@@ -219,8 +219,8 @@ func (s *EdgeService) FlagEdgeMismatch(ctx context.Context, actor domain.Actor, 
 		updatedEdge, uErr = q.UpdateEdgeHandshake(ctx, sqlcgen.UpdateEdgeHandshakeParams{
 			ID:              edgeID,
 			HandshakeStatus: sqlcgen.HandshakeStatusEnumFlaggedMismatch,
-			ConfirmedBy:     pgtype.UUID{Valid: false},
-			ConfirmedAt:     pgtype.Timestamptz{Valid: false},
+			ConfirmedBy:     pgtype.UUID{Bytes: actor.ID, Valid: true},
+			ConfirmedAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		})
 		if uErr != nil {
 			return fmt.Errorf("failed to flag edge mismatch: %w", uErr)
@@ -290,8 +290,8 @@ func (s *EdgeService) RejectEdge(ctx context.Context, actor domain.Actor, edgeID
 		updatedEdge, uErr = q.UpdateEdgeHandshake(ctx, sqlcgen.UpdateEdgeHandshakeParams{
 			ID:              edgeID,
 			HandshakeStatus: sqlcgen.HandshakeStatusEnumRejected,
-			ConfirmedBy:     pgtype.UUID{Valid: false},
-			ConfirmedAt:     pgtype.Timestamptz{Valid: false},
+			ConfirmedBy:     pgtype.UUID{Bytes: actor.ID, Valid: true},
+			ConfirmedAt:     pgtype.Timestamptz{Time: now, Valid: true},
 		})
 		if uErr != nil {
 			return fmt.Errorf("failed to reject edge: %w", uErr)

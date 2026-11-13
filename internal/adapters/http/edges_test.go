@@ -309,6 +309,9 @@ func TestCrossBoundaryEdgeHandshakeService(t *testing.T) {
 
 		assert.Equal(t, f.pendingEdge2ID, edgeResp.Id)
 		assert.Equal(t, "flagged_mismatch", string(edgeResp.HandshakeStatus))
+		require.NotNil(t, edgeResp.ConfirmedBy)
+		assert.Equal(t, f.targetTLID, *edgeResp.ConfirmedBy)
+		assert.NotNil(t, edgeResp.ConfirmedAt)
 
 		// Verify audit log has reason
 		var diffJSON []byte
@@ -353,6 +356,9 @@ func TestCrossBoundaryEdgeHandshakeService(t *testing.T) {
 
 		assert.Equal(t, f.unrelatedEdgeID, edgeResp.Id)
 		assert.Equal(t, "rejected", string(edgeResp.HandshakeStatus))
+		require.NotNil(t, edgeResp.ConfirmedBy)
+		assert.Equal(t, f.unrelatedTLID, *edgeResp.ConfirmedBy)
+		assert.NotNil(t, edgeResp.ConfirmedAt)
 
 		// Database status check
 		var dbStatus string
