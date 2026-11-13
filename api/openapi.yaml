@@ -703,6 +703,118 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+    patch:
+      summary: Update configuration item attributes with domain RBAC and volatile-only stamping
+      operationId: updateCI
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCIRequest'
+      responses:
+        '200':
+          description: Configuration item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request (malformed JSON or invalid syntax)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (actor does not belong to owner group and is not platform_admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity (validation errors, retirement disallowed via PATCH, unapproved ITAM fields)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/flags:
+    post:
+      summary: Report data-quality flag on configuration item
+      operationId: createCIFlag
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCIFlagRequest'
+      responses:
+        '201':
+          description: Data-quality flag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIFlagResponse'
+        '400':
+          description: Bad request (malformed JSON or invalid syntax)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity (validation errors, reason too short)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
 
   /api/v1/cis/{id}/impact-upward:
     get:
@@ -1903,3 +2015,115 @@ components:
             - hosted_on
             - connects_to
             - reads_from
+
+    UpdateCIRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        ci_class:
+          type: string
+          enum:
+            - business_service
+            - application
+            - database
+            - vm_cluster
+            - physical_host
+            - network_firewall
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        lifecycle_state:
+          type: string
+          enum:
+            - planned
+            - in_service
+            - retired
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        owner_group_id:
+          type: string
+          format: uuid
+        technical_contact:
+          type: string
+          minLength: 1
+          maxLength: 160
+        primary_endpoint:
+          type: string
+          nullable: true
+          maxLength: 255
+        itam_external_ref:
+          type: string
+          nullable: true
+          maxLength: 512
+        class_metadata:
+          type: object
+          maxProperties: 2
+          additionalProperties:
+            type: string
+
+    CreateCIFlagRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+        flag_type:
+          type: string
+          maxLength: 64
+
+    CIFlagResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - ci_id
+        - flagged_by
+        - reason
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        ci_id:
+          type: string
+          format: uuid
+        flagged_by:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        status:
+          type: string
+          enum:
+            - open
+            - resolved
+            - dismissed
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_by:
+          type: string
+          format: uuid
+          nullable: true
+

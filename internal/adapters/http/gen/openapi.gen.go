@@ -49,10 +49,17 @@ const (
 
 // Defines values for CIEnvelopeLifecycleState.
 const (
-	Deprecated CIEnvelopeLifecycleState = "deprecated"
-	InService  CIEnvelopeLifecycleState = "in_service"
-	Planned    CIEnvelopeLifecycleState = "planned"
-	Retired    CIEnvelopeLifecycleState = "retired"
+	CIEnvelopeLifecycleStateDeprecated CIEnvelopeLifecycleState = "deprecated"
+	CIEnvelopeLifecycleStateInService  CIEnvelopeLifecycleState = "in_service"
+	CIEnvelopeLifecycleStatePlanned    CIEnvelopeLifecycleState = "planned"
+	CIEnvelopeLifecycleStateRetired    CIEnvelopeLifecycleState = "retired"
+)
+
+// Defines values for CIFlagResponseStatus.
+const (
+	Dismissed CIFlagResponseStatus = "dismissed"
+	Open      CIFlagResponseStatus = "open"
+	Resolved  CIFlagResponseStatus = "resolved"
 )
 
 // Defines values for CIUpwardSummaryHighestCriticalityTier.
@@ -202,12 +209,44 @@ const (
 	Ready    ReadyResponseStatus = "ready"
 )
 
+// Defines values for UpdateCIRequestCiClass.
+const (
+	UpdateCIRequestCiClassApplication     UpdateCIRequestCiClass = "application"
+	UpdateCIRequestCiClassBusinessService UpdateCIRequestCiClass = "business_service"
+	UpdateCIRequestCiClassDatabase        UpdateCIRequestCiClass = "database"
+	UpdateCIRequestCiClassNetworkFirewall UpdateCIRequestCiClass = "network_firewall"
+	UpdateCIRequestCiClassPhysicalHost    UpdateCIRequestCiClass = "physical_host"
+	UpdateCIRequestCiClassVmCluster       UpdateCIRequestCiClass = "vm_cluster"
+)
+
+// Defines values for UpdateCIRequestCriticalityTier.
+const (
+	UpdateCIRequestCriticalityTierTier0 UpdateCIRequestCriticalityTier = "tier_0"
+	UpdateCIRequestCriticalityTierTier1 UpdateCIRequestCriticalityTier = "tier_1"
+	UpdateCIRequestCriticalityTierTier2 UpdateCIRequestCriticalityTier = "tier_2"
+	UpdateCIRequestCriticalityTierTier3 UpdateCIRequestCriticalityTier = "tier_3"
+)
+
+// Defines values for UpdateCIRequestEnvironment.
+const (
+	UpdateCIRequestEnvironmentDr      UpdateCIRequestEnvironment = "dr"
+	UpdateCIRequestEnvironmentProd    UpdateCIRequestEnvironment = "prod"
+	UpdateCIRequestEnvironmentStaging UpdateCIRequestEnvironment = "staging"
+)
+
+// Defines values for UpdateCIRequestLifecycleState.
+const (
+	UpdateCIRequestLifecycleStateInService UpdateCIRequestLifecycleState = "in_service"
+	UpdateCIRequestLifecycleStatePlanned   UpdateCIRequestLifecycleState = "planned"
+	UpdateCIRequestLifecycleStateRetired   UpdateCIRequestLifecycleState = "retired"
+)
+
 // Defines values for UpwardImpactResponseHighestCriticalityTier.
 const (
-	UpwardImpactResponseHighestCriticalityTierTier0 UpwardImpactResponseHighestCriticalityTier = "tier_0"
-	UpwardImpactResponseHighestCriticalityTierTier1 UpwardImpactResponseHighestCriticalityTier = "tier_1"
-	UpwardImpactResponseHighestCriticalityTierTier2 UpwardImpactResponseHighestCriticalityTier = "tier_2"
-	UpwardImpactResponseHighestCriticalityTierTier3 UpwardImpactResponseHighestCriticalityTier = "tier_3"
+	Tier0 UpwardImpactResponseHighestCriticalityTier = "tier_0"
+	Tier1 UpwardImpactResponseHighestCriticalityTier = "tier_1"
+	Tier2 UpwardImpactResponseHighestCriticalityTier = "tier_2"
+	Tier3 UpwardImpactResponseHighestCriticalityTier = "tier_3"
 )
 
 // Defines values for UserRole.
@@ -219,19 +258,19 @@ const (
 
 // Defines values for SearchCIsParamsCiClass.
 const (
-	SearchCIsParamsCiClassApplication     SearchCIsParamsCiClass = "application"
-	SearchCIsParamsCiClassBusinessService SearchCIsParamsCiClass = "business_service"
-	SearchCIsParamsCiClassDatabase        SearchCIsParamsCiClass = "database"
-	SearchCIsParamsCiClassNetworkFirewall SearchCIsParamsCiClass = "network_firewall"
-	SearchCIsParamsCiClassPhysicalHost    SearchCIsParamsCiClass = "physical_host"
-	SearchCIsParamsCiClassVmCluster       SearchCIsParamsCiClass = "vm_cluster"
+	Application     SearchCIsParamsCiClass = "application"
+	BusinessService SearchCIsParamsCiClass = "business_service"
+	Database        SearchCIsParamsCiClass = "database"
+	NetworkFirewall SearchCIsParamsCiClass = "network_firewall"
+	PhysicalHost    SearchCIsParamsCiClass = "physical_host"
+	VmCluster       SearchCIsParamsCiClass = "vm_cluster"
 )
 
 // Defines values for SearchCIsParamsEnvironment.
 const (
-	SearchCIsParamsEnvironmentDr      SearchCIsParamsEnvironment = "dr"
-	SearchCIsParamsEnvironmentProd    SearchCIsParamsEnvironment = "prod"
-	SearchCIsParamsEnvironmentStaging SearchCIsParamsEnvironment = "staging"
+	Dr      SearchCIsParamsEnvironment = "dr"
+	Prod    SearchCIsParamsEnvironment = "prod"
+	Staging SearchCIsParamsEnvironment = "staging"
 )
 
 // BaselineResponse defines model for BaselineResponse.
@@ -293,6 +332,21 @@ type CIEnvelopeEnvironment string
 
 // CIEnvelopeLifecycleState defines model for CIEnvelope.LifecycleState.
 type CIEnvelopeLifecycleState string
+
+// CIFlagResponse defines model for CIFlagResponse.
+type CIFlagResponse struct {
+	CiId       openapi_types.UUID   `json:"ci_id"`
+	CreatedAt  time.Time            `json:"created_at"`
+	FlaggedBy  openapi_types.UUID   `json:"flagged_by"`
+	Id         openapi_types.UUID   `json:"id"`
+	Reason     string               `json:"reason"`
+	ResolvedAt *time.Time           `json:"resolved_at"`
+	ResolvedBy *openapi_types.UUID  `json:"resolved_by"`
+	Status     CIFlagResponseStatus `json:"status"`
+}
+
+// CIFlagResponseStatus defines model for CIFlagResponse.Status.
+type CIFlagResponseStatus string
 
 // CISearchResponse defines model for CISearchResponse.
 type CISearchResponse struct {
@@ -367,6 +421,12 @@ type CampaignResponse struct {
 
 // CampaignResponseStatus defines model for CampaignResponse.Status.
 type CampaignResponseStatus string
+
+// CreateCIFlagRequest defines model for CreateCIFlagRequest.
+type CreateCIFlagRequest struct {
+	FlagType *string `json:"flag_type,omitempty"`
+	Reason   string  `json:"reason"`
+}
 
 // CreateCIRequest defines model for CreateCIRequest.
 type CreateCIRequest struct {
@@ -617,6 +677,32 @@ type SubmitIntakeRequest struct {
 	Payload *map[string]interface{} `json:"payload,omitempty"`
 }
 
+// UpdateCIRequest defines model for UpdateCIRequest.
+type UpdateCIRequest struct {
+	CiClass          *UpdateCIRequestCiClass         `json:"ci_class,omitempty"`
+	ClassMetadata    *map[string]string              `json:"class_metadata,omitempty"`
+	CriticalityTier  *UpdateCIRequestCriticalityTier `json:"criticality_tier,omitempty"`
+	Environment      *UpdateCIRequestEnvironment     `json:"environment,omitempty"`
+	ItamExternalRef  *string                         `json:"itam_external_ref"`
+	LifecycleState   *UpdateCIRequestLifecycleState  `json:"lifecycle_state,omitempty"`
+	Name             *string                         `json:"name,omitempty"`
+	OwnerGroupId     *openapi_types.UUID             `json:"owner_group_id,omitempty"`
+	PrimaryEndpoint  *string                         `json:"primary_endpoint"`
+	TechnicalContact *string                         `json:"technical_contact,omitempty"`
+}
+
+// UpdateCIRequestCiClass defines model for UpdateCIRequest.CiClass.
+type UpdateCIRequestCiClass string
+
+// UpdateCIRequestCriticalityTier defines model for UpdateCIRequest.CriticalityTier.
+type UpdateCIRequestCriticalityTier string
+
+// UpdateCIRequestEnvironment defines model for UpdateCIRequest.Environment.
+type UpdateCIRequestEnvironment string
+
+// UpdateCIRequestLifecycleState defines model for UpdateCIRequest.LifecycleState.
+type UpdateCIRequestLifecycleState string
+
 // UpwardImpactResponse defines model for UpwardImpactResponse.
 type UpwardImpactResponse struct {
 	CiId                      openapi_types.UUID                          `json:"ci_id"`
@@ -696,6 +782,12 @@ type CreateIntakeCampaignJSONRequestBody = CreateCampaignRequest
 // CreateCIJSONRequestBody defines body for CreateCI for application/json ContentType.
 type CreateCIJSONRequestBody = CreateCIRequest
 
+// UpdateCIJSONRequestBody defines body for UpdateCI for application/json ContentType.
+type UpdateCIJSONRequestBody = UpdateCIRequest
+
+// CreateCIFlagJSONRequestBody defines body for CreateCIFlag for application/json ContentType.
+type CreateCIFlagJSONRequestBody = CreateCIFlagRequest
+
 // CreateEdgeJSONRequestBody defines body for CreateEdge for application/json ContentType.
 type CreateEdgeJSONRequestBody = CreateEdgeRequest
 
@@ -728,9 +820,15 @@ type ServerInterface interface {
 	// Get configuration item detail with graph summary and verification status
 	// (GET /api/v1/cis/{id})
 	GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Update configuration item attributes with domain RBAC and volatile-only stamping
+	// (PATCH /api/v1/cis/{id})
+	UpdateCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Traverse downward dependency graph for a configuration item
 	// (GET /api/v1/cis/{id}/dependencies-downward)
 	GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams)
+	// Report data-quality flag on configuration item
+	// (POST /api/v1/cis/{id}/flags)
+	CreateCIFlag(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Traverse upward impact graph for a configuration item
 	// (GET /api/v1/cis/{id}/impact-upward)
 	GetUpwardImpact(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUpwardImpactParams)
@@ -809,9 +907,21 @@ func (_ Unimplemented) GetCIDetail(w http.ResponseWriter, r *http.Request, id op
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Update configuration item attributes with domain RBAC and volatile-only stamping
+// (PATCH /api/v1/cis/{id})
+func (_ Unimplemented) UpdateCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Traverse downward dependency graph for a configuration item
 // (GET /api/v1/cis/{id}/dependencies-downward)
 func (_ Unimplemented) GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Report data-quality flag on configuration item
+// (POST /api/v1/cis/{id}/flags)
+func (_ Unimplemented) CreateCIFlag(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1095,6 +1205,39 @@ func (siw *ServerInterfaceWrapper) GetCIDetail(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateCI operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCI(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCI(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDownwardDependencies operation middleware
 func (siw *ServerInterfaceWrapper) GetDownwardDependencies(w http.ResponseWriter, r *http.Request) {
 
@@ -1130,6 +1273,39 @@ func (siw *ServerInterfaceWrapper) GetDownwardDependencies(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDownwardDependencies(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCIFlag operation middleware
+func (siw *ServerInterfaceWrapper) CreateCIFlag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCIFlag(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1700,7 +1876,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/cis/{id}", wrapper.GetCIDetail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/api/v1/cis/{id}", wrapper.UpdateCI)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/cis/{id}/dependencies-downward", wrapper.GetDownwardDependencies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/cis/{id}/flags", wrapper.CreateCIFlag)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/cis/{id}/impact-upward", wrapper.GetUpwardImpact)
@@ -1995,6 +2177,69 @@ func (response GetCIDetail404ApplicationProblemPlusJSONResponse) VisitGetCIDetai
 	return json.NewEncoder(w).Encode(response)
 }
 
+type UpdateCIRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *UpdateCIJSONRequestBody
+}
+
+type UpdateCIResponseObject interface {
+	VisitUpdateCIResponse(w http.ResponseWriter) error
+}
+
+type UpdateCI200JSONResponse CIEnvelope
+
+func (response UpdateCI200JSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCI400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCI400ApplicationProblemPlusJSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCI401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCI401ApplicationProblemPlusJSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCI403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCI403ApplicationProblemPlusJSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCI404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCI404ApplicationProblemPlusJSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCI422ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCI422ApplicationProblemPlusJSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetDownwardDependenciesRequestObject struct {
 	Id     openapi_types.UUID `json:"id"`
 	Params GetDownwardDependenciesParams
@@ -2036,6 +2281,60 @@ type GetDownwardDependencies404ApplicationProblemPlusJSONResponse ProblemDetails
 func (response GetDownwardDependencies404ApplicationProblemPlusJSONResponse) VisitGetDownwardDependenciesResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIFlagRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *CreateCIFlagJSONRequestBody
+}
+
+type CreateCIFlagResponseObject interface {
+	VisitCreateCIFlagResponse(w http.ResponseWriter) error
+}
+
+type CreateCIFlag201JSONResponse CIFlagResponse
+
+func (response CreateCIFlag201JSONResponse) VisitCreateCIFlagResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIFlag400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIFlag400ApplicationProblemPlusJSONResponse) VisitCreateCIFlagResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIFlag401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIFlag401ApplicationProblemPlusJSONResponse) VisitCreateCIFlagResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIFlag404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIFlag404ApplicationProblemPlusJSONResponse) VisitCreateCIFlagResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIFlag422ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIFlag422ApplicationProblemPlusJSONResponse) VisitCreateCIFlagResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -2700,9 +2999,15 @@ type StrictServerInterface interface {
 	// Get configuration item detail with graph summary and verification status
 	// (GET /api/v1/cis/{id})
 	GetCIDetail(ctx context.Context, request GetCIDetailRequestObject) (GetCIDetailResponseObject, error)
+	// Update configuration item attributes with domain RBAC and volatile-only stamping
+	// (PATCH /api/v1/cis/{id})
+	UpdateCI(ctx context.Context, request UpdateCIRequestObject) (UpdateCIResponseObject, error)
 	// Traverse downward dependency graph for a configuration item
 	// (GET /api/v1/cis/{id}/dependencies-downward)
 	GetDownwardDependencies(ctx context.Context, request GetDownwardDependenciesRequestObject) (GetDownwardDependenciesResponseObject, error)
+	// Report data-quality flag on configuration item
+	// (POST /api/v1/cis/{id}/flags)
+	CreateCIFlag(ctx context.Context, request CreateCIFlagRequestObject) (CreateCIFlagResponseObject, error)
 	// Traverse upward impact graph for a configuration item
 	// (GET /api/v1/cis/{id}/impact-upward)
 	GetUpwardImpact(ctx context.Context, request GetUpwardImpactRequestObject) (GetUpwardImpactResponseObject, error)
@@ -2916,6 +3221,39 @@ func (sh *strictHandler) GetCIDetail(w http.ResponseWriter, r *http.Request, id 
 	}
 }
 
+// UpdateCI operation middleware
+func (sh *strictHandler) UpdateCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request UpdateCIRequestObject
+
+	request.Id = id
+
+	var body UpdateCIJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCI(ctx, request.(UpdateCIRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCI")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCIResponseObject); ok {
+		if err := validResponse.VisitUpdateCIResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetDownwardDependencies operation middleware
 func (sh *strictHandler) GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams) {
 	var request GetDownwardDependenciesRequestObject
@@ -2936,6 +3274,39 @@ func (sh *strictHandler) GetDownwardDependencies(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetDownwardDependenciesResponseObject); ok {
 		if err := validResponse.VisitGetDownwardDependenciesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCIFlag operation middleware
+func (sh *strictHandler) CreateCIFlag(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request CreateCIFlagRequestObject
+
+	request.Id = id
+
+	var body CreateCIFlagJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCIFlag(ctx, request.(CreateCIFlagRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCIFlag")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCIFlagResponseObject); ok {
+		if err := validResponse.VisitCreateCIFlagResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

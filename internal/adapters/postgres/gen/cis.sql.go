@@ -122,6 +122,55 @@ func (q *Queries) CreateCI(ctx context.Context, arg CreateCIParams) (Ci, error) 
 	return i, err
 }
 
+const createCIFlag = `-- name: CreateCIFlag :one
+INSERT INTO ci_flags (
+    id,
+    ci_id,
+    flagged_by,
+    reason,
+    status,
+    created_at
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    'open',
+    $5
+)
+RETURNING id, ci_id, flagged_by, reason, status, created_at, resolved_at, resolved_by
+`
+
+type CreateCIFlagParams struct {
+	ID        uuid.UUID `json:"id"`
+	CiID      uuid.UUID `json:"ci_id"`
+	FlaggedBy uuid.UUID `json:"flagged_by"`
+	Reason    string    `json:"reason"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) CreateCIFlag(ctx context.Context, arg CreateCIFlagParams) (CiFlag, error) {
+	row := q.db.QueryRow(ctx, createCIFlag,
+		arg.ID,
+		arg.CiID,
+		arg.FlaggedBy,
+		arg.Reason,
+		arg.CreatedAt,
+	)
+	var i CiFlag
+	err := row.Scan(
+		&i.ID,
+		&i.CiID,
+		&i.FlaggedBy,
+		&i.Reason,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+		&i.ResolvedBy,
+	)
+	return i, err
+}
+
 const getActiveCIsByOwnerGroup = `-- name: GetActiveCIsByOwnerGroup :many
 SELECT
     c.ci_id,
@@ -350,6 +399,28 @@ func (q *Queries) GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (Ge
 	return i, err
 }
 
+const getCIFlagByID = `-- name: GetCIFlagByID :one
+SELECT id, ci_id, flagged_by, reason, status, created_at, resolved_at, resolved_by
+FROM ci_flags
+WHERE id = $1
+`
+
+func (q *Queries) GetCIFlagByID(ctx context.Context, id uuid.UUID) (CiFlag, error) {
+	row := q.db.QueryRow(ctx, getCIFlagByID, id)
+	var i CiFlag
+	err := row.Scan(
+		&i.ID,
+		&i.CiID,
+		&i.FlaggedBy,
+		&i.Reason,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+		&i.ResolvedBy,
+	)
+	return i, err
+}
+
 const searchCIs = `-- name: SearchCIs :many
 SELECT
     c.ci_id,
@@ -502,6 +573,125 @@ func (q *Queries) SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchC
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCI = `-- name: UpdateCI :one
+WITH updated AS (
+    UPDATE cis
+    SET
+        name = $1,
+        ci_class = $2,
+        environment = $3,
+        lifecycle_state = $4,
+        criticality_tier = $5,
+        owner_group_id = $6,
+        technical_contact = $7,
+        primary_endpoint = $8,
+        last_verified_at = $9,
+        itam_external_ref = $10,
+        class_metadata = $11,
+        updated_at = $12
+    WHERE ci_id = $13
+    RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, itam_external_ref, class_metadata, created_at, updated_at
+)
+SELECT
+    u.ci_id,
+    u.name,
+    u.ci_class,
+    u.environment,
+    u.lifecycle_state,
+    u.criticality_tier,
+    u.owner_group_id,
+    u.technical_contact,
+    u.primary_endpoint,
+    u.last_verified_at,
+    u.itam_external_ref,
+    u.class_metadata,
+    u.created_at,
+    u.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM updated u
+JOIN owner_groups og ON og.id = u.owner_group_id
+`
+
+type UpdateCIParams struct {
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	CiID             uuid.UUID           `json:"ci_id"`
+}
+
+type UpdateCIRow struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+	DepartmentName   string              `json:"department_name"`
+	TeamLeadName     string              `json:"team_lead_name"`
+	TeamLeadEmail    string              `json:"team_lead_email"`
+}
+
+func (q *Queries) UpdateCI(ctx context.Context, arg UpdateCIParams) (UpdateCIRow, error) {
+	row := q.db.QueryRow(ctx, updateCI,
+		arg.Name,
+		arg.CiClass,
+		arg.Environment,
+		arg.LifecycleState,
+		arg.CriticalityTier,
+		arg.OwnerGroupID,
+		arg.TechnicalContact,
+		arg.PrimaryEndpoint,
+		arg.LastVerifiedAt,
+		arg.ItamExternalRef,
+		arg.ClassMetadata,
+		arg.UpdatedAt,
+		arg.CiID,
+	)
+	var i UpdateCIRow
+	err := row.Scan(
+		&i.CiID,
+		&i.Name,
+		&i.CiClass,
+		&i.Environment,
+		&i.LifecycleState,
+		&i.CriticalityTier,
+		&i.OwnerGroupID,
+		&i.TechnicalContact,
+		&i.PrimaryEndpoint,
+		&i.LastVerifiedAt,
+		&i.ItamExternalRef,
+		&i.ClassMetadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerGroupName,
+		&i.DepartmentName,
+		&i.TeamLeadName,
+		&i.TeamLeadEmail,
+	)
+	return i, err
 }
 
 const upsertCI = `-- name: UpsertCI :one

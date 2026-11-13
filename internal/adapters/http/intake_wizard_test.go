@@ -143,7 +143,7 @@ func TestIntakeWizardGuidedFlow(t *testing.T) {
 		ci := contextResp.ExistingCis[0]
 		assert.Equal(t, "payment-gateway-svc", ci.Name)
 		assert.Equal(t, gen.CIEnvelopeCiClassApplication, ci.CiClass)
-		assert.Equal(t, gen.InService, ci.LifecycleState)
+		assert.Equal(t, gen.CIEnvelopeLifecycleStateInService, ci.LifecycleState)
 		assert.Equal(t, "chi", ci.ClassMetadata["framework"])
 		require.NotNil(t, ci.Ownership)
 		assert.Equal(t, "Payments Engineering", ci.Ownership.OwnerGroupName)

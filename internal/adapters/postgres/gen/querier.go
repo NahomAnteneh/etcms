@@ -15,6 +15,7 @@ type Querier interface {
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error)
 	CreateCI(ctx context.Context, arg CreateCIParams) (Ci, error)
+	CreateCIFlag(ctx context.Context, arg CreateCIFlagParams) (CiFlag, error)
 	CreateEdge(ctx context.Context, arg CreateEdgeParams) (CiEdge, error)
 	CreateIntakeCampaign(ctx context.Context, arg CreateIntakeCampaignParams) (IntakeCampaign, error)
 	CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (IntakeInvitation, error)
@@ -27,6 +28,7 @@ type Querier interface {
 	GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error)
 	GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error)
 	GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (GetCIDetailAggregatesRow, error)
+	GetCIFlagByID(ctx context.Context, id uuid.UUID) (CiFlag, error)
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (IntakeCampaign, error)
 	GetCampaignDepartmentProgress(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignDepartmentProgressRow, error)
 	GetCampaignInvitationsWithGroup(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignInvitationsWithGroupRow, error)
@@ -48,6 +50,7 @@ type Querier interface {
 	ListPendingEdgesForGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]ListPendingEdgesForGroupRow, error)
 	ListPendingEdgesForGroups(ctx context.Context, ownerGroupIds []uuid.UUID) ([]ListPendingEdgesForGroupsRow, error)
 	SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchCIsRow, error)
+	UpdateCI(ctx context.Context, arg UpdateCIParams) (UpdateCIRow, error)
 	UpdateEdgeHandshake(ctx context.Context, arg UpdateEdgeHandshakeParams) (CiEdge, error)
 	UpdateIntakeDraft(ctx context.Context, arg UpdateIntakeDraftParams) (IntakeSubmission, error)
 	UpdateInvitationAccess(ctx context.Context, arg UpdateInvitationAccessParams) error

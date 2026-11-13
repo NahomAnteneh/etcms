@@ -246,3 +246,68 @@ DO UPDATE SET
     confirmed_at = EXCLUDED.confirmed_at,
     updated_at = EXCLUDED.updated_at
 RETURNING id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at;
+
+-- name: UpdateCI :one
+WITH updated AS (
+    UPDATE cis
+    SET
+        name = @name,
+        ci_class = @ci_class,
+        environment = @environment,
+        lifecycle_state = @lifecycle_state,
+        criticality_tier = @criticality_tier,
+        owner_group_id = @owner_group_id,
+        technical_contact = @technical_contact,
+        primary_endpoint = @primary_endpoint,
+        last_verified_at = @last_verified_at,
+        itam_external_ref = @itam_external_ref,
+        class_metadata = @class_metadata,
+        updated_at = @updated_at
+    WHERE ci_id = @ci_id
+    RETURNING *
+)
+SELECT
+    u.ci_id,
+    u.name,
+    u.ci_class,
+    u.environment,
+    u.lifecycle_state,
+    u.criticality_tier,
+    u.owner_group_id,
+    u.technical_contact,
+    u.primary_endpoint,
+    u.last_verified_at,
+    u.itam_external_ref,
+    u.class_metadata,
+    u.created_at,
+    u.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM updated u
+JOIN owner_groups og ON og.id = u.owner_group_id;
+
+-- name: CreateCIFlag :one
+INSERT INTO ci_flags (
+    id,
+    ci_id,
+    flagged_by,
+    reason,
+    status,
+    created_at
+) VALUES (
+    @id,
+    @ci_id,
+    @flagged_by,
+    @reason,
+    'open',
+    @created_at
+)
+RETURNING id, ci_id, flagged_by, reason, status, created_at, resolved_at, resolved_by;
+
+-- name: GetCIFlagByID :one
+SELECT id, ci_id, flagged_by, reason, status, created_at, resolved_at, resolved_by
+FROM ci_flags
+WHERE id = $1;
+

@@ -814,3 +814,116 @@ func (s *Server) GetDownwardDependencies(ctx context.Context, request gen.GetDow
 	return gen.GetDownwardDependencies200JSONResponse(*resp), nil
 }
 
+// UpdateCI updates an existing configuration item with domain-restricted RBAC, volatile stamping, and diff auditing.
+func (s *Server) UpdateCI(ctx context.Context, request gen.UpdateCIRequestObject) (gen.UpdateCIResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.UpdateCI401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	if request.Body == nil {
+		return gen.UpdateCI400ApplicationProblemPlusJSONResponse{
+			Title:  "Bad Request",
+			Status: 400,
+			Detail: "Request body cannot be empty",
+		}, nil
+	}
+
+	res, err := s.ciService.UpdateCI(ctx, actor, request.Id, *request.Body)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.UpdateCI404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.UpdateCI403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "You do not have permission to update configuration items for this owner group",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.UpdateCI422ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 422,
+				Detail: err.Error(),
+			}, nil
+		}
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) {
+			return gen.UpdateCI422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
+				Detail: valErr.Message,
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.UpdateCI400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to update CI: %w", err)
+	}
+
+	return gen.UpdateCI200JSONResponse(*res), nil
+}
+
+// CreateCIFlag reports a data-quality flag on a configuration item.
+func (s *Server) CreateCIFlag(ctx context.Context, request gen.CreateCIFlagRequestObject) (gen.CreateCIFlagResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.CreateCIFlag401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	if request.Body == nil {
+		return gen.CreateCIFlag400ApplicationProblemPlusJSONResponse{
+			Title:  "Bad Request",
+			Status: 400,
+			Detail: "Request body cannot be empty",
+		}, nil
+	}
+
+	res, err := s.ciService.CreateCIFlag(ctx, actor, request.Id, *request.Body)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.CreateCIFlag404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) {
+			return gen.CreateCIFlag422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
+				Detail: valErr.Message,
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.CreateCIFlag400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to create CI flag: %w", err)
+	}
+
+	return gen.CreateCIFlag201JSONResponse(*res), nil
+}
+
+

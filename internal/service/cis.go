@@ -409,6 +409,350 @@ func (s *CIService) CreateCI(ctx context.Context, actor domain.Actor, req gen.Cr
 	}, nil
 }
 
+// UpdateCI updates a configuration item with domain-restricted RBAC, volatile-only verification stamping, and diff auditing.
+func (s *CIService) UpdateCI(ctx context.Context, actor domain.Actor, ciID uuid.UUID, req gen.UpdateCIRequest) (*gen.CIEnvelope, error) {
+	// 1. Fetch existing CI
+	existingCI, err := s.store.Queries().GetCIByID(ctx, ciID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch CI: %w", err)
+	}
+
+	// 2. Domain RBAC: actor must belong to existingCI.OwnerGroupID or be platform_admin
+	if actor.Role != domain.RolePlatformAdmin && !actor.BelongsToOwnerGroup(existingCI.OwnerGroupID) {
+		return nil, domain.ErrForbidden
+	}
+
+	// 3. Disallow retiring CIs via PATCH (retirement must use POST .../retire)
+	if req.LifecycleState != nil && *req.LifecycleState == gen.UpdateCIRequestLifecycleStateRetired {
+		return nil, &domain.ValidationError{
+			Message: "cannot retire CI via PATCH; retirement must use POST /api/v1/cis/{id}/retire",
+		}
+	}
+
+	// 4. Validate class_metadata if provided (max 2 keys)
+	metaJSON := existingCI.ClassMetadata
+	if req.ClassMetadata != nil {
+		if len(*req.ClassMetadata) > 2 {
+			return nil, &domain.ValidationError{
+				Message: "class_metadata cannot exceed 2 keys",
+			}
+		}
+		var mErr error
+		metaJSON, mErr = json.Marshal(*req.ClassMetadata)
+		if mErr != nil {
+			return nil, &domain.ValidationError{
+				Message: "invalid class_metadata format",
+			}
+		}
+	}
+
+	// 5. Track diff and determine whether volatile fields were modified
+	oldValues := make(map[string]interface{})
+	newValues := make(map[string]interface{})
+	isVolatileChanged := false
+
+	name := existingCI.Name
+	if req.Name != nil && *req.Name != "" && *req.Name != existingCI.Name {
+		oldValues["name"] = existingCI.Name
+		newValues["name"] = *req.Name
+		name = *req.Name
+	}
+
+	ciClass := existingCI.CiClass
+	if req.CiClass != nil && string(*req.CiClass) != string(existingCI.CiClass) {
+		oldValues["ci_class"] = string(existingCI.CiClass)
+		newValues["ci_class"] = string(*req.CiClass)
+		ciClass = sqlcgen.CiClassEnum(*req.CiClass)
+	}
+
+	env := existingCI.Environment
+	if req.Environment != nil && string(*req.Environment) != string(existingCI.Environment) {
+		oldValues["environment"] = string(existingCI.Environment)
+		newValues["environment"] = string(*req.Environment)
+		env = sqlcgen.EnvironmentEnum(*req.Environment)
+	}
+
+	lifecycleState := existingCI.LifecycleState
+	if req.LifecycleState != nil && string(*req.LifecycleState) != string(existingCI.LifecycleState) {
+		oldValues["lifecycle_state"] = string(existingCI.LifecycleState)
+		newValues["lifecycle_state"] = string(*req.LifecycleState)
+		lifecycleState = sqlcgen.LifecycleStateEnum(*req.LifecycleState)
+	}
+
+	// Volatile 1: Criticality Tier
+	critTier := existingCI.CriticalityTier
+	if req.CriticalityTier != nil && string(*req.CriticalityTier) != string(existingCI.CriticalityTier) {
+		isVolatileChanged = true
+		oldValues["criticality_tier"] = string(existingCI.CriticalityTier)
+		newValues["criticality_tier"] = string(*req.CriticalityTier)
+		critTier = sqlcgen.CriticalityTierEnum(*req.CriticalityTier)
+	}
+
+	// Volatile 2: Owner Group ID
+	ownerGroupID := existingCI.OwnerGroupID
+	affectedGroups := []uuid.UUID{existingCI.OwnerGroupID}
+	if req.OwnerGroupId != nil && *req.OwnerGroupId != existingCI.OwnerGroupID {
+		_, ogErr := s.store.Queries().GetOwnerGroupByID(ctx, *req.OwnerGroupId)
+		if ogErr != nil {
+			if errors.Is(ogErr, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("%w: target owner group not found", domain.ErrNotFound)
+			}
+			return nil, fmt.Errorf("failed to query new owner group: %w", ogErr)
+		}
+		isVolatileChanged = true
+		oldValues["owner_group_id"] = existingCI.OwnerGroupID.String()
+		newValues["owner_group_id"] = req.OwnerGroupId.String()
+		ownerGroupID = *req.OwnerGroupId
+		affectedGroups = append(affectedGroups, ownerGroupID)
+	}
+
+	// Volatile 3: Technical Contact
+	techContact := existingCI.TechnicalContact
+	if req.TechnicalContact != nil && *req.TechnicalContact != existingCI.TechnicalContact {
+		isVolatileChanged = true
+		oldValues["technical_contact"] = existingCI.TechnicalContact
+		newValues["technical_contact"] = *req.TechnicalContact
+		techContact = *req.TechnicalContact
+	}
+
+	// Volatile 4: Primary Endpoint
+	primaryEndpoint := existingCI.PrimaryEndpoint
+	if req.PrimaryEndpoint != nil {
+		oldEp := ""
+		if existingCI.PrimaryEndpoint.Valid {
+			oldEp = existingCI.PrimaryEndpoint.String
+		}
+		newEp := *req.PrimaryEndpoint
+		if newEp != oldEp {
+			isVolatileChanged = true
+			oldValues["primary_endpoint"] = oldEp
+			newValues["primary_endpoint"] = newEp
+			if newEp != "" {
+				primaryEndpoint = pgtype.Text{String: newEp, Valid: true}
+			} else {
+				primaryEndpoint = pgtype.Text{Valid: false}
+			}
+		}
+	}
+
+	// Cosmetic: ITAM External Ref
+	itamRef := existingCI.ItamExternalRef
+	if req.ItamExternalRef != nil {
+		oldRef := ""
+		if existingCI.ItamExternalRef.Valid {
+			oldRef = existingCI.ItamExternalRef.String
+		}
+		newRef := *req.ItamExternalRef
+		if newRef != oldRef {
+			oldValues["itam_external_ref"] = oldRef
+			newValues["itam_external_ref"] = newRef
+			if newRef != "" {
+				itamRef = pgtype.Text{String: newRef, Valid: true}
+			} else {
+				itamRef = pgtype.Text{Valid: false}
+			}
+		}
+	}
+
+	// Cosmetic: Class Metadata
+	if req.ClassMetadata != nil && string(metaJSON) != string(existingCI.ClassMetadata) {
+		oldValues["class_metadata"] = string(existingCI.ClassMetadata)
+		newValues["class_metadata"] = string(metaJSON)
+	}
+
+	// 6. Stamping Rule: Volatile modification stamps last_verified_at = now(); cosmetic modification only touches updated_at
+	now := time.Now().UTC()
+	newUpdatedAt := now
+	newLastVerifiedAt := existingCI.LastVerifiedAt
+	if isVolatileChanged {
+		newLastVerifiedAt = now
+	}
+
+	// 7. Execute update inside WithAuditTx
+	var updatedRow sqlcgen.UpdateCIRow
+	diffJSON, _ := json.Marshal(map[string]interface{}{
+		"old_values": oldValues,
+		"new_values": newValues,
+	})
+
+	err = s.store.WithAuditTx(ctx, actor, func(tx pgx.Tx, q *sqlcgen.Queries) error {
+		var uErr error
+		updatedRow, uErr = q.UpdateCI(ctx, sqlcgen.UpdateCIParams{
+			CiID:             ciID,
+			Name:             name,
+			CiClass:          ciClass,
+			Environment:      env,
+			LifecycleState:   lifecycleState,
+			CriticalityTier:  critTier,
+			OwnerGroupID:     ownerGroupID,
+			TechnicalContact: techContact,
+			PrimaryEndpoint:  primaryEndpoint,
+			LastVerifiedAt:   newLastVerifiedAt,
+			ItamExternalRef:  itamRef,
+			ClassMetadata:    metaJSON,
+			UpdatedAt:        newUpdatedAt,
+		})
+		if uErr != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(uErr, &pgErr) && pgErr.Code == "23505" {
+				return fmt.Errorf("%w: active CI with name '%s', class '%s', and environment '%s' already exists", domain.ErrConflict, name, ciClass, env)
+			}
+			return fmt.Errorf("failed to update CI: %w", uErr)
+		}
+
+		_, aErr := q.CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+			ID:                    uuid.New(),
+			EntityType:            "ci",
+			EntityID:              ciID,
+			AffectedOwnerGroupIds: affectedGroups,
+			ActorID:               actor.ID,
+			Action:                sqlcgen.AuditActionEnumUpdate,
+			Diff:                  diffJSON,
+			CreatedAt:             now,
+		})
+		if aErr != nil {
+			return fmt.Errorf("failed to write audit log: %w", aErr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	res := mapUpdateCIRowToEnvelope(updatedRow)
+	return &res, nil
+}
+
+// CreateCIFlag allows any authenticated user to report a data-quality flag on a CI.
+func (s *CIService) CreateCIFlag(ctx context.Context, actor domain.Actor, ciID uuid.UUID, req gen.CreateCIFlagRequest) (*gen.CIFlagResponse, error) {
+	trimmedReason := strings.TrimSpace(req.Reason)
+	if len(trimmedReason) < 5 {
+		return nil, &domain.ValidationError{
+			Message: "reason must be at least 5 characters",
+		}
+	}
+
+	// Verify CI exists
+	ci, err := s.store.Queries().GetCIByID(ctx, ciID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch CI: %w", err)
+	}
+
+	now := time.Now().UTC()
+	flagID := uuid.New()
+	var createdFlag sqlcgen.CiFlag
+
+	err = s.store.WithAuditTx(ctx, actor, func(tx pgx.Tx, q *sqlcgen.Queries) error {
+		var fErr error
+		createdFlag, fErr = q.CreateCIFlag(ctx, sqlcgen.CreateCIFlagParams{
+			ID:        flagID,
+			CiID:      ciID,
+			FlaggedBy: actor.ID,
+			Reason:    trimmedReason,
+			CreatedAt: now,
+		})
+		if fErr != nil {
+			return fmt.Errorf("failed to insert CI flag: %w", fErr)
+		}
+
+		diffData := map[string]interface{}{
+			"flag_id": flagID.String(),
+			"reason":  trimmedReason,
+		}
+		if req.FlagType != nil {
+			diffData["flag_type"] = *req.FlagType
+		}
+		diffJSON, _ := json.Marshal(diffData)
+
+		_, aErr := q.CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+			ID:                    uuid.New(),
+			EntityType:            "ci",
+			EntityID:              ciID,
+			AffectedOwnerGroupIds: []uuid.UUID{ci.OwnerGroupID},
+			ActorID:               actor.ID,
+			Action:                sqlcgen.AuditActionEnumFlag,
+			Diff:                  diffJSON,
+			CreatedAt:             now,
+		})
+		if aErr != nil {
+			return fmt.Errorf("failed to write audit log: %w", aErr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resAt *time.Time
+	if createdFlag.ResolvedAt.Valid {
+		resAt = &createdFlag.ResolvedAt.Time
+	}
+	var resBy *openapi_types.UUID
+	if createdFlag.ResolvedBy.Valid {
+		resBy = (*openapi_types.UUID)(&createdFlag.ResolvedBy.Bytes)
+	}
+
+	return &gen.CIFlagResponse{
+		Id:         createdFlag.ID,
+		CiId:       createdFlag.CiID,
+		FlaggedBy:  createdFlag.FlaggedBy,
+		Reason:     createdFlag.Reason,
+		Status:     gen.CIFlagResponseStatus(createdFlag.Status),
+		CreatedAt:  createdFlag.CreatedAt,
+		ResolvedAt: resAt,
+		ResolvedBy: resBy,
+	}, nil
+}
+
+func mapUpdateCIRowToEnvelope(u sqlcgen.UpdateCIRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if u.PrimaryEndpoint.Valid {
+		primaryEndpoint = &u.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if u.ItamExternalRef.Valid {
+		itamRef = &u.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(u.ClassMetadata) > 0 {
+		_ = json.Unmarshal(u.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &u.CiID,
+		Name:             u.Name,
+		CiClass:          gen.CIEnvelopeCiClass(u.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(u.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(u.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(u.CriticalityTier),
+		OwnerGroupId:     u.OwnerGroupID,
+		TechnicalContact: u.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &u.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &u.CreatedAt,
+		UpdatedAt:        &u.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     u.OwnerGroupID,
+			OwnerGroupName:   u.OwnerGroupName,
+			DepartmentName:   u.DepartmentName,
+			TechnicalContact: u.TechnicalContact,
+			TeamLeadName:     u.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(u.TeamLeadEmail),
+		},
+	}
+}
+
+
 // GetUpwardImpact performs cycle-safe upward impact traversal following target_ci_id -> source_ci_id dependencies.
 func (s *CIService) GetUpwardImpact(ctx context.Context, startCIID uuid.UUID, includeRetired bool) (*gen.UpwardImpactResponse, error) {
 	// 1. Verify Start CI exists
