@@ -13,6 +13,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createBaseline = `-- name: CreateBaseline :one
+INSERT INTO baselines (
+    id, campaign_id, owner_group_id, version_tag, snapshot, published_by, published_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+)
+RETURNING id, campaign_id, owner_group_id, version_tag, snapshot, published_by, published_at
+`
+
+type CreateBaselineParams struct {
+	ID           uuid.UUID   `json:"id"`
+	CampaignID   pgtype.UUID `json:"campaign_id"`
+	OwnerGroupID uuid.UUID   `json:"owner_group_id"`
+	VersionTag   string      `json:"version_tag"`
+	Snapshot     []byte      `json:"snapshot"`
+	PublishedBy  uuid.UUID   `json:"published_by"`
+	PublishedAt  time.Time   `json:"published_at"`
+}
+
+func (q *Queries) CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error) {
+	row := q.db.QueryRow(ctx, createBaseline,
+		arg.ID,
+		arg.CampaignID,
+		arg.OwnerGroupID,
+		arg.VersionTag,
+		arg.Snapshot,
+		arg.PublishedBy,
+		arg.PublishedAt,
+	)
+	var i Baseline
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.OwnerGroupID,
+		&i.VersionTag,
+		&i.Snapshot,
+		&i.PublishedBy,
+		&i.PublishedAt,
+	)
+	return i, err
+}
+
 const createIntakeCampaign = `-- name: CreateIntakeCampaign :one
 INSERT INTO intake_campaigns (
     id, title, status, deadline, created_by, created_at
@@ -140,6 +182,63 @@ func (q *Queries) CreateIntakeSubmission(ctx context.Context, arg CreateIntakeSu
 		&i.SubmittedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const finalizeIntakeInvitation = `-- name: FinalizeIntakeInvitation :exec
+UPDATE intake_invitations
+SET status = 'submitted'
+WHERE id = $1
+`
+
+func (q *Queries) FinalizeIntakeInvitation(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, finalizeIntakeInvitation, id)
+	return err
+}
+
+const finalizeIntakeSubmission = `-- name: FinalizeIntakeSubmission :exec
+UPDATE intake_submissions
+SET status = 'approved',
+    submitted_at = $2,
+    updated_at = $2
+WHERE id = $1
+`
+
+type FinalizeIntakeSubmissionParams struct {
+	ID          uuid.UUID          `json:"id"`
+	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+}
+
+func (q *Queries) FinalizeIntakeSubmission(ctx context.Context, arg FinalizeIntakeSubmissionParams) error {
+	_, err := q.db.Exec(ctx, finalizeIntakeSubmission, arg.ID, arg.SubmittedAt)
+	return err
+}
+
+const getBaselineByCampaignAndGroup = `-- name: GetBaselineByCampaignAndGroup :one
+SELECT id, campaign_id, owner_group_id, version_tag, snapshot, published_by, published_at
+FROM baselines
+WHERE campaign_id = $1 AND owner_group_id = $2
+ORDER BY published_at DESC
+LIMIT 1
+`
+
+type GetBaselineByCampaignAndGroupParams struct {
+	CampaignID   pgtype.UUID `json:"campaign_id"`
+	OwnerGroupID uuid.UUID   `json:"owner_group_id"`
+}
+
+func (q *Queries) GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error) {
+	row := q.db.QueryRow(ctx, getBaselineByCampaignAndGroup, arg.CampaignID, arg.OwnerGroupID)
+	var i Baseline
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.OwnerGroupID,
+		&i.VersionTag,
+		&i.Snapshot,
+		&i.PublishedBy,
+		&i.PublishedAt,
 	)
 	return i, err
 }
@@ -373,6 +472,68 @@ func (q *Queries) GetSubmissionByInvitationID(ctx context.Context, invitationID 
 		&i.SubmittedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSubmissionByTokenHashForUpdate = `-- name: GetSubmissionByTokenHashForUpdate :one
+SELECT
+    s.id AS submission_id,
+    s.invitation_id,
+    s.owner_group_id,
+    s.status AS submission_status,
+    s.payload AS submission_payload,
+    s.lock_version AS submission_lock_version,
+    i.campaign_id,
+    i.token_hash,
+    i.team_lead_email,
+    i.status AS invitation_status,
+    i.expires_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name
+FROM intake_submissions s
+JOIN intake_invitations i ON i.id = s.invitation_id
+JOIN owner_groups og ON og.id = s.owner_group_id
+WHERE i.token_hash = $1
+FOR UPDATE OF s
+`
+
+type GetSubmissionByTokenHashForUpdateRow struct {
+	SubmissionID          uuid.UUID            `json:"submission_id"`
+	InvitationID          uuid.UUID            `json:"invitation_id"`
+	OwnerGroupID          uuid.UUID            `json:"owner_group_id"`
+	SubmissionStatus      SubmissionStatusEnum `json:"submission_status"`
+	SubmissionPayload     []byte               `json:"submission_payload"`
+	SubmissionLockVersion int32                `json:"submission_lock_version"`
+	CampaignID            uuid.UUID            `json:"campaign_id"`
+	TokenHash             string               `json:"token_hash"`
+	TeamLeadEmail         string               `json:"team_lead_email"`
+	InvitationStatus      InvitationStatusEnum `json:"invitation_status"`
+	ExpiresAt             time.Time            `json:"expires_at"`
+	OwnerGroupName        string               `json:"owner_group_name"`
+	DepartmentName        string               `json:"department_name"`
+	TeamLeadName          string               `json:"team_lead_name"`
+}
+
+func (q *Queries) GetSubmissionByTokenHashForUpdate(ctx context.Context, tokenHash string) (GetSubmissionByTokenHashForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getSubmissionByTokenHashForUpdate, tokenHash)
+	var i GetSubmissionByTokenHashForUpdateRow
+	err := row.Scan(
+		&i.SubmissionID,
+		&i.InvitationID,
+		&i.OwnerGroupID,
+		&i.SubmissionStatus,
+		&i.SubmissionPayload,
+		&i.SubmissionLockVersion,
+		&i.CampaignID,
+		&i.TokenHash,
+		&i.TeamLeadEmail,
+		&i.InvitationStatus,
+		&i.ExpiresAt,
+		&i.OwnerGroupName,
+		&i.DepartmentName,
+		&i.TeamLeadName,
 	)
 	return i, err
 }

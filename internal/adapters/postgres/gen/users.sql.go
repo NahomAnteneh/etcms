@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAuditLog = `-- name: CreateAuditLog :one
@@ -59,6 +60,41 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 		&i.ActorID,
 		&i.Action,
 		&i.Diff,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const ensureTeamLeadUser = `-- name: EnsureTeamLeadUser :one
+INSERT INTO users (id, email, name, role, primary_owner_group_id, created_at)
+VALUES ($1, $2, $3, 'team_lead', $4, now())
+ON CONFLICT (email) DO UPDATE
+SET name = EXCLUDED.name,
+    primary_owner_group_id = COALESCE(users.primary_owner_group_id, EXCLUDED.primary_owner_group_id)
+RETURNING id, email, name, role, primary_owner_group_id, created_at
+`
+
+type EnsureTeamLeadUserParams struct {
+	ID                  uuid.UUID   `json:"id"`
+	Email               string      `json:"email"`
+	Name                string      `json:"name"`
+	PrimaryOwnerGroupID pgtype.UUID `json:"primary_owner_group_id"`
+}
+
+func (q *Queries) EnsureTeamLeadUser(ctx context.Context, arg EnsureTeamLeadUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, ensureTeamLeadUser,
+		arg.ID,
+		arg.Email,
+		arg.Name,
+		arg.PrimaryOwnerGroupID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.Role,
+		&i.PrimaryOwnerGroupID,
 		&i.CreatedAt,
 	)
 	return i, err

@@ -37,3 +37,11 @@ INSERT INTO audit_logs (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING id, entity_type, entity_id, affected_owner_group_ids, actor_id, action, diff, created_at;
+
+-- name: EnsureTeamLeadUser :one
+INSERT INTO users (id, email, name, role, primary_owner_group_id, created_at)
+VALUES ($1, $2, $3, 'team_lead', $4, now())
+ON CONFLICT (email) DO UPDATE
+SET name = EXCLUDED.name,
+    primary_owner_group_id = COALESCE(users.primary_owner_group_id, EXCLUDED.primary_owner_group_id)
+RETURNING id, email, name, role, primary_owner_group_id, created_at;

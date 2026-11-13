@@ -99,6 +99,78 @@ func (q *Queries) GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uui
 	return items, nil
 }
 
+const getCIByID = `-- name: GetCIByID :one
+SELECT
+    c.ci_id,
+    c.name,
+    c.ci_class,
+    c.environment,
+    c.lifecycle_state,
+    c.criticality_tier,
+    c.owner_group_id,
+    c.technical_contact,
+    c.primary_endpoint,
+    c.last_verified_at,
+    c.itam_external_ref,
+    c.class_metadata,
+    c.created_at,
+    c.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM cis c
+JOIN owner_groups og ON og.id = c.owner_group_id
+WHERE c.ci_id = $1
+`
+
+type GetCIByIDRow struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+	DepartmentName   string              `json:"department_name"`
+	TeamLeadName     string              `json:"team_lead_name"`
+	TeamLeadEmail    string              `json:"team_lead_email"`
+}
+
+func (q *Queries) GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error) {
+	row := q.db.QueryRow(ctx, getCIByID, ciID)
+	var i GetCIByIDRow
+	err := row.Scan(
+		&i.CiID,
+		&i.Name,
+		&i.CiClass,
+		&i.Environment,
+		&i.LifecycleState,
+		&i.CriticalityTier,
+		&i.OwnerGroupID,
+		&i.TechnicalContact,
+		&i.PrimaryEndpoint,
+		&i.LastVerifiedAt,
+		&i.ItamExternalRef,
+		&i.ClassMetadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerGroupName,
+		&i.DepartmentName,
+		&i.TeamLeadName,
+		&i.TeamLeadEmail,
+	)
+	return i, err
+}
+
 const searchCIs = `-- name: SearchCIs :many
 SELECT
     c.ci_id,
@@ -220,4 +292,155 @@ func (q *Queries) SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchC
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertCI = `-- name: UpsertCI :one
+INSERT INTO cis (
+    ci_id,
+    name,
+    ci_class,
+    environment,
+    lifecycle_state,
+    criticality_tier,
+    owner_group_id,
+    technical_contact,
+    primary_endpoint,
+    last_verified_at,
+    itam_external_ref,
+    class_metadata,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+)
+ON CONFLICT (lower(name), ci_class, environment) WHERE lifecycle_state != 'retired'
+DO UPDATE SET
+    criticality_tier = EXCLUDED.criticality_tier,
+    owner_group_id = EXCLUDED.owner_group_id,
+    technical_contact = EXCLUDED.technical_contact,
+    primary_endpoint = EXCLUDED.primary_endpoint,
+    class_metadata = EXCLUDED.class_metadata,
+    last_verified_at = EXCLUDED.last_verified_at,
+    updated_at = EXCLUDED.updated_at
+RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, itam_external_ref, class_metadata, created_at, updated_at
+`
+
+type UpsertCIParams struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+}
+
+func (q *Queries) UpsertCI(ctx context.Context, arg UpsertCIParams) (Ci, error) {
+	row := q.db.QueryRow(ctx, upsertCI,
+		arg.CiID,
+		arg.Name,
+		arg.CiClass,
+		arg.Environment,
+		arg.LifecycleState,
+		arg.CriticalityTier,
+		arg.OwnerGroupID,
+		arg.TechnicalContact,
+		arg.PrimaryEndpoint,
+		arg.LastVerifiedAt,
+		arg.ItamExternalRef,
+		arg.ClassMetadata,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Ci
+	err := row.Scan(
+		&i.CiID,
+		&i.Name,
+		&i.CiClass,
+		&i.Environment,
+		&i.LifecycleState,
+		&i.CriticalityTier,
+		&i.OwnerGroupID,
+		&i.TechnicalContact,
+		&i.PrimaryEndpoint,
+		&i.LastVerifiedAt,
+		&i.ItamExternalRef,
+		&i.ClassMetadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertEdge = `-- name: UpsertEdge :one
+INSERT INTO ci_edges (
+    id,
+    source_ci_id,
+    target_ci_id,
+    edge_type,
+    handshake_status,
+    created_by,
+    confirmed_by,
+    confirmed_at,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+)
+ON CONFLICT (source_ci_id, target_ci_id, edge_type)
+DO UPDATE SET
+    handshake_status = EXCLUDED.handshake_status,
+    confirmed_by = EXCLUDED.confirmed_by,
+    confirmed_at = EXCLUDED.confirmed_at,
+    updated_at = EXCLUDED.updated_at
+RETURNING id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at
+`
+
+type UpsertEdgeParams struct {
+	ID              uuid.UUID           `json:"id"`
+	SourceCiID      uuid.UUID           `json:"source_ci_id"`
+	TargetCiID      uuid.UUID           `json:"target_ci_id"`
+	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
+	CreatedBy       uuid.UUID           `json:"created_by"`
+	ConfirmedBy     pgtype.UUID         `json:"confirmed_by"`
+	ConfirmedAt     pgtype.Timestamptz  `json:"confirmed_at"`
+	CreatedAt       time.Time           `json:"created_at"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+}
+
+func (q *Queries) UpsertEdge(ctx context.Context, arg UpsertEdgeParams) (CiEdge, error) {
+	row := q.db.QueryRow(ctx, upsertEdge,
+		arg.ID,
+		arg.SourceCiID,
+		arg.TargetCiID,
+		arg.EdgeType,
+		arg.HandshakeStatus,
+		arg.CreatedBy,
+		arg.ConfirmedBy,
+		arg.ConfirmedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i CiEdge
+	err := row.Scan(
+		&i.ID,
+		&i.SourceCiID,
+		&i.TargetCiID,
+		&i.EdgeType,
+		&i.HandshakeStatus,
+		&i.CreatedBy,
+		&i.ConfirmedBy,
+		&i.ConfirmedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

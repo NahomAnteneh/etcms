@@ -120,6 +120,20 @@ const (
 	SearchCIsParamsEnvironmentStaging SearchCIsParamsEnvironment = "staging"
 )
 
+// BaselineResponse defines model for BaselineResponse.
+type BaselineResponse struct {
+	BaselineId       openapi_types.UUID      `json:"baseline_id"`
+	CampaignId       openapi_types.UUID      `json:"campaign_id"`
+	CiCount          int                     `json:"ci_count"`
+	EdgeCount        int                     `json:"edge_count"`
+	OwnerGroupId     openapi_types.UUID      `json:"owner_group_id"`
+	PendingEdgeCount int                     `json:"pending_edge_count"`
+	PublishedAt      time.Time               `json:"published_at"`
+	PublishedBy      openapi_types.UUID      `json:"published_by"`
+	Snapshot         *map[string]interface{} `json:"snapshot,omitempty"`
+	VersionTag       string                  `json:"version_tag"`
+}
+
 // CIEnvelope defines model for CIEnvelope.
 type CIEnvelope struct {
 	CiClass          CIEnvelopeCiClass         `json:"ci_class"`
@@ -314,6 +328,11 @@ type SaveDraftResponse struct {
 	UpdatedAt    time.Time              `json:"updated_at"`
 }
 
+// SubmitIntakeRequest defines model for SubmitIntakeRequest.
+type SubmitIntakeRequest struct {
+	Payload *map[string]interface{} `json:"payload,omitempty"`
+}
+
 // User defines model for User.
 type User struct {
 	CreatedAt           time.Time            `json:"created_at"`
@@ -351,11 +370,20 @@ type SaveIntakeDraftParams struct {
 	IfMatch string `json:"If-Match"`
 }
 
+// SubmitIntakeParams defines parameters for SubmitIntake.
+type SubmitIntakeParams struct {
+	// IdempotencyKey Optional idempotency key for safe retries
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
 // CreateIntakeCampaignJSONRequestBody defines body for CreateIntakeCampaign for application/json ContentType.
 type CreateIntakeCampaignJSONRequestBody = CreateCampaignRequest
 
 // SaveIntakeDraftJSONRequestBody defines body for SaveIntakeDraft for application/json ContentType.
 type SaveIntakeDraftJSONRequestBody = SaveDraftRequest
+
+// SubmitIntakeJSONRequestBody defines body for SubmitIntake for application/json ContentType.
+type SubmitIntakeJSONRequestBody = SubmitIntakeRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -377,6 +405,9 @@ type ServerInterface interface {
 	// Auto-save intake draft
 	// (PATCH /api/v1/intake/{token})
 	SaveIntakeDraft(w http.ResponseWriter, r *http.Request, token string, params SaveIntakeDraftParams)
+	// Submit intake and publish baseline
+	// (POST /api/v1/intake/{token}/submit)
+	SubmitIntake(w http.ResponseWriter, r *http.Request, token string, params SubmitIntakeParams)
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(w http.ResponseWriter, r *http.Request)
@@ -425,6 +456,12 @@ func (_ Unimplemented) GetIntakeInvitation(w http.ResponseWriter, r *http.Reques
 // Auto-save intake draft
 // (PATCH /api/v1/intake/{token})
 func (_ Unimplemented) SaveIntakeDraft(w http.ResponseWriter, r *http.Request, token string, params SaveIntakeDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Submit intake and publish baseline
+// (POST /api/v1/intake/{token}/submit)
+func (_ Unimplemented) SubmitIntake(w http.ResponseWriter, r *http.Request, token string, params SubmitIntakeParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -679,6 +716,55 @@ func (siw *ServerInterfaceWrapper) SaveIntakeDraft(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SubmitIntake operation middleware
+func (siw *ServerInterfaceWrapper) SubmitIntake(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubmitIntakeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitIntake(w, r, token, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOwnerGroups operation middleware
 func (siw *ServerInterfaceWrapper) ListOwnerGroups(w http.ResponseWriter, r *http.Request) {
 
@@ -867,6 +953,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/api/v1/intake/{token}", wrapper.SaveIntakeDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/intake/{token}/submit", wrapper.SubmitIntake)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups", wrapper.ListOwnerGroups)
@@ -1153,6 +1242,79 @@ func (response SaveIntakeDraft422ApplicationProblemPlusJSONResponse) VisitSaveIn
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SubmitIntakeRequestObject struct {
+	Token  string `json:"token"`
+	Params SubmitIntakeParams
+	Body   *SubmitIntakeJSONRequestBody
+}
+
+type SubmitIntakeResponseObject interface {
+	VisitSubmitIntakeResponse(w http.ResponseWriter) error
+}
+
+type SubmitIntake200JSONResponse BaselineResponse
+
+func (response SubmitIntake200JSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitIntake201JSONResponse BaselineResponse
+
+func (response SubmitIntake201JSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitIntake400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SubmitIntake400ApplicationProblemPlusJSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitIntake401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SubmitIntake401ApplicationProblemPlusJSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitIntake404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SubmitIntake404ApplicationProblemPlusJSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitIntake409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SubmitIntake409ApplicationProblemPlusJSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitIntake422ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SubmitIntake422ApplicationProblemPlusJSONResponse) VisitSubmitIntakeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListOwnerGroupsRequestObject struct {
 }
 
@@ -1248,6 +1410,9 @@ type StrictServerInterface interface {
 	// Auto-save intake draft
 	// (PATCH /api/v1/intake/{token})
 	SaveIntakeDraft(ctx context.Context, request SaveIntakeDraftRequestObject) (SaveIntakeDraftResponseObject, error)
+	// Submit intake and publish baseline
+	// (POST /api/v1/intake/{token}/submit)
+	SubmitIntake(ctx context.Context, request SubmitIntakeRequestObject) (SubmitIntakeResponseObject, error)
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(ctx context.Context, request ListOwnerGroupsRequestObject) (ListOwnerGroupsResponseObject, error)
@@ -1448,6 +1613,40 @@ func (sh *strictHandler) SaveIntakeDraft(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SaveIntakeDraftResponseObject); ok {
 		if err := validResponse.VisitSaveIntakeDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitIntake operation middleware
+func (sh *strictHandler) SubmitIntake(w http.ResponseWriter, r *http.Request, token string, params SubmitIntakeParams) {
+	var request SubmitIntakeRequestObject
+
+	request.Token = token
+	request.Params = params
+
+	var body SubmitIntakeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitIntake(ctx, request.(SubmitIntakeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitIntake")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitIntakeResponseObject); ok {
+		if err := validResponse.VisitSubmitIntakeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

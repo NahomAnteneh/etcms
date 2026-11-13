@@ -12,16 +12,23 @@ import (
 
 type Querier interface {
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
+	CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error)
 	CreateIntakeCampaign(ctx context.Context, arg CreateIntakeCampaignParams) (IntakeCampaign, error)
 	CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (IntakeInvitation, error)
 	CreateIntakeSubmission(ctx context.Context, arg CreateIntakeSubmissionParams) (IntakeSubmission, error)
+	EnsureTeamLeadUser(ctx context.Context, arg EnsureTeamLeadUserParams) (User, error)
+	FinalizeIntakeInvitation(ctx context.Context, id uuid.UUID) error
+	FinalizeIntakeSubmission(ctx context.Context, arg FinalizeIntakeSubmissionParams) error
 	GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]GetActiveCIsByOwnerGroupRow, error)
+	GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error)
+	GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error)
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (IntakeCampaign, error)
 	GetCampaignDepartmentProgress(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignDepartmentProgressRow, error)
 	GetCampaignInvitationsWithGroup(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignInvitationsWithGroupRow, error)
 	GetInvitationByTokenHash(ctx context.Context, tokenHash string) (GetInvitationByTokenHashRow, error)
 	GetOwnerGroupByID(ctx context.Context, id uuid.UUID) (OwnerGroup, error)
 	GetSubmissionByInvitationID(ctx context.Context, invitationID uuid.UUID) (IntakeSubmission, error)
+	GetSubmissionByTokenHashForUpdate(ctx context.Context, tokenHash string) (GetSubmissionByTokenHashForUpdateRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserOwnerGroupIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
@@ -29,6 +36,8 @@ type Querier interface {
 	SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchCIsRow, error)
 	UpdateIntakeDraft(ctx context.Context, arg UpdateIntakeDraftParams) (IntakeSubmission, error)
 	UpdateInvitationAccess(ctx context.Context, arg UpdateInvitationAccessParams) error
+	UpsertCI(ctx context.Context, arg UpsertCIParams) (Ci, error)
+	UpsertEdge(ctx context.Context, arg UpsertEdgeParams) (CiEdge, error)
 }
 
 var _ Querier = (*Queries)(nil)

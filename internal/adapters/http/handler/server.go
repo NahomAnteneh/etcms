@@ -314,3 +314,63 @@ func (s *Server) SearchCIs(ctx context.Context, request gen.SearchCIsRequestObje
 
 	return gen.SearchCIs200JSONResponse(*resp), nil
 }
+
+// SubmitIntake submits an intake draft and atomically publishes an approved baseline.
+func (s *Server) SubmitIntake(ctx context.Context, request gen.SubmitIntakeRequestObject) (gen.SubmitIntakeResponseObject, error) {
+	idempotencyKey := ""
+	if request.Params.IdempotencyKey != nil {
+		idempotencyKey = *request.Params.IdempotencyKey
+	}
+
+	var explicitPayload *map[string]interface{}
+	if request.Body != nil && request.Body.Payload != nil {
+		explicitPayload = request.Body.Payload
+	}
+
+	resp, isExisting, err := s.intakeService.SubmitIntake(ctx, request.Token, idempotencyKey, explicitPayload)
+	if err != nil {
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) {
+			return gen.SubmitIntake422ApplicationProblemPlusJSONResponse{
+				Title:      "Unprocessable Entity",
+				Status:     422,
+				Detail:     valErr.Message,
+				NodeErrors: &valErr.NodeErrors,
+			}, nil
+		}
+		if errors.Is(err, domain.ErrUnapprovedITAMField) {
+			return gen.SubmitIntake422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, service.ErrTokenNotFound) {
+			return gen.SubmitIntake404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Intake invitation token not found",
+			}, nil
+		}
+		if errors.Is(err, service.ErrTokenExpired) {
+			return gen.SubmitIntake401ApplicationProblemPlusJSONResponse{
+				Title:  "Unauthorized",
+				Status: 401,
+				Detail: "Intake invitation token has expired",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.SubmitIntake409ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 409,
+				Detail: "Intake submission has already been approved or published",
+			}, nil
+		}
+		return nil, err
+	}
+
+	if isExisting {
+		return gen.SubmitIntake200JSONResponse(*resp), nil
+	}
+	return gen.SubmitIntake201JSONResponse(*resp), nil
+}

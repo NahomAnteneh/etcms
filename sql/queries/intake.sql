@@ -105,3 +105,52 @@ RETURNING id, invitation_id, owner_group_id, status, payload, lock_version, subm
 SELECT id, invitation_id, owner_group_id, status, payload, lock_version, submitted_at, created_at, updated_at
 FROM intake_submissions
 WHERE invitation_id = $1;
+
+-- name: GetSubmissionByTokenHashForUpdate :one
+SELECT
+    s.id AS submission_id,
+    s.invitation_id,
+    s.owner_group_id,
+    s.status AS submission_status,
+    s.payload AS submission_payload,
+    s.lock_version AS submission_lock_version,
+    i.campaign_id,
+    i.token_hash,
+    i.team_lead_email,
+    i.status AS invitation_status,
+    i.expires_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name
+FROM intake_submissions s
+JOIN intake_invitations i ON i.id = s.invitation_id
+JOIN owner_groups og ON og.id = s.owner_group_id
+WHERE i.token_hash = $1
+FOR UPDATE OF s;
+
+-- name: FinalizeIntakeSubmission :exec
+UPDATE intake_submissions
+SET status = 'approved',
+    submitted_at = $2,
+    updated_at = $2
+WHERE id = $1;
+
+-- name: FinalizeIntakeInvitation :exec
+UPDATE intake_invitations
+SET status = 'submitted'
+WHERE id = $1;
+
+-- name: CreateBaseline :one
+INSERT INTO baselines (
+    id, campaign_id, owner_group_id, version_tag, snapshot, published_by, published_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+)
+RETURNING id, campaign_id, owner_group_id, version_tag, snapshot, published_by, published_at;
+
+-- name: GetBaselineByCampaignAndGroup :one
+SELECT id, campaign_id, owner_group_id, version_tag, snapshot, published_by, published_at
+FROM baselines
+WHERE campaign_id = $1 AND owner_group_id = $2
+ORDER BY published_at DESC
+LIMIT 1;

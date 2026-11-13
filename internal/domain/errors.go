@@ -11,3 +11,13 @@ var (
 	ErrSubmissionNotDraft  = errors.New("intake submission is not in draft status")
 	ErrInvalidIfMatch      = errors.New("invalid If-Match header")
 )
+
+// ValidationError represents semantic or business rule validation errors with node-level details.
+type ValidationError struct {
+	Message    string
+	NodeErrors map[string][]string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
