@@ -89,10 +89,10 @@ const (
 
 // Defines values for CreateCIRequestCriticalityTier.
 const (
-	Tier0 CreateCIRequestCriticalityTier = "tier_0"
-	Tier1 CreateCIRequestCriticalityTier = "tier_1"
-	Tier2 CreateCIRequestCriticalityTier = "tier_2"
-	Tier3 CreateCIRequestCriticalityTier = "tier_3"
+	CreateCIRequestCriticalityTierTier0 CreateCIRequestCriticalityTier = "tier_0"
+	CreateCIRequestCriticalityTierTier1 CreateCIRequestCriticalityTier = "tier_1"
+	CreateCIRequestCriticalityTierTier2 CreateCIRequestCriticalityTier = "tier_2"
+	CreateCIRequestCriticalityTierTier3 CreateCIRequestCriticalityTier = "tier_3"
 )
 
 // Defines values for CreateCIRequestEnvironment.
@@ -143,6 +143,22 @@ const (
 	EdgeResponseHandshakeStatusRejected            EdgeResponseHandshakeStatus = "rejected"
 )
 
+// Defines values for GraphEdgeEdgeType.
+const (
+	GraphEdgeEdgeTypeConnectsTo GraphEdgeEdgeType = "connects_to"
+	GraphEdgeEdgeTypeDependsOn  GraphEdgeEdgeType = "depends_on"
+	GraphEdgeEdgeTypeHostedOn   GraphEdgeEdgeType = "hosted_on"
+	GraphEdgeEdgeTypeReadsFrom  GraphEdgeEdgeType = "reads_from"
+)
+
+// Defines values for GraphEdgeHandshakeStatus.
+const (
+	GraphEdgeHandshakeStatusConfirmed           GraphEdgeHandshakeStatus = "confirmed"
+	GraphEdgeHandshakeStatusFlaggedMismatch     GraphEdgeHandshakeStatus = "flagged_mismatch"
+	GraphEdgeHandshakeStatusPendingConfirmation GraphEdgeHandshakeStatus = "pending_confirmation"
+	GraphEdgeHandshakeStatusRejected            GraphEdgeHandshakeStatus = "rejected"
+)
+
 // Defines values for HealthResponseStatus.
 const (
 	Degraded HealthResponseStatus = "degraded"
@@ -160,18 +176,18 @@ const (
 
 // Defines values for PendingEdgeEdgeType.
 const (
-	ConnectsTo PendingEdgeEdgeType = "connects_to"
-	DependsOn  PendingEdgeEdgeType = "depends_on"
-	HostedOn   PendingEdgeEdgeType = "hosted_on"
-	ReadsFrom  PendingEdgeEdgeType = "reads_from"
+	PendingEdgeEdgeTypeConnectsTo PendingEdgeEdgeType = "connects_to"
+	PendingEdgeEdgeTypeDependsOn  PendingEdgeEdgeType = "depends_on"
+	PendingEdgeEdgeTypeHostedOn   PendingEdgeEdgeType = "hosted_on"
+	PendingEdgeEdgeTypeReadsFrom  PendingEdgeEdgeType = "reads_from"
 )
 
 // Defines values for PendingEdgeHandshakeStatus.
 const (
-	PendingEdgeHandshakeStatusConfirmed           PendingEdgeHandshakeStatus = "confirmed"
-	PendingEdgeHandshakeStatusFlaggedMismatch     PendingEdgeHandshakeStatus = "flagged_mismatch"
-	PendingEdgeHandshakeStatusPendingConfirmation PendingEdgeHandshakeStatus = "pending_confirmation"
-	PendingEdgeHandshakeStatusRejected            PendingEdgeHandshakeStatus = "rejected"
+	Confirmed           PendingEdgeHandshakeStatus = "confirmed"
+	FlaggedMismatch     PendingEdgeHandshakeStatus = "flagged_mismatch"
+	PendingConfirmation PendingEdgeHandshakeStatus = "pending_confirmation"
+	Rejected            PendingEdgeHandshakeStatus = "rejected"
 )
 
 // Defines values for ReadyResponseDatabase.
@@ -184,6 +200,14 @@ const (
 const (
 	NotReady ReadyResponseStatus = "not_ready"
 	Ready    ReadyResponseStatus = "ready"
+)
+
+// Defines values for UpwardImpactResponseHighestCriticalityTier.
+const (
+	UpwardImpactResponseHighestCriticalityTierTier0 UpwardImpactResponseHighestCriticalityTier = "tier_0"
+	UpwardImpactResponseHighestCriticalityTierTier1 UpwardImpactResponseHighestCriticalityTier = "tier_1"
+	UpwardImpactResponseHighestCriticalityTierTier2 UpwardImpactResponseHighestCriticalityTier = "tier_2"
+	UpwardImpactResponseHighestCriticalityTierTier3 UpwardImpactResponseHighestCriticalityTier = "tier_3"
 )
 
 // Defines values for UserRole.
@@ -436,6 +460,21 @@ type FlagMismatchRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// GraphEdge defines model for GraphEdge.
+type GraphEdge struct {
+	EdgeType        GraphEdgeEdgeType        `json:"edge_type"`
+	HandshakeStatus GraphEdgeHandshakeStatus `json:"handshake_status"`
+	Id              openapi_types.UUID       `json:"id"`
+	SourceCiId      openapi_types.UUID       `json:"source_ci_id"`
+	TargetCiId      openapi_types.UUID       `json:"target_ci_id"`
+}
+
+// GraphEdgeEdgeType defines model for GraphEdge.EdgeType.
+type GraphEdgeEdgeType string
+
+// GraphEdgeHandshakeStatus defines model for GraphEdge.HandshakeStatus.
+type GraphEdgeHandshakeStatus string
+
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status    HealthResponseStatus `json:"status"`
@@ -561,6 +600,20 @@ type SubmitIntakeRequest struct {
 	Payload *map[string]interface{} `json:"payload,omitempty"`
 }
 
+// UpwardImpactResponse defines model for UpwardImpactResponse.
+type UpwardImpactResponse struct {
+	CiId                      openapi_types.UUID                          `json:"ci_id"`
+	Edges                     []GraphEdge                                 `json:"edges"`
+	HighestCriticalityTier    *UpwardImpactResponseHighestCriticalityTier `json:"highest_criticality_tier"`
+	ImpactedApplications      []CIEnvelope                                `json:"impacted_applications"`
+	ImpactedBusinessServices  []CIEnvelope                                `json:"impacted_business_services"`
+	Nodes                     *[]CIEnvelope                               `json:"nodes,omitempty"`
+	SharedSiblingDependencies []CIEnvelope                                `json:"shared_sibling_dependencies"`
+}
+
+// UpwardImpactResponseHighestCriticalityTier defines model for UpwardImpactResponse.HighestCriticalityTier.
+type UpwardImpactResponseHighestCriticalityTier string
+
 // User defines model for User.
 type User struct {
 	CreatedAt           time.Time            `json:"created_at"`
@@ -591,6 +644,11 @@ type SearchCIsParamsCiClass string
 
 // SearchCIsParamsEnvironment defines parameters for SearchCIs.
 type SearchCIsParamsEnvironment string
+
+// GetUpwardImpactParams defines parameters for GetUpwardImpact.
+type GetUpwardImpactParams struct {
+	IncludeRetired *bool `form:"include_retired,omitempty" json:"include_retired,omitempty"`
+}
 
 // SaveIntakeDraftParams defines parameters for SaveIntakeDraft.
 type SaveIntakeDraftParams struct {
@@ -648,6 +706,9 @@ type ServerInterface interface {
 	// Get configuration item detail with graph summary and verification status
 	// (GET /api/v1/cis/{id})
 	GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Traverse upward impact graph for a configuration item
+	// (GET /api/v1/cis/{id}/impact-upward)
+	GetUpwardImpact(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUpwardImpactParams)
 	// Create a single edge dependency post-baseline
 	// (POST /api/v1/edges)
 	CreateEdge(w http.ResponseWriter, r *http.Request)
@@ -720,6 +781,12 @@ func (_ Unimplemented) SearchCIs(w http.ResponseWriter, r *http.Request, params 
 // Get configuration item detail with graph summary and verification status
 // (GET /api/v1/cis/{id})
 func (_ Unimplemented) GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Traverse upward impact graph for a configuration item
+// (GET /api/v1/cis/{id}/impact-upward)
+func (_ Unimplemented) GetUpwardImpact(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUpwardImpactParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -988,6 +1055,50 @@ func (siw *ServerInterfaceWrapper) GetCIDetail(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCIDetail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUpwardImpact operation middleware
+func (siw *ServerInterfaceWrapper) GetUpwardImpact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetUpwardImpactParams
+
+	// ------------- Optional query parameter "include_retired" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "include_retired", r.URL.Query(), &params.IncludeRetired)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_retired", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUpwardImpact(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1514,6 +1625,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/cis/{id}", wrapper.GetCIDetail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cis/{id}/impact-upward", wrapper.GetUpwardImpact)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/edges", wrapper.CreateEdge)
 	})
 	r.Group(func(r chi.Router) {
@@ -1797,6 +1911,51 @@ func (response GetCIDetail401ApplicationProblemPlusJSONResponse) VisitGetCIDetai
 type GetCIDetail404ApplicationProblemPlusJSONResponse ProblemDetails
 
 func (response GetCIDetail404ApplicationProblemPlusJSONResponse) VisitGetCIDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetUpwardImpactRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params GetUpwardImpactParams
+}
+
+type GetUpwardImpactResponseObject interface {
+	VisitGetUpwardImpactResponse(w http.ResponseWriter) error
+}
+
+type GetUpwardImpact200JSONResponse UpwardImpactResponse
+
+func (response GetUpwardImpact200JSONResponse) VisitGetUpwardImpactResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetUpwardImpact400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetUpwardImpact400ApplicationProblemPlusJSONResponse) VisitGetUpwardImpactResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetUpwardImpact401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetUpwardImpact401ApplicationProblemPlusJSONResponse) VisitGetUpwardImpactResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetUpwardImpact404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetUpwardImpact404ApplicationProblemPlusJSONResponse) VisitGetUpwardImpactResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
 
@@ -2418,6 +2577,9 @@ type StrictServerInterface interface {
 	// Get configuration item detail with graph summary and verification status
 	// (GET /api/v1/cis/{id})
 	GetCIDetail(ctx context.Context, request GetCIDetailRequestObject) (GetCIDetailResponseObject, error)
+	// Traverse upward impact graph for a configuration item
+	// (GET /api/v1/cis/{id}/impact-upward)
+	GetUpwardImpact(ctx context.Context, request GetUpwardImpactRequestObject) (GetUpwardImpactResponseObject, error)
 	// Create a single edge dependency post-baseline
 	// (POST /api/v1/edges)
 	CreateEdge(ctx context.Context, request CreateEdgeRequestObject) (CreateEdgeResponseObject, error)
@@ -2621,6 +2783,33 @@ func (sh *strictHandler) GetCIDetail(w http.ResponseWriter, r *http.Request, id 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetCIDetailResponseObject); ok {
 		if err := validResponse.VisitGetCIDetailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUpwardImpact operation middleware
+func (sh *strictHandler) GetUpwardImpact(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUpwardImpactParams) {
+	var request GetUpwardImpactRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUpwardImpact(ctx, request.(GetUpwardImpactRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUpwardImpact")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUpwardImpactResponseObject); ok {
+		if err := validResponse.VisitGetUpwardImpactResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

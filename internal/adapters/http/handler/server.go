@@ -737,3 +737,41 @@ func (s *Server) GetCIDetail(ctx context.Context, request gen.GetCIDetailRequest
 
 	return gen.GetCIDetail200JSONResponse(*detail), nil
 }
+
+// GetUpwardImpact traverses upward impact graph for a configuration item.
+func (s *Server) GetUpwardImpact(ctx context.Context, request gen.GetUpwardImpactRequestObject) (gen.GetUpwardImpactResponseObject, error) {
+	_, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.GetUpwardImpact401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	includeRetired := false
+	if request.Params.IncludeRetired != nil {
+		includeRetired = *request.Params.IncludeRetired
+	}
+
+	resp, err := s.ciService.GetUpwardImpact(ctx, request.Id, includeRetired)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.GetUpwardImpact404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.GetUpwardImpact400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, err
+	}
+
+	return gen.GetUpwardImpact200JSONResponse(*resp), nil
+}

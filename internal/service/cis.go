@@ -408,3 +408,199 @@ func (s *CIService) CreateCI(ctx context.Context, actor domain.Actor, req gen.Cr
 		},
 	}, nil
 }
+
+// GetUpwardImpact performs cycle-safe upward impact traversal following target_ci_id -> source_ci_id dependencies.
+func (s *CIService) GetUpwardImpact(ctx context.Context, startCIID uuid.UUID, includeRetired bool) (*gen.UpwardImpactResponse, error) {
+	// 1. Verify Start CI exists
+	_, err := s.store.Queries().GetCIByID(ctx, startCIID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch starting CI: %w", err)
+	}
+
+	// 2. Fetch reachable upstream nodes
+	nodes, err := s.store.Queries().GetUpwardImpactNodes(ctx, sqlcgen.GetUpwardImpactNodesParams{
+		StartCiID:      startCIID,
+		IncludeRetired: includeRetired,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query upward impact nodes: %w", err)
+	}
+
+	// 3. Fetch connecting subgraph edges
+	edges, err := s.store.Queries().GetUpwardImpactEdges(ctx, sqlcgen.GetUpwardImpactEdgesParams{
+		StartCiID:      startCIID,
+		IncludeRetired: includeRetired,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query upward impact edges: %w", err)
+	}
+
+	// 4. Fetch sibling infrastructure dependencies for reachable applications
+	siblings, err := s.store.Queries().GetSiblingDependencies(ctx, sqlcgen.GetSiblingDependenciesParams{
+		StartCiID:      startCIID,
+		IncludeRetired: includeRetired,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query sibling dependencies: %w", err)
+	}
+
+	// 5. Partition nodes and compute highest criticality tier
+	impactedApps := make([]gen.CIEnvelope, 0)
+	impactedServices := make([]gen.CIEnvelope, 0)
+	allEnvelopes := make([]gen.CIEnvelope, 0, len(nodes))
+
+	var highestTier *gen.UpwardImpactResponseHighestCriticalityTier
+	bestRank := 99
+	bestTierStr := ""
+
+	for _, n := range nodes {
+		env := mapUpwardNodeToEnvelope(n)
+		allEnvelopes = append(allEnvelopes, env)
+
+		switch n.CiClass {
+		case sqlcgen.CiClassEnumApplication:
+			impactedApps = append(impactedApps, env)
+		case sqlcgen.CiClassEnumBusinessService:
+			impactedServices = append(impactedServices, env)
+		case sqlcgen.CiClassEnumDatabase, sqlcgen.CiClassEnumVmCluster, sqlcgen.CiClassEnumPhysicalHost, sqlcgen.CiClassEnumNetworkFirewall:
+			// Non-application / non-business-service classes
+		}
+
+		rank := criticalityRank(n.CriticalityTier)
+		if rank < bestRank {
+			bestRank = rank
+			bestTierStr = string(n.CriticalityTier)
+		}
+	}
+
+	if bestTierStr != "" {
+		t := gen.UpwardImpactResponseHighestCriticalityTier(bestTierStr)
+		highestTier = &t
+	}
+
+	// 6. Map sibling dependencies
+	siblingEnvelopes := make([]gen.CIEnvelope, 0, len(siblings))
+	for _, sib := range siblings {
+		siblingEnvelopes = append(siblingEnvelopes, mapSiblingToEnvelope(sib))
+	}
+
+	// 7. Map edges
+	graphEdges := make([]gen.GraphEdge, 0, len(edges))
+	for _, e := range edges {
+		graphEdges = append(graphEdges, gen.GraphEdge{
+			Id:              e.ID,
+			SourceCiId:      e.SourceCiID,
+			TargetCiId:      e.TargetCiID,
+			EdgeType:        gen.GraphEdgeEdgeType(e.EdgeType),
+			HandshakeStatus: gen.GraphEdgeHandshakeStatus(e.HandshakeStatus),
+		})
+	}
+
+	return &gen.UpwardImpactResponse{
+		CiId:                      startCIID,
+		HighestCriticalityTier:    highestTier,
+		ImpactedApplications:      impactedApps,
+		ImpactedBusinessServices:  impactedServices,
+		SharedSiblingDependencies: siblingEnvelopes,
+		Nodes:                     &allEnvelopes,
+		Edges:                     graphEdges,
+	}, nil
+}
+
+func criticalityRank(tier sqlcgen.CriticalityTierEnum) int {
+	switch tier {
+	case sqlcgen.CriticalityTierEnumTier0:
+		return 0
+	case sqlcgen.CriticalityTierEnumTier1:
+		return 1
+	case sqlcgen.CriticalityTierEnumTier2:
+		return 2
+	case sqlcgen.CriticalityTierEnumTier3:
+		return 3
+	default:
+		return 4
+	}
+}
+
+func mapUpwardNodeToEnvelope(n sqlcgen.GetUpwardImpactNodesRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if n.PrimaryEndpoint.Valid {
+		primaryEndpoint = &n.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if n.ItamExternalRef.Valid {
+		itamRef = &n.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(n.ClassMetadata) > 0 {
+		_ = json.Unmarshal(n.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &n.CiID,
+		Name:             n.Name,
+		CiClass:          gen.CIEnvelopeCiClass(n.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(n.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(n.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(n.CriticalityTier),
+		OwnerGroupId:     n.OwnerGroupID,
+		TechnicalContact: n.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &n.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &n.CreatedAt,
+		UpdatedAt:        &n.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     n.OwnerGroupID,
+			OwnerGroupName:   n.OwnerGroupName,
+			DepartmentName:   n.DepartmentName,
+			TechnicalContact: n.TechnicalContact,
+			TeamLeadName:     n.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(n.TeamLeadEmail),
+		},
+	}
+}
+
+func mapSiblingToEnvelope(s sqlcgen.GetSiblingDependenciesRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if s.PrimaryEndpoint.Valid {
+		primaryEndpoint = &s.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if s.ItamExternalRef.Valid {
+		itamRef = &s.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(s.ClassMetadata) > 0 {
+		_ = json.Unmarshal(s.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &s.CiID,
+		Name:             s.Name,
+		CiClass:          gen.CIEnvelopeCiClass(s.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(s.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(s.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(s.CriticalityTier),
+		OwnerGroupId:     s.OwnerGroupID,
+		TechnicalContact: s.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &s.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &s.CreatedAt,
+		UpdatedAt:        &s.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     s.OwnerGroupID,
+			OwnerGroupName:   s.OwnerGroupName,
+			DepartmentName:   s.DepartmentName,
+			TechnicalContact: s.TechnicalContact,
+			TeamLeadName:     s.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(s.TeamLeadEmail),
+		},
+	}
+}
