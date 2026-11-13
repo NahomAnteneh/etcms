@@ -11,20 +11,24 @@ import (
 )
 
 type Querier interface {
+	ClosePreviousOpenCycles(ctx context.Context, arg ClosePreviousOpenCyclesParams) ([]uuid.UUID, error)
 	CountSearchCIs(ctx context.Context, arg CountSearchCIsParams) (int32, error)
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error)
 	CreateCI(ctx context.Context, arg CreateCIParams) (Ci, error)
 	CreateCIFlag(ctx context.Context, arg CreateCIFlagParams) (CiFlag, error)
+	CreateDigestCycle(ctx context.Context, arg CreateDigestCycleParams) (DigestCycle, error)
 	CreateEdge(ctx context.Context, arg CreateEdgeParams) (CiEdge, error)
 	CreateIntakeCampaign(ctx context.Context, arg CreateIntakeCampaignParams) (IntakeCampaign, error)
 	CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (IntakeInvitation, error)
 	CreateIntakeSubmission(ctx context.Context, arg CreateIntakeSubmissionParams) (IntakeSubmission, error)
 	DeleteEdge(ctx context.Context, id uuid.UUID) error
 	EnsureTeamLeadUser(ctx context.Context, arg EnsureTeamLeadUserParams) (User, error)
+	ExpireUnActionedItemsForCycles(ctx context.Context, cycleIds []uuid.UUID) error
 	FinalizeIntakeInvitation(ctx context.Context, id uuid.UUID) error
 	FinalizeIntakeSubmission(ctx context.Context, arg FinalizeIntakeSubmissionParams) error
 	GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]GetActiveCIsByOwnerGroupRow, error)
+	GetActiveDigestCycleByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) (DigestCycle, error)
 	GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error)
 	GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error)
 	GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (GetCIDetailAggregatesRow, error)
@@ -32,6 +36,9 @@ type Querier interface {
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (IntakeCampaign, error)
 	GetCampaignDepartmentProgress(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignDepartmentProgressRow, error)
 	GetCampaignInvitationsWithGroup(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignInvitationsWithGroupRow, error)
+	GetCandidateCIsForDigest(ctx context.Context, arg GetCandidateCIsForDigestParams) ([]GetCandidateCIsForDigestRow, error)
+	GetDigestCycleByGroupAndWindow(ctx context.Context, arg GetDigestCycleByGroupAndWindowParams) (DigestCycle, error)
+	GetDigestItemsByCycle(ctx context.Context, cycleID uuid.UUID) ([]GetDigestItemsByCycleRow, error)
 	GetDownwardDependencyEdges(ctx context.Context, arg GetDownwardDependencyEdgesParams) ([]GetDownwardDependencyEdgesRow, error)
 	GetDownwardDependencyNodes(ctx context.Context, arg GetDownwardDependencyNodesParams) ([]GetDownwardDependencyNodesRow, error)
 	GetEdgeWithDetails(ctx context.Context, id uuid.UUID) (GetEdgeWithDetailsRow, error)
@@ -45,6 +52,8 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserOwnerGroupIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+	InsertDigestItem(ctx context.Context, arg InsertDigestItemParams) (DigestItem, error)
+	ListAllOwnerGroups(ctx context.Context) ([]OwnerGroup, error)
 	ListAllPendingEdges(ctx context.Context) ([]ListAllPendingEdgesRow, error)
 	ListOwnerGroups(ctx context.Context) ([]OwnerGroup, error)
 	ListPendingEdgesForGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]ListPendingEdgesForGroupRow, error)

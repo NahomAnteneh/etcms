@@ -193,6 +193,91 @@ func (ns NullCriticalityTierEnum) Value() (driver.Value, error) {
 	return string(ns.CriticalityTierEnum), nil
 }
 
+type DigestCycleStatusEnum string
+
+const (
+	DigestCycleStatusEnumOpen   DigestCycleStatusEnum = "open"
+	DigestCycleStatusEnumClosed DigestCycleStatusEnum = "closed"
+)
+
+func (e *DigestCycleStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DigestCycleStatusEnum(s)
+	case string:
+		*e = DigestCycleStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DigestCycleStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullDigestCycleStatusEnum struct {
+	DigestCycleStatusEnum DigestCycleStatusEnum `json:"digest_cycle_status_enum"`
+	Valid                 bool                  `json:"valid"` // Valid is true if DigestCycleStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDigestCycleStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.DigestCycleStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DigestCycleStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDigestCycleStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DigestCycleStatusEnum), nil
+}
+
+type DigestItemStatusEnum string
+
+const (
+	DigestItemStatusEnumOpen     DigestItemStatusEnum = "open"
+	DigestItemStatusEnumActioned DigestItemStatusEnum = "actioned"
+	DigestItemStatusEnumExpired  DigestItemStatusEnum = "expired"
+)
+
+func (e *DigestItemStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DigestItemStatusEnum(s)
+	case string:
+		*e = DigestItemStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DigestItemStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullDigestItemStatusEnum struct {
+	DigestItemStatusEnum DigestItemStatusEnum `json:"digest_item_status_enum"`
+	Valid                bool                 `json:"valid"` // Valid is true if DigestItemStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDigestItemStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.DigestItemStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DigestItemStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDigestItemStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DigestItemStatusEnum), nil
+}
+
 type EdgeTypeEnum string
 
 const (
@@ -602,6 +687,27 @@ type CiFlag struct {
 	CreatedAt  time.Time          `json:"created_at"`
 	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
 	ResolvedBy pgtype.UUID        `json:"resolved_by"`
+}
+
+type DigestCycle struct {
+	ID           uuid.UUID             `json:"id"`
+	OwnerGroupID uuid.UUID             `json:"owner_group_id"`
+	WindowStart  time.Time             `json:"window_start"`
+	WindowEnd    time.Time             `json:"window_end"`
+	Status       DigestCycleStatusEnum `json:"status"`
+	CreatedAt    time.Time             `json:"created_at"`
+	ClosedAt     pgtype.Timestamptz    `json:"closed_at"`
+}
+
+type DigestItem struct {
+	ID            uuid.UUID            `json:"id"`
+	CycleID       uuid.UUID            `json:"cycle_id"`
+	CiID          uuid.UUID            `json:"ci_id"`
+	TriggerReason string               `json:"trigger_reason"`
+	Status        DigestItemStatusEnum `json:"status"`
+	ActionedAt    pgtype.Timestamptz   `json:"actioned_at"`
+	ActionType    pgtype.Text          `json:"action_type"`
+	CreatedAt     time.Time            `json:"created_at"`
 }
 
 type IntakeCampaign struct {
