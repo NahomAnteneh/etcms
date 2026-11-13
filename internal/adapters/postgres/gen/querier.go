@@ -13,9 +13,12 @@ import (
 type Querier interface {
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error)
+	CreateCI(ctx context.Context, arg CreateCIParams) (Ci, error)
+	CreateEdge(ctx context.Context, arg CreateEdgeParams) (CiEdge, error)
 	CreateIntakeCampaign(ctx context.Context, arg CreateIntakeCampaignParams) (IntakeCampaign, error)
 	CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (IntakeInvitation, error)
 	CreateIntakeSubmission(ctx context.Context, arg CreateIntakeSubmissionParams) (IntakeSubmission, error)
+	DeleteEdge(ctx context.Context, id uuid.UUID) error
 	EnsureTeamLeadUser(ctx context.Context, arg EnsureTeamLeadUserParams) (User, error)
 	FinalizeIntakeInvitation(ctx context.Context, id uuid.UUID) error
 	FinalizeIntakeSubmission(ctx context.Context, arg FinalizeIntakeSubmissionParams) error

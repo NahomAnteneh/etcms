@@ -34,10 +34,10 @@ const (
 
 // Defines values for CIEnvelopeCriticalityTier.
 const (
-	Tier0 CIEnvelopeCriticalityTier = "tier_0"
-	Tier1 CIEnvelopeCriticalityTier = "tier_1"
-	Tier2 CIEnvelopeCriticalityTier = "tier_2"
-	Tier3 CIEnvelopeCriticalityTier = "tier_3"
+	CIEnvelopeCriticalityTierTier0 CIEnvelopeCriticalityTier = "tier_0"
+	CIEnvelopeCriticalityTierTier1 CIEnvelopeCriticalityTier = "tier_1"
+	CIEnvelopeCriticalityTierTier2 CIEnvelopeCriticalityTier = "tier_2"
+	CIEnvelopeCriticalityTierTier3 CIEnvelopeCriticalityTier = "tier_3"
 )
 
 // Defines values for CIEnvelopeEnvironment.
@@ -67,6 +67,39 @@ const (
 	CampaignResponseStatusActive   CampaignResponseStatus = "active"
 	CampaignResponseStatusArchived CampaignResponseStatus = "archived"
 	CampaignResponseStatusClosed   CampaignResponseStatus = "closed"
+)
+
+// Defines values for CreateCIRequestCiClass.
+const (
+	CreateCIRequestCiClassApplication     CreateCIRequestCiClass = "application"
+	CreateCIRequestCiClassBusinessService CreateCIRequestCiClass = "business_service"
+	CreateCIRequestCiClassDatabase        CreateCIRequestCiClass = "database"
+	CreateCIRequestCiClassNetworkFirewall CreateCIRequestCiClass = "network_firewall"
+	CreateCIRequestCiClassPhysicalHost    CreateCIRequestCiClass = "physical_host"
+	CreateCIRequestCiClassVmCluster       CreateCIRequestCiClass = "vm_cluster"
+)
+
+// Defines values for CreateCIRequestCriticalityTier.
+const (
+	CreateCIRequestCriticalityTierTier0 CreateCIRequestCriticalityTier = "tier_0"
+	CreateCIRequestCriticalityTierTier1 CreateCIRequestCriticalityTier = "tier_1"
+	CreateCIRequestCriticalityTierTier2 CreateCIRequestCriticalityTier = "tier_2"
+	CreateCIRequestCriticalityTierTier3 CreateCIRequestCriticalityTier = "tier_3"
+)
+
+// Defines values for CreateCIRequestEnvironment.
+const (
+	CreateCIRequestEnvironmentDr      CreateCIRequestEnvironment = "dr"
+	CreateCIRequestEnvironmentProd    CreateCIRequestEnvironment = "prod"
+	CreateCIRequestEnvironmentStaging CreateCIRequestEnvironment = "staging"
+)
+
+// Defines values for CreateEdgeRequestEdgeType.
+const (
+	CreateEdgeRequestEdgeTypeConnectsTo CreateEdgeRequestEdgeType = "connects_to"
+	CreateEdgeRequestEdgeTypeDependsOn  CreateEdgeRequestEdgeType = "depends_on"
+	CreateEdgeRequestEdgeTypeHostedOn   CreateEdgeRequestEdgeType = "hosted_on"
+	CreateEdgeRequestEdgeTypeReadsFrom  CreateEdgeRequestEdgeType = "reads_from"
 )
 
 // Defines values for EdgeCIPeerCiClass.
@@ -119,10 +152,10 @@ const (
 
 // Defines values for PendingEdgeEdgeType.
 const (
-	PendingEdgeEdgeTypeConnectsTo PendingEdgeEdgeType = "connects_to"
-	PendingEdgeEdgeTypeDependsOn  PendingEdgeEdgeType = "depends_on"
-	PendingEdgeEdgeTypeHostedOn   PendingEdgeEdgeType = "hosted_on"
-	PendingEdgeEdgeTypeReadsFrom  PendingEdgeEdgeType = "reads_from"
+	ConnectsTo PendingEdgeEdgeType = "connects_to"
+	DependsOn  PendingEdgeEdgeType = "depends_on"
+	HostedOn   PendingEdgeEdgeType = "hosted_on"
+	ReadsFrom  PendingEdgeEdgeType = "reads_from"
 )
 
 // Defines values for PendingEdgeHandshakeStatus.
@@ -154,19 +187,19 @@ const (
 
 // Defines values for SearchCIsParamsCiClass.
 const (
-	Application     SearchCIsParamsCiClass = "application"
-	BusinessService SearchCIsParamsCiClass = "business_service"
-	Database        SearchCIsParamsCiClass = "database"
-	NetworkFirewall SearchCIsParamsCiClass = "network_firewall"
-	PhysicalHost    SearchCIsParamsCiClass = "physical_host"
-	VmCluster       SearchCIsParamsCiClass = "vm_cluster"
+	SearchCIsParamsCiClassApplication     SearchCIsParamsCiClass = "application"
+	SearchCIsParamsCiClassBusinessService SearchCIsParamsCiClass = "business_service"
+	SearchCIsParamsCiClassDatabase        SearchCIsParamsCiClass = "database"
+	SearchCIsParamsCiClassNetworkFirewall SearchCIsParamsCiClass = "network_firewall"
+	SearchCIsParamsCiClassPhysicalHost    SearchCIsParamsCiClass = "physical_host"
+	SearchCIsParamsCiClassVmCluster       SearchCIsParamsCiClass = "vm_cluster"
 )
 
 // Defines values for SearchCIsParamsEnvironment.
 const (
-	Dr      SearchCIsParamsEnvironment = "dr"
-	Prod    SearchCIsParamsEnvironment = "prod"
-	Staging SearchCIsParamsEnvironment = "staging"
+	SearchCIsParamsEnvironmentDr      SearchCIsParamsEnvironment = "dr"
+	SearchCIsParamsEnvironmentProd    SearchCIsParamsEnvironment = "prod"
+	SearchCIsParamsEnvironmentStaging SearchCIsParamsEnvironment = "staging"
 )
 
 // BaselineResponse defines model for BaselineResponse.
@@ -269,12 +302,44 @@ type CampaignResponse struct {
 // CampaignResponseStatus defines model for CampaignResponse.Status.
 type CampaignResponseStatus string
 
+// CreateCIRequest defines model for CreateCIRequest.
+type CreateCIRequest struct {
+	CiClass          CreateCIRequestCiClass         `json:"ci_class"`
+	ClassMetadata    *map[string]string             `json:"class_metadata,omitempty"`
+	CriticalityTier  CreateCIRequestCriticalityTier `json:"criticality_tier"`
+	Environment      CreateCIRequestEnvironment     `json:"environment"`
+	ItamExternalRef  *string                        `json:"itam_external_ref"`
+	Name             string                         `json:"name"`
+	OwnerGroupId     openapi_types.UUID             `json:"owner_group_id"`
+	PrimaryEndpoint  *string                        `json:"primary_endpoint"`
+	TechnicalContact string                         `json:"technical_contact"`
+}
+
+// CreateCIRequestCiClass defines model for CreateCIRequest.CiClass.
+type CreateCIRequestCiClass string
+
+// CreateCIRequestCriticalityTier defines model for CreateCIRequest.CriticalityTier.
+type CreateCIRequestCriticalityTier string
+
+// CreateCIRequestEnvironment defines model for CreateCIRequest.Environment.
+type CreateCIRequestEnvironment string
+
 // CreateCampaignRequest defines model for CreateCampaignRequest.
 type CreateCampaignRequest struct {
 	Deadline      time.Time            `json:"deadline"`
 	OwnerGroupIds []openapi_types.UUID `json:"owner_group_ids"`
 	Title         string               `json:"title"`
 }
+
+// CreateEdgeRequest defines model for CreateEdgeRequest.
+type CreateEdgeRequest struct {
+	EdgeType   CreateEdgeRequestEdgeType `json:"edge_type"`
+	SourceCiId openapi_types.UUID        `json:"source_ci_id"`
+	TargetCiId openapi_types.UUID        `json:"target_ci_id"`
+}
+
+// CreateEdgeRequestEdgeType defines model for CreateEdgeRequest.EdgeType.
+type CreateEdgeRequestEdgeType string
 
 // DepartmentProgress defines model for DepartmentProgress.
 type DepartmentProgress struct {
@@ -506,6 +571,12 @@ type ListPendingEdgesParams struct {
 // CreateIntakeCampaignJSONRequestBody defines body for CreateIntakeCampaign for application/json ContentType.
 type CreateIntakeCampaignJSONRequestBody = CreateCampaignRequest
 
+// CreateCIJSONRequestBody defines body for CreateCI for application/json ContentType.
+type CreateCIJSONRequestBody = CreateCIRequest
+
+// CreateEdgeJSONRequestBody defines body for CreateEdge for application/json ContentType.
+type CreateEdgeJSONRequestBody = CreateEdgeRequest
+
 // FlagEdgeMismatchJSONRequestBody defines body for FlagEdgeMismatch for application/json ContentType.
 type FlagEdgeMismatchJSONRequestBody = FlagMismatchRequest
 
@@ -526,9 +597,18 @@ type ServerInterface interface {
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Create a single configuration item post-baseline
+	// (POST /api/v1/cis)
+	CreateCI(w http.ResponseWriter, r *http.Request)
 	// Search configuration items
 	// (GET /api/v1/cis/search)
 	SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams)
+	// Create a single edge dependency post-baseline
+	// (POST /api/v1/edges)
+	CreateEdge(w http.ResponseWriter, r *http.Request)
+	// Soft-disconnect a graph edge with audit trail
+	// (DELETE /api/v1/edges/{id})
+	DeleteEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Confirm cross-boundary edge handshake
 	// (POST /api/v1/edges/{id}/confirm)
 	ConfirmEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -580,9 +660,27 @@ func (_ Unimplemented) GetCampaignProgress(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Create a single configuration item post-baseline
+// (POST /api/v1/cis)
+func (_ Unimplemented) CreateCI(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Search configuration items
 // (GET /api/v1/cis/search)
 func (_ Unimplemented) SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a single edge dependency post-baseline
+// (POST /api/v1/edges)
+func (_ Unimplemented) CreateEdge(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Soft-disconnect a graph edge with audit trail
+// (DELETE /api/v1/edges/{id})
+func (_ Unimplemented) DeleteEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -716,6 +814,28 @@ func (siw *ServerInterfaceWrapper) GetCampaignProgress(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// CreateCI operation middleware
+func (siw *ServerInterfaceWrapper) CreateCI(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCI(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SearchCIs operation middleware
 func (siw *ServerInterfaceWrapper) SearchCIs(w http.ResponseWriter, r *http.Request) {
 
@@ -784,6 +904,61 @@ func (siw *ServerInterfaceWrapper) SearchCIs(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchCIs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateEdge operation middleware
+func (siw *ServerInterfaceWrapper) CreateEdge(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateEdge(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteEdge operation middleware
+func (siw *ServerInterfaceWrapper) DeleteEdge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteEdge(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1246,7 +1421,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}/progress", wrapper.GetCampaignProgress)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/cis", wrapper.CreateCI)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/cis/search", wrapper.SearchCIs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/edges", wrapper.CreateEdge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/edges/{id}", wrapper.DeleteEdge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/edges/{id}/confirm", wrapper.ConfirmEdge)
@@ -1382,6 +1566,77 @@ func (response GetCampaignProgress404ApplicationProblemPlusJSONResponse) VisitGe
 	return json.NewEncoder(w).Encode(response)
 }
 
+type CreateCIRequestObject struct {
+	Body *CreateCIJSONRequestBody
+}
+
+type CreateCIResponseObject interface {
+	VisitCreateCIResponse(w http.ResponseWriter) error
+}
+
+type CreateCI201JSONResponse CIEnvelope
+
+func (response CreateCI201JSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCI400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCI400ApplicationProblemPlusJSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCI401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCI401ApplicationProblemPlusJSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCI403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCI403ApplicationProblemPlusJSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCI404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCI404ApplicationProblemPlusJSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCI409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCI409ApplicationProblemPlusJSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCI422ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCI422ApplicationProblemPlusJSONResponse) VisitCreateCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type SearchCIsRequestObject struct {
 	Params SearchCIsParams
 }
@@ -1413,6 +1668,120 @@ type SearchCIs401ApplicationProblemPlusJSONResponse ProblemDetails
 func (response SearchCIs401ApplicationProblemPlusJSONResponse) VisitSearchCIsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdgeRequestObject struct {
+	Body *CreateEdgeJSONRequestBody
+}
+
+type CreateEdgeResponseObject interface {
+	VisitCreateEdgeResponse(w http.ResponseWriter) error
+}
+
+type CreateEdge201JSONResponse EdgeResponse
+
+func (response CreateEdge201JSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdge400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateEdge400ApplicationProblemPlusJSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdge401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateEdge401ApplicationProblemPlusJSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdge403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateEdge403ApplicationProblemPlusJSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdge404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateEdge404ApplicationProblemPlusJSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdge409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateEdge409ApplicationProblemPlusJSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateEdge422ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateEdge422ApplicationProblemPlusJSONResponse) VisitCreateEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteEdgeRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteEdgeResponseObject interface {
+	VisitDeleteEdgeResponse(w http.ResponseWriter) error
+}
+
+type DeleteEdge204Response struct {
+}
+
+func (response DeleteEdge204Response) VisitDeleteEdgeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteEdge401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteEdge401ApplicationProblemPlusJSONResponse) VisitDeleteEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteEdge403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteEdge403ApplicationProblemPlusJSONResponse) VisitDeleteEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteEdge404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteEdge404ApplicationProblemPlusJSONResponse) VisitDeleteEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -1909,9 +2278,18 @@ type StrictServerInterface interface {
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(ctx context.Context, request GetCampaignProgressRequestObject) (GetCampaignProgressResponseObject, error)
+	// Create a single configuration item post-baseline
+	// (POST /api/v1/cis)
+	CreateCI(ctx context.Context, request CreateCIRequestObject) (CreateCIResponseObject, error)
 	// Search configuration items
 	// (GET /api/v1/cis/search)
 	SearchCIs(ctx context.Context, request SearchCIsRequestObject) (SearchCIsResponseObject, error)
+	// Create a single edge dependency post-baseline
+	// (POST /api/v1/edges)
+	CreateEdge(ctx context.Context, request CreateEdgeRequestObject) (CreateEdgeResponseObject, error)
+	// Soft-disconnect a graph edge with audit trail
+	// (DELETE /api/v1/edges/{id})
+	DeleteEdge(ctx context.Context, request DeleteEdgeRequestObject) (DeleteEdgeResponseObject, error)
 	// Confirm cross-boundary edge handshake
 	// (POST /api/v1/edges/{id}/confirm)
 	ConfirmEdge(ctx context.Context, request ConfirmEdgeRequestObject) (ConfirmEdgeResponseObject, error)
@@ -2033,6 +2411,37 @@ func (sh *strictHandler) GetCampaignProgress(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// CreateCI operation middleware
+func (sh *strictHandler) CreateCI(w http.ResponseWriter, r *http.Request) {
+	var request CreateCIRequestObject
+
+	var body CreateCIJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCI(ctx, request.(CreateCIRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCI")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCIResponseObject); ok {
+		if err := validResponse.VisitCreateCIResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SearchCIs operation middleware
 func (sh *strictHandler) SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams) {
 	var request SearchCIsRequestObject
@@ -2052,6 +2461,63 @@ func (sh *strictHandler) SearchCIs(w http.ResponseWriter, r *http.Request, param
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchCIsResponseObject); ok {
 		if err := validResponse.VisitSearchCIsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateEdge operation middleware
+func (sh *strictHandler) CreateEdge(w http.ResponseWriter, r *http.Request) {
+	var request CreateEdgeRequestObject
+
+	var body CreateEdgeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateEdge(ctx, request.(CreateEdgeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateEdge")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateEdgeResponseObject); ok {
+		if err := validResponse.VisitCreateEdgeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteEdge operation middleware
+func (sh *strictHandler) DeleteEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteEdgeRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteEdge(ctx, request.(DeleteEdgeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteEdge")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteEdgeResponseObject); ok {
+		if err := validResponse.VisitDeleteEdgeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

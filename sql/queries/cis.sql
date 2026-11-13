@@ -93,6 +93,27 @@ FROM cis c
 JOIN owner_groups og ON og.id = c.owner_group_id
 WHERE c.ci_id = $1;
 
+-- name: CreateCI :one
+INSERT INTO cis (
+    ci_id,
+    name,
+    ci_class,
+    environment,
+    lifecycle_state,
+    criticality_tier,
+    owner_group_id,
+    technical_contact,
+    primary_endpoint,
+    last_verified_at,
+    itam_external_ref,
+    class_metadata,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+)
+RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, itam_external_ref, class_metadata, created_at, updated_at;
+
 -- name: UpsertCI :one
 INSERT INTO cis (
     ci_id,

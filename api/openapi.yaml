@@ -603,6 +603,162 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/cis:
+    post:
+      summary: Create a single configuration item post-baseline
+      operationId: createCI
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCIRequest'
+      responses:
+        '201':
+          description: Configuration item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (e.g. duplicate active CI name)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity (e.g. anti-ITAM or validation rule violated)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges:
+    post:
+      summary: Create a single edge dependency post-baseline
+      operationId: createEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEdgeRequest'
+      responses:
+        '201':
+          description: Edge created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '400':
+          description: Bad request (e.g. self-loop)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (caller does not belong to source CI owner group)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Source or target CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (edge already exists or target CI retired)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}:
+    delete:
+      summary: Soft-disconnect a graph edge with audit trail
+      operationId: deleteEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Edge disconnected successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (caller does not belong to source or target owner group)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1330,3 +1486,83 @@ components:
         reason:
           type: string
           maxLength: 512
+
+    CreateCIRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - ci_class
+        - environment
+        - criticality_tier
+        - owner_group_id
+        - technical_contact
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        ci_class:
+          type: string
+          enum:
+            - business_service
+            - application
+            - database
+            - vm_cluster
+            - physical_host
+            - network_firewall
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        owner_group_id:
+          type: string
+          format: uuid
+        technical_contact:
+          type: string
+          minLength: 1
+          maxLength: 160
+        primary_endpoint:
+          type: string
+          nullable: true
+          maxLength: 255
+        itam_external_ref:
+          type: string
+          nullable: true
+          maxLength: 512
+        class_metadata:
+          type: object
+          maxProperties: 2
+          additionalProperties:
+            type: string
+
+    CreateEdgeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - source_ci_id
+        - target_ci_id
+        - edge_type
+      properties:
+        source_ci_id:
+          type: string
+          format: uuid
+        target_ci_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+          enum:
+            - depends_on
+            - hosted_on
+            - connects_to
+            - reads_from

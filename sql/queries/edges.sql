@@ -151,3 +151,25 @@ SET handshake_status = $2,
     updated_at = now()
 WHERE id = $1
 RETURNING id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at;
+
+-- name: CreateEdge :one
+INSERT INTO ci_edges (
+    id,
+    source_ci_id,
+    target_ci_id,
+    edge_type,
+    handshake_status,
+    created_by,
+    confirmed_by,
+    confirmed_at,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+)
+RETURNING id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at;
+
+-- name: DeleteEdge :exec
+DELETE FROM ci_edges
+WHERE id = $1;
+

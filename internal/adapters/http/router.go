@@ -24,6 +24,7 @@ func NewRouter(store *postgres.Store, authConfig middleware.AuthConfig, version 
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(middleware.MaxBodySize(2 * 1024 * 1024))
+	r.Use(middleware.AntiITAM())
 	r.Use(auth.Middleware)
 
 	server := handler.NewServer(store, version)

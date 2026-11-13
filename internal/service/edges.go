@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/org/etcms-backend/internal/adapters/http/gen"
 	"github.com/org/etcms-backend/internal/adapters/postgres"
@@ -407,4 +408,168 @@ func mapEdgeToResponse(edge sqlcgen.CiEdge) *gen.EdgeResponse {
 		CreatedAt:       edge.CreatedAt,
 		UpdatedAt:       edge.UpdatedAt,
 	}
+}
+
+// CreateEdge creates a single dependency edge post-baseline, initiating handshake if cross-boundary.
+func (s *EdgeService) CreateEdge(ctx context.Context, actor domain.Actor, req gen.CreateEdgeRequest) (*gen.EdgeResponse, error) {
+	// 1. RBAC check: Viewers cannot create edges
+	if actor.Role == domain.RoleViewer {
+		return nil, domain.ErrForbidden
+	}
+
+	// 2. Self-loop check
+	if req.SourceCiId == req.TargetCiId {
+		return nil, domain.ErrInvalidEdge
+	}
+
+	// 3. Verify Source CI exists and is not retired
+	sourceCI, err := s.store.Queries().GetCIByID(ctx, req.SourceCiId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: source CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch source CI: %w", err)
+	}
+	if sourceCI.LifecycleState == sqlcgen.LifecycleStateEnumRetired {
+		return nil, fmt.Errorf("%w: source CI is retired", domain.ErrConflict)
+	}
+
+	// 4. Caller must belong to source CI's owner group (or platform admin)
+	if !actor.BelongsToOwnerGroup(sourceCI.OwnerGroupID) {
+		return nil, domain.ErrForbidden
+	}
+
+	// 5. Verify Target CI exists and is not retired
+	targetCI, err := s.store.Queries().GetCIByID(ctx, req.TargetCiId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: target CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch target CI: %w", err)
+	}
+	if targetCI.LifecycleState == sqlcgen.LifecycleStateEnumRetired {
+		return nil, fmt.Errorf("%w: target CI is retired", domain.ErrConflict)
+	}
+
+	now := time.Now().UTC()
+	edgeID := uuid.New()
+
+	var handshakeStatus sqlcgen.HandshakeStatusEnum
+	var confirmedBy pgtype.UUID
+	var confirmedAt pgtype.Timestamptz
+
+	if sourceCI.OwnerGroupID == targetCI.OwnerGroupID {
+		handshakeStatus = sqlcgen.HandshakeStatusEnumConfirmed
+		confirmedBy = pgtype.UUID{Bytes: actor.ID, Valid: true}
+		confirmedAt = pgtype.Timestamptz{Time: now, Valid: true}
+	} else {
+		handshakeStatus = sqlcgen.HandshakeStatusEnumPendingConfirmation
+	}
+
+	var createdEdge sqlcgen.CiEdge
+
+	err = s.store.WithAuditTx(ctx, actor, func(tx pgx.Tx, q *sqlcgen.Queries) error {
+		var cErr error
+		createdEdge, cErr = q.CreateEdge(ctx, sqlcgen.CreateEdgeParams{
+			ID:              edgeID,
+			SourceCiID:      req.SourceCiId,
+			TargetCiID:      req.TargetCiId,
+			EdgeType:        sqlcgen.EdgeTypeEnum(req.EdgeType),
+			HandshakeStatus: handshakeStatus,
+			CreatedBy:       actor.ID,
+			ConfirmedBy:     confirmedBy,
+			ConfirmedAt:     confirmedAt,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		})
+		if cErr != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(cErr, &pgErr) && pgErr.Code == "23505" {
+				return fmt.Errorf("%w: edge between source and target with this edge_type already exists", domain.ErrConflict)
+			}
+			return fmt.Errorf("failed to create edge: %w", cErr)
+		}
+
+		diffMap := map[string]interface{}{
+			"action":           "create_edge",
+			"source_ci_id":     req.SourceCiId.String(),
+			"target_ci_id":     req.TargetCiId.String(),
+			"edge_type":        string(req.EdgeType),
+			"handshake_status": string(handshakeStatus),
+		}
+		diffJSON, _ := json.Marshal(diffMap)
+
+		_, cErr = q.CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+			ID:                    uuid.New(),
+			EntityType:            "ci_edge",
+			EntityID:              edgeID,
+			AffectedOwnerGroupIds: []uuid.UUID{sourceCI.OwnerGroupID, targetCI.OwnerGroupID},
+			ActorID:               actor.ID,
+			Action:                sqlcgen.AuditActionEnumCreate,
+			Diff:                  diffJSON,
+			CreatedAt:             now,
+		})
+		if cErr != nil {
+			return fmt.Errorf("failed to write audit log: %w", cErr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapEdgeToResponse(createdEdge), nil
+}
+
+// DeleteEdge soft-disconnects an edge by removing it from the active graph and recording an immutable audit entry.
+func (s *EdgeService) DeleteEdge(ctx context.Context, actor domain.Actor, edgeID uuid.UUID) error {
+	edge, err := s.store.Queries().GetEdgeWithDetails(ctx, edgeID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrNotFound
+		}
+		return fmt.Errorf("failed to fetch edge: %w", err)
+	}
+
+	// RBAC check: Viewers cannot delete; caller must belong to source OR target CI owner group
+	if actor.Role == domain.RoleViewer {
+		return domain.ErrForbidden
+	}
+	if !actor.BelongsToOwnerGroup(edge.SourceOwnerGroupID) && !actor.BelongsToOwnerGroup(edge.TargetOwnerGroupID) {
+		return domain.ErrForbidden
+	}
+
+	now := time.Now().UTC()
+
+	return s.store.WithAuditTx(ctx, actor, func(tx pgx.Tx, q *sqlcgen.Queries) error {
+		if err := q.DeleteEdge(ctx, edgeID); err != nil {
+			return fmt.Errorf("failed to delete edge: %w", err)
+		}
+
+		diffMap := map[string]interface{}{
+			"action":           "disconnect",
+			"source_ci_id":     edge.SourceCiID.String(),
+			"target_ci_id":     edge.TargetCiID.String(),
+			"edge_type":        string(edge.EdgeType),
+			"handshake_status": string(edge.HandshakeStatus),
+		}
+		diffJSON, _ := json.Marshal(diffMap)
+
+		_, err := q.CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+			ID:                    uuid.New(),
+			EntityType:            "ci_edge",
+			EntityID:              edgeID,
+			AffectedOwnerGroupIds: []uuid.UUID{edge.SourceOwnerGroupID, edge.TargetOwnerGroupID},
+			ActorID:               actor.ID,
+			Action:                sqlcgen.AuditActionEnumDisconnect,
+			Diff:                  diffJSON,
+			CreatedAt:             now,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to write audit log: %w", err)
+		}
+
+		return nil
+	})
 }

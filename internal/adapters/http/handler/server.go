@@ -20,6 +20,7 @@ type Server struct {
 	store         *postgres.Store
 	intakeService *service.IntakeService
 	edgeService   *service.EdgeService
+	ciService     *service.CIService
 	version       string
 }
 
@@ -32,6 +33,7 @@ func NewServer(store *postgres.Store, version string) *Server {
 		store:         store,
 		intakeService: service.NewIntakeService(store),
 		edgeService:   service.NewEdgeService(store),
+		ciService:     service.NewCIService(store),
 		version:       version,
 	}
 }
@@ -541,4 +543,156 @@ func (s *Server) RejectEdge(ctx context.Context, request gen.RejectEdgeRequestOb
 	}
 
 	return gen.RejectEdge200JSONResponse(*res), nil
+}
+
+// CreateCI creates a single configuration item post-baseline.
+func (s *Server) CreateCI(ctx context.Context, request gen.CreateCIRequestObject) (gen.CreateCIResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.CreateCI401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	if request.Body == nil {
+		return gen.CreateCI400ApplicationProblemPlusJSONResponse{
+			Title:  "Bad Request",
+			Status: 400,
+			Detail: "Request body cannot be empty",
+		}, nil
+	}
+
+	res, err := s.ciService.CreateCI(ctx, actor, *request.Body)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.CreateCI404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.CreateCI403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "You do not have permission to create configuration items for this owner group",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.CreateCI409ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 409,
+				Detail: err.Error(),
+			}, nil
+		}
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) {
+			return gen.CreateCI422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
+				Detail: valErr.Message,
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.CreateCI400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to create CI: %w", err)
+	}
+
+	return gen.CreateCI201JSONResponse(*res), nil
+}
+
+// CreateEdge creates a single dependency edge post-baseline.
+func (s *Server) CreateEdge(ctx context.Context, request gen.CreateEdgeRequestObject) (gen.CreateEdgeResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.CreateEdge401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	if request.Body == nil {
+		return gen.CreateEdge400ApplicationProblemPlusJSONResponse{
+			Title:  "Bad Request",
+			Status: 400,
+			Detail: "Request body cannot be empty",
+		}, nil
+	}
+
+	res, err := s.edgeService.CreateEdge(ctx, actor, *request.Body)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidEdge) {
+			return gen.CreateEdge400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.CreateEdge404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.CreateEdge403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "You do not have permission to declare dependencies for this source CI",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.CreateEdge409ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 409,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to create edge: %w", err)
+	}
+
+	return gen.CreateEdge201JSONResponse(*res), nil
+}
+
+// DeleteEdge soft-disconnects an edge by removing it from the graph and writing an audit trail.
+func (s *Server) DeleteEdge(ctx context.Context, request gen.DeleteEdgeRequestObject) (gen.DeleteEdgeResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.DeleteEdge401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	edgeID := request.Id
+	err := s.edgeService.DeleteEdge(ctx, actor, edgeID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.DeleteEdge404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Edge not found",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.DeleteEdge403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "Only members of the source or target CI owner groups or platform administrators may disconnect edges",
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to delete edge: %w", err)
+	}
+
+	return gen.DeleteEdge204Response{}, nil
 }

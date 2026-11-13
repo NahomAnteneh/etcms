@@ -13,6 +13,76 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createEdge = `-- name: CreateEdge :one
+INSERT INTO ci_edges (
+    id,
+    source_ci_id,
+    target_ci_id,
+    edge_type,
+    handshake_status,
+    created_by,
+    confirmed_by,
+    confirmed_at,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+)
+RETURNING id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at
+`
+
+type CreateEdgeParams struct {
+	ID              uuid.UUID           `json:"id"`
+	SourceCiID      uuid.UUID           `json:"source_ci_id"`
+	TargetCiID      uuid.UUID           `json:"target_ci_id"`
+	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
+	CreatedBy       uuid.UUID           `json:"created_by"`
+	ConfirmedBy     pgtype.UUID         `json:"confirmed_by"`
+	ConfirmedAt     pgtype.Timestamptz  `json:"confirmed_at"`
+	CreatedAt       time.Time           `json:"created_at"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+}
+
+func (q *Queries) CreateEdge(ctx context.Context, arg CreateEdgeParams) (CiEdge, error) {
+	row := q.db.QueryRow(ctx, createEdge,
+		arg.ID,
+		arg.SourceCiID,
+		arg.TargetCiID,
+		arg.EdgeType,
+		arg.HandshakeStatus,
+		arg.CreatedBy,
+		arg.ConfirmedBy,
+		arg.ConfirmedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i CiEdge
+	err := row.Scan(
+		&i.ID,
+		&i.SourceCiID,
+		&i.TargetCiID,
+		&i.EdgeType,
+		&i.HandshakeStatus,
+		&i.CreatedBy,
+		&i.ConfirmedBy,
+		&i.ConfirmedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteEdge = `-- name: DeleteEdge :exec
+DELETE FROM ci_edges
+WHERE id = $1
+`
+
+func (q *Queries) DeleteEdge(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEdge, id)
+	return err
+}
+
 const getEdgeWithDetails = `-- name: GetEdgeWithDetails :one
 SELECT
     e.id,

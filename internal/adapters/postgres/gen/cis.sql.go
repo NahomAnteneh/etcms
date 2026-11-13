@@ -13,6 +13,82 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createCI = `-- name: CreateCI :one
+INSERT INTO cis (
+    ci_id,
+    name,
+    ci_class,
+    environment,
+    lifecycle_state,
+    criticality_tier,
+    owner_group_id,
+    technical_contact,
+    primary_endpoint,
+    last_verified_at,
+    itam_external_ref,
+    class_metadata,
+    created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+)
+RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, itam_external_ref, class_metadata, created_at, updated_at
+`
+
+type CreateCIParams struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+}
+
+func (q *Queries) CreateCI(ctx context.Context, arg CreateCIParams) (Ci, error) {
+	row := q.db.QueryRow(ctx, createCI,
+		arg.CiID,
+		arg.Name,
+		arg.CiClass,
+		arg.Environment,
+		arg.LifecycleState,
+		arg.CriticalityTier,
+		arg.OwnerGroupID,
+		arg.TechnicalContact,
+		arg.PrimaryEndpoint,
+		arg.LastVerifiedAt,
+		arg.ItamExternalRef,
+		arg.ClassMetadata,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Ci
+	err := row.Scan(
+		&i.CiID,
+		&i.Name,
+		&i.CiClass,
+		&i.Environment,
+		&i.LifecycleState,
+		&i.CriticalityTier,
+		&i.OwnerGroupID,
+		&i.TechnicalContact,
+		&i.PrimaryEndpoint,
+		&i.LastVerifiedAt,
+		&i.ItamExternalRef,
+		&i.ClassMetadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getActiveCIsByOwnerGroup = `-- name: GetActiveCIsByOwnerGroup :many
 SELECT
     c.ci_id,

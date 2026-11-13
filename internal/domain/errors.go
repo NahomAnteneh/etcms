@@ -10,6 +10,8 @@ var (
 	ErrLockVersionMismatch = errors.New("lock version mismatch")
 	ErrSubmissionNotDraft  = errors.New("intake submission is not in draft status")
 	ErrInvalidIfMatch      = errors.New("invalid If-Match header")
+	ErrInvalidEdge         = errors.New("invalid edge: self-dependency is forbidden")
+	ErrBadParam            = errors.New("bad request: invalid parameter")
 )
 
 // ValidationError represents semantic or business rule validation errors with node-level details.
