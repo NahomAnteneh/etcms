@@ -69,6 +69,39 @@ const (
 	CampaignResponseStatusClosed   CampaignResponseStatus = "closed"
 )
 
+// Defines values for EdgeCIPeerCiClass.
+const (
+	EdgeCIPeerCiClassApplication     EdgeCIPeerCiClass = "application"
+	EdgeCIPeerCiClassBusinessService EdgeCIPeerCiClass = "business_service"
+	EdgeCIPeerCiClassDatabase        EdgeCIPeerCiClass = "database"
+	EdgeCIPeerCiClassNetworkFirewall EdgeCIPeerCiClass = "network_firewall"
+	EdgeCIPeerCiClassPhysicalHost    EdgeCIPeerCiClass = "physical_host"
+	EdgeCIPeerCiClassVmCluster       EdgeCIPeerCiClass = "vm_cluster"
+)
+
+// Defines values for EdgeCIPeerEnvironment.
+const (
+	EdgeCIPeerEnvironmentDr      EdgeCIPeerEnvironment = "dr"
+	EdgeCIPeerEnvironmentProd    EdgeCIPeerEnvironment = "prod"
+	EdgeCIPeerEnvironmentStaging EdgeCIPeerEnvironment = "staging"
+)
+
+// Defines values for EdgeResponseEdgeType.
+const (
+	EdgeResponseEdgeTypeConnectsTo EdgeResponseEdgeType = "connects_to"
+	EdgeResponseEdgeTypeDependsOn  EdgeResponseEdgeType = "depends_on"
+	EdgeResponseEdgeTypeHostedOn   EdgeResponseEdgeType = "hosted_on"
+	EdgeResponseEdgeTypeReadsFrom  EdgeResponseEdgeType = "reads_from"
+)
+
+// Defines values for EdgeResponseHandshakeStatus.
+const (
+	EdgeResponseHandshakeStatusConfirmed           EdgeResponseHandshakeStatus = "confirmed"
+	EdgeResponseHandshakeStatusFlaggedMismatch     EdgeResponseHandshakeStatus = "flagged_mismatch"
+	EdgeResponseHandshakeStatusPendingConfirmation EdgeResponseHandshakeStatus = "pending_confirmation"
+	EdgeResponseHandshakeStatusRejected            EdgeResponseHandshakeStatus = "rejected"
+)
+
 // Defines values for HealthResponseStatus.
 const (
 	Degraded HealthResponseStatus = "degraded"
@@ -82,6 +115,22 @@ const (
 	Opened    IntakeContextResponseStatus = "opened"
 	Sent      IntakeContextResponseStatus = "sent"
 	Submitted IntakeContextResponseStatus = "submitted"
+)
+
+// Defines values for PendingEdgeEdgeType.
+const (
+	PendingEdgeEdgeTypeConnectsTo PendingEdgeEdgeType = "connects_to"
+	PendingEdgeEdgeTypeDependsOn  PendingEdgeEdgeType = "depends_on"
+	PendingEdgeEdgeTypeHostedOn   PendingEdgeEdgeType = "hosted_on"
+	PendingEdgeEdgeTypeReadsFrom  PendingEdgeEdgeType = "reads_from"
+)
+
+// Defines values for PendingEdgeHandshakeStatus.
+const (
+	PendingEdgeHandshakeStatusConfirmed           PendingEdgeHandshakeStatus = "confirmed"
+	PendingEdgeHandshakeStatusFlaggedMismatch     PendingEdgeHandshakeStatus = "flagged_mismatch"
+	PendingEdgeHandshakeStatusPendingConfirmation PendingEdgeHandshakeStatus = "pending_confirmation"
+	PendingEdgeHandshakeStatusRejected            PendingEdgeHandshakeStatus = "rejected"
 )
 
 // Defines values for ReadyResponseDatabase.
@@ -105,19 +154,19 @@ const (
 
 // Defines values for SearchCIsParamsCiClass.
 const (
-	SearchCIsParamsCiClassApplication     SearchCIsParamsCiClass = "application"
-	SearchCIsParamsCiClassBusinessService SearchCIsParamsCiClass = "business_service"
-	SearchCIsParamsCiClassDatabase        SearchCIsParamsCiClass = "database"
-	SearchCIsParamsCiClassNetworkFirewall SearchCIsParamsCiClass = "network_firewall"
-	SearchCIsParamsCiClassPhysicalHost    SearchCIsParamsCiClass = "physical_host"
-	SearchCIsParamsCiClassVmCluster       SearchCIsParamsCiClass = "vm_cluster"
+	Application     SearchCIsParamsCiClass = "application"
+	BusinessService SearchCIsParamsCiClass = "business_service"
+	Database        SearchCIsParamsCiClass = "database"
+	NetworkFirewall SearchCIsParamsCiClass = "network_firewall"
+	PhysicalHost    SearchCIsParamsCiClass = "physical_host"
+	VmCluster       SearchCIsParamsCiClass = "vm_cluster"
 )
 
 // Defines values for SearchCIsParamsEnvironment.
 const (
-	SearchCIsParamsEnvironmentDr      SearchCIsParamsEnvironment = "dr"
-	SearchCIsParamsEnvironmentProd    SearchCIsParamsEnvironment = "prod"
-	SearchCIsParamsEnvironmentStaging SearchCIsParamsEnvironment = "staging"
+	Dr      SearchCIsParamsEnvironment = "dr"
+	Prod    SearchCIsParamsEnvironment = "prod"
+	Staging SearchCIsParamsEnvironment = "staging"
 )
 
 // BaselineResponse defines model for BaselineResponse.
@@ -237,6 +286,49 @@ type DepartmentProgress struct {
 	TotalInvitations int    `json:"total_invitations"`
 }
 
+// EdgeCIPeer defines model for EdgeCIPeer.
+type EdgeCIPeer struct {
+	CiClass          EdgeCIPeerCiClass     `json:"ci_class"`
+	CiId             openapi_types.UUID    `json:"ci_id"`
+	DepartmentName   string                `json:"department_name"`
+	Environment      EdgeCIPeerEnvironment `json:"environment"`
+	Name             string                `json:"name"`
+	OwnerGroupId     openapi_types.UUID    `json:"owner_group_id"`
+	OwnerGroupName   string                `json:"owner_group_name"`
+	TechnicalContact string                `json:"technical_contact"`
+}
+
+// EdgeCIPeerCiClass defines model for EdgeCIPeer.CiClass.
+type EdgeCIPeerCiClass string
+
+// EdgeCIPeerEnvironment defines model for EdgeCIPeer.Environment.
+type EdgeCIPeerEnvironment string
+
+// EdgeResponse defines model for EdgeResponse.
+type EdgeResponse struct {
+	ConfirmedAt     *time.Time                  `json:"confirmed_at"`
+	ConfirmedBy     *openapi_types.UUID         `json:"confirmed_by"`
+	CreatedAt       time.Time                   `json:"created_at"`
+	CreatedBy       openapi_types.UUID          `json:"created_by"`
+	EdgeType        EdgeResponseEdgeType        `json:"edge_type"`
+	HandshakeStatus EdgeResponseHandshakeStatus `json:"handshake_status"`
+	Id              openapi_types.UUID          `json:"id"`
+	SourceCiId      openapi_types.UUID          `json:"source_ci_id"`
+	TargetCiId      openapi_types.UUID          `json:"target_ci_id"`
+	UpdatedAt       time.Time                   `json:"updated_at"`
+}
+
+// EdgeResponseEdgeType defines model for EdgeResponse.EdgeType.
+type EdgeResponseEdgeType string
+
+// EdgeResponseHandshakeStatus defines model for EdgeResponse.HandshakeStatus.
+type EdgeResponseHandshakeStatus string
+
+// FlagMismatchRequest defines model for FlagMismatchRequest.
+type FlagMismatchRequest struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status    HealthResponseStatus `json:"status"`
@@ -288,6 +380,30 @@ type OwnershipHeader struct {
 	TechnicalContact string              `json:"technical_contact"`
 }
 
+// PendingEdge defines model for PendingEdge.
+type PendingEdge struct {
+	CreatedAt       time.Time                  `json:"created_at"`
+	CreatedBy       *openapi_types.UUID        `json:"created_by,omitempty"`
+	EdgeType        PendingEdgeEdgeType        `json:"edge_type"`
+	HandshakeStatus PendingEdgeHandshakeStatus `json:"handshake_status"`
+	Id              openapi_types.UUID         `json:"id"`
+	SourceCi        EdgeCIPeer                 `json:"source_ci"`
+	TargetCi        EdgeCIPeer                 `json:"target_ci"`
+	UpdatedAt       *time.Time                 `json:"updated_at,omitempty"`
+}
+
+// PendingEdgeEdgeType defines model for PendingEdge.EdgeType.
+type PendingEdgeEdgeType string
+
+// PendingEdgeHandshakeStatus defines model for PendingEdge.HandshakeStatus.
+type PendingEdgeHandshakeStatus string
+
+// PendingEdgesResponse defines model for PendingEdgesResponse.
+type PendingEdgesResponse struct {
+	Items []PendingEdge `json:"items"`
+	Total int           `json:"total"`
+}
+
 // ProblemDetails defines model for ProblemDetails.
 type ProblemDetails struct {
 	Detail        string  `json:"detail"`
@@ -314,6 +430,11 @@ type ReadyResponseDatabase string
 
 // ReadyResponseStatus defines model for ReadyResponse.Status.
 type ReadyResponseStatus string
+
+// RejectEdgeRequest defines model for RejectEdgeRequest.
+type RejectEdgeRequest struct {
+	Reason *string `json:"reason,omitempty"`
+}
 
 // SaveDraftRequest defines model for SaveDraftRequest.
 type SaveDraftRequest struct {
@@ -376,8 +497,20 @@ type SubmitIntakeParams struct {
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
+// ListPendingEdgesParams defines parameters for ListPendingEdges.
+type ListPendingEdgesParams struct {
+	// OwnerGroupId Optional filter by specific target owner group ID
+	OwnerGroupId *openapi_types.UUID `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
+}
+
 // CreateIntakeCampaignJSONRequestBody defines body for CreateIntakeCampaign for application/json ContentType.
 type CreateIntakeCampaignJSONRequestBody = CreateCampaignRequest
+
+// FlagEdgeMismatchJSONRequestBody defines body for FlagEdgeMismatch for application/json ContentType.
+type FlagEdgeMismatchJSONRequestBody = FlagMismatchRequest
+
+// RejectEdgeJSONRequestBody defines body for RejectEdge for application/json ContentType.
+type RejectEdgeJSONRequestBody = RejectEdgeRequest
 
 // SaveIntakeDraftJSONRequestBody defines body for SaveIntakeDraft for application/json ContentType.
 type SaveIntakeDraftJSONRequestBody = SaveDraftRequest
@@ -396,6 +529,15 @@ type ServerInterface interface {
 	// Search configuration items
 	// (GET /api/v1/cis/search)
 	SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams)
+	// Confirm cross-boundary edge handshake
+	// (POST /api/v1/edges/{id}/confirm)
+	ConfirmEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Flag cross-boundary edge mismatch
+	// (POST /api/v1/edges/{id}/flag-mismatch)
+	FlagEdgeMismatch(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Reject cross-boundary edge
+	// (POST /api/v1/edges/{id}/reject)
+	RejectEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Liveness probe
 	// (GET /api/v1/healthz)
 	GetHealthz(w http.ResponseWriter, r *http.Request)
@@ -411,6 +553,9 @@ type ServerInterface interface {
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(w http.ResponseWriter, r *http.Request)
+	// List pending cross-boundary edges awaiting confirmation
+	// (GET /api/v1/owner-groups/pending-edges)
+	ListPendingEdges(w http.ResponseWriter, r *http.Request, params ListPendingEdgesParams)
 	// Readiness probe
 	// (GET /api/v1/readyz)
 	GetReadyz(w http.ResponseWriter, r *http.Request)
@@ -441,6 +586,24 @@ func (_ Unimplemented) SearchCIs(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Confirm cross-boundary edge handshake
+// (POST /api/v1/edges/{id}/confirm)
+func (_ Unimplemented) ConfirmEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Flag cross-boundary edge mismatch
+// (POST /api/v1/edges/{id}/flag-mismatch)
+func (_ Unimplemented) FlagEdgeMismatch(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject cross-boundary edge
+// (POST /api/v1/edges/{id}/reject)
+func (_ Unimplemented) RejectEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Liveness probe
 // (GET /api/v1/healthz)
 func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
@@ -468,6 +631,12 @@ func (_ Unimplemented) SubmitIntake(w http.ResponseWriter, r *http.Request, toke
 // List all owner groups
 // (GET /api/v1/owner-groups)
 func (_ Unimplemented) ListOwnerGroups(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List pending cross-boundary edges awaiting confirmation
+// (GET /api/v1/owner-groups/pending-edges)
+func (_ Unimplemented) ListPendingEdges(w http.ResponseWriter, r *http.Request, params ListPendingEdgesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -615,6 +784,105 @@ func (siw *ServerInterfaceWrapper) SearchCIs(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchCIs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmEdge operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmEdge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmEdge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FlagEdgeMismatch operation middleware
+func (siw *ServerInterfaceWrapper) FlagEdgeMismatch(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FlagEdgeMismatch(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectEdge operation middleware
+func (siw *ServerInterfaceWrapper) RejectEdge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectEdge(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -787,6 +1055,41 @@ func (siw *ServerInterfaceWrapper) ListOwnerGroups(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListPendingEdges operation middleware
+func (siw *ServerInterfaceWrapper) ListPendingEdges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPendingEdgesParams
+
+	// ------------- Optional query parameter "owner_group_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "owner_group_id", r.URL.Query(), &params.OwnerGroupId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_group_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPendingEdges(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetReadyz operation middleware
 func (siw *ServerInterfaceWrapper) GetReadyz(w http.ResponseWriter, r *http.Request) {
 
@@ -946,6 +1249,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/cis/search", wrapper.SearchCIs)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/edges/{id}/confirm", wrapper.ConfirmEdge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/edges/{id}/flag-mismatch", wrapper.FlagEdgeMismatch)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/edges/{id}/reject", wrapper.RejectEdge)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/healthz", wrapper.GetHealthz)
 	})
 	r.Group(func(r chi.Router) {
@@ -959,6 +1271,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups", wrapper.ListOwnerGroups)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/owner-groups/pending-edges", wrapper.ListPendingEdges)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/readyz", wrapper.GetReadyz)
@@ -1098,6 +1413,167 @@ type SearchCIs401ApplicationProblemPlusJSONResponse ProblemDetails
 func (response SearchCIs401ApplicationProblemPlusJSONResponse) VisitSearchCIsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConfirmEdgeRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type ConfirmEdgeResponseObject interface {
+	VisitConfirmEdgeResponse(w http.ResponseWriter) error
+}
+
+type ConfirmEdge200JSONResponse EdgeResponse
+
+func (response ConfirmEdge200JSONResponse) VisitConfirmEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConfirmEdge401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ConfirmEdge401ApplicationProblemPlusJSONResponse) VisitConfirmEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConfirmEdge403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ConfirmEdge403ApplicationProblemPlusJSONResponse) VisitConfirmEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConfirmEdge404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ConfirmEdge404ApplicationProblemPlusJSONResponse) VisitConfirmEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ConfirmEdge409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ConfirmEdge409ApplicationProblemPlusJSONResponse) VisitConfirmEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FlagEdgeMismatchRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *FlagEdgeMismatchJSONRequestBody
+}
+
+type FlagEdgeMismatchResponseObject interface {
+	VisitFlagEdgeMismatchResponse(w http.ResponseWriter) error
+}
+
+type FlagEdgeMismatch200JSONResponse EdgeResponse
+
+func (response FlagEdgeMismatch200JSONResponse) VisitFlagEdgeMismatchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FlagEdgeMismatch401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response FlagEdgeMismatch401ApplicationProblemPlusJSONResponse) VisitFlagEdgeMismatchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FlagEdgeMismatch403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response FlagEdgeMismatch403ApplicationProblemPlusJSONResponse) VisitFlagEdgeMismatchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FlagEdgeMismatch404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response FlagEdgeMismatch404ApplicationProblemPlusJSONResponse) VisitFlagEdgeMismatchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FlagEdgeMismatch409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response FlagEdgeMismatch409ApplicationProblemPlusJSONResponse) VisitFlagEdgeMismatchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RejectEdgeRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *RejectEdgeJSONRequestBody
+}
+
+type RejectEdgeResponseObject interface {
+	VisitRejectEdgeResponse(w http.ResponseWriter) error
+}
+
+type RejectEdge200JSONResponse EdgeResponse
+
+func (response RejectEdge200JSONResponse) VisitRejectEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RejectEdge401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RejectEdge401ApplicationProblemPlusJSONResponse) VisitRejectEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RejectEdge403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RejectEdge403ApplicationProblemPlusJSONResponse) VisitRejectEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RejectEdge404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RejectEdge404ApplicationProblemPlusJSONResponse) VisitRejectEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RejectEdge409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RejectEdge409ApplicationProblemPlusJSONResponse) VisitRejectEdgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -1340,6 +1816,41 @@ func (response ListOwnerGroups401ApplicationProblemPlusJSONResponse) VisitListOw
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListPendingEdgesRequestObject struct {
+	Params ListPendingEdgesParams
+}
+
+type ListPendingEdgesResponseObject interface {
+	VisitListPendingEdgesResponse(w http.ResponseWriter) error
+}
+
+type ListPendingEdges200JSONResponse PendingEdgesResponse
+
+func (response ListPendingEdges200JSONResponse) VisitListPendingEdgesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPendingEdges401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListPendingEdges401ApplicationProblemPlusJSONResponse) VisitListPendingEdgesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPendingEdges403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListPendingEdges403ApplicationProblemPlusJSONResponse) VisitListPendingEdgesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetReadyzRequestObject struct {
 }
 
@@ -1401,6 +1912,15 @@ type StrictServerInterface interface {
 	// Search configuration items
 	// (GET /api/v1/cis/search)
 	SearchCIs(ctx context.Context, request SearchCIsRequestObject) (SearchCIsResponseObject, error)
+	// Confirm cross-boundary edge handshake
+	// (POST /api/v1/edges/{id}/confirm)
+	ConfirmEdge(ctx context.Context, request ConfirmEdgeRequestObject) (ConfirmEdgeResponseObject, error)
+	// Flag cross-boundary edge mismatch
+	// (POST /api/v1/edges/{id}/flag-mismatch)
+	FlagEdgeMismatch(ctx context.Context, request FlagEdgeMismatchRequestObject) (FlagEdgeMismatchResponseObject, error)
+	// Reject cross-boundary edge
+	// (POST /api/v1/edges/{id}/reject)
+	RejectEdge(ctx context.Context, request RejectEdgeRequestObject) (RejectEdgeResponseObject, error)
 	// Liveness probe
 	// (GET /api/v1/healthz)
 	GetHealthz(ctx context.Context, request GetHealthzRequestObject) (GetHealthzResponseObject, error)
@@ -1416,6 +1936,9 @@ type StrictServerInterface interface {
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(ctx context.Context, request ListOwnerGroupsRequestObject) (ListOwnerGroupsResponseObject, error)
+	// List pending cross-boundary edges awaiting confirmation
+	// (GET /api/v1/owner-groups/pending-edges)
+	ListPendingEdges(ctx context.Context, request ListPendingEdgesRequestObject) (ListPendingEdgesResponseObject, error)
 	// Readiness probe
 	// (GET /api/v1/readyz)
 	GetReadyz(ctx context.Context, request GetReadyzRequestObject) (GetReadyzResponseObject, error)
@@ -1529,6 +2052,98 @@ func (sh *strictHandler) SearchCIs(w http.ResponseWriter, r *http.Request, param
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchCIsResponseObject); ok {
 		if err := validResponse.VisitSearchCIsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ConfirmEdge operation middleware
+func (sh *strictHandler) ConfirmEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request ConfirmEdgeRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ConfirmEdge(ctx, request.(ConfirmEdgeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ConfirmEdge")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ConfirmEdgeResponseObject); ok {
+		if err := validResponse.VisitConfirmEdgeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FlagEdgeMismatch operation middleware
+func (sh *strictHandler) FlagEdgeMismatch(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request FlagEdgeMismatchRequestObject
+
+	request.Id = id
+
+	var body FlagEdgeMismatchJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FlagEdgeMismatch(ctx, request.(FlagEdgeMismatchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FlagEdgeMismatch")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FlagEdgeMismatchResponseObject); ok {
+		if err := validResponse.VisitFlagEdgeMismatchResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectEdge operation middleware
+func (sh *strictHandler) RejectEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request RejectEdgeRequestObject
+
+	request.Id = id
+
+	var body RejectEdgeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectEdge(ctx, request.(RejectEdgeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectEdge")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejectEdgeResponseObject); ok {
+		if err := validResponse.VisitRejectEdgeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1671,6 +2286,32 @@ func (sh *strictHandler) ListOwnerGroups(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListOwnerGroupsResponseObject); ok {
 		if err := validResponse.VisitListOwnerGroupsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPendingEdges operation middleware
+func (sh *strictHandler) ListPendingEdges(w http.ResponseWriter, r *http.Request, params ListPendingEdgesParams) {
+	var request ListPendingEdgesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPendingEdges(ctx, request.(ListPendingEdgesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPendingEdges")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPendingEdgesResponseObject); ok {
+		if err := validResponse.VisitListPendingEdgesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

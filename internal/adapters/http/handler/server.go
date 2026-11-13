@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/org/etcms-backend/internal/adapters/http/gen"
 	"github.com/org/etcms-backend/internal/adapters/http/middleware"
@@ -18,6 +19,7 @@ import (
 type Server struct {
 	store         *postgres.Store
 	intakeService *service.IntakeService
+	edgeService   *service.EdgeService
 	version       string
 }
 
@@ -29,6 +31,7 @@ func NewServer(store *postgres.Store, version string) *Server {
 	return &Server{
 		store:         store,
 		intakeService: service.NewIntakeService(store),
+		edgeService:   service.NewEdgeService(store),
 		version:       version,
 	}
 }
@@ -373,4 +376,169 @@ func (s *Server) SubmitIntake(ctx context.Context, request gen.SubmitIntakeReque
 		return gen.SubmitIntake200JSONResponse(*resp), nil
 	}
 	return gen.SubmitIntake201JSONResponse(*resp), nil
+}
+
+// ListPendingEdges returns edges with handshake_status = 'pending_confirmation' targeting caller's groups.
+func (s *Server) ListPendingEdges(ctx context.Context, request gen.ListPendingEdgesRequestObject) (gen.ListPendingEdgesResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.ListPendingEdges401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	var groupFilter *uuid.UUID
+	if request.Params.OwnerGroupId != nil {
+		id := *request.Params.OwnerGroupId
+		groupFilter = &id
+	}
+
+	res, err := s.edgeService.ListPendingEdges(ctx, actor, groupFilter)
+	if err != nil {
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.ListPendingEdges403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "You do not have permission to view pending edges for this owner group",
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to list pending edges: %w", err)
+	}
+
+	return gen.ListPendingEdges200JSONResponse(*res), nil
+}
+
+// ConfirmEdge confirms a pending cross-boundary edge handshake.
+func (s *Server) ConfirmEdge(ctx context.Context, request gen.ConfirmEdgeRequestObject) (gen.ConfirmEdgeResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.ConfirmEdge401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	edgeID := request.Id
+	res, err := s.edgeService.ConfirmEdge(ctx, actor, edgeID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.ConfirmEdge404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Edge not found",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.ConfirmEdge403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "Only members of the target CI owner group or platform administrators may confirm edges",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.ConfirmEdge409ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 409,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to confirm edge: %w", err)
+	}
+
+	return gen.ConfirmEdge200JSONResponse(*res), nil
+}
+
+// FlagEdgeMismatch flags an edge mismatch on a pending or cross-boundary edge.
+func (s *Server) FlagEdgeMismatch(ctx context.Context, request gen.FlagEdgeMismatchRequestObject) (gen.FlagEdgeMismatchResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.FlagEdgeMismatch401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	var reason *string
+	if request.Body != nil && request.Body.Reason != nil {
+		reason = request.Body.Reason
+	}
+
+	edgeID := request.Id
+	res, err := s.edgeService.FlagEdgeMismatch(ctx, actor, edgeID, reason)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.FlagEdgeMismatch404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Edge not found",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.FlagEdgeMismatch403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "Only members of the target CI owner group or platform administrators may flag edge mismatches",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.FlagEdgeMismatch409ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 409,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to flag edge mismatch: %w", err)
+	}
+
+	return gen.FlagEdgeMismatch200JSONResponse(*res), nil
+}
+
+// RejectEdge rejects a cross-boundary edge handshake.
+func (s *Server) RejectEdge(ctx context.Context, request gen.RejectEdgeRequestObject) (gen.RejectEdgeResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.RejectEdge401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	var reason *string
+	if request.Body != nil && request.Body.Reason != nil {
+		reason = request.Body.Reason
+	}
+
+	edgeID := request.Id
+	res, err := s.edgeService.RejectEdge(ctx, actor, edgeID, reason)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.RejectEdge404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Edge not found",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.RejectEdge403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: "Only members of the target CI owner group or platform administrators may reject edges",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			return gen.RejectEdge409ApplicationProblemPlusJSONResponse{
+				Title:  "Conflict",
+				Status: 409,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to reject edge: %w", err)
+	}
+
+	return gen.RejectEdge200JSONResponse(*res), nil
 }

@@ -410,6 +410,199 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/owner-groups/pending-edges:
+    get:
+      summary: List pending cross-boundary edges awaiting confirmation
+      operationId: listPendingEdges
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional filter by specific target owner group ID
+      responses:
+        '200':
+          description: List of pending edges awaiting confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingEdgesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}/confirm:
+    post:
+      summary: Confirm cross-boundary edge handshake
+      operationId: confirmEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Edge confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: State machine conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}/flag-mismatch:
+    post:
+      summary: Flag cross-boundary edge mismatch
+      operationId: flagEdgeMismatch
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagMismatchRequest'
+      responses:
+        '200':
+          description: Edge flagged as mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: State machine conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}/reject:
+    post:
+      summary: Reject cross-boundary edge
+      operationId: rejectEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectEdgeRequest'
+      responses:
+        '200':
+          description: Edge rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: State machine conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -993,3 +1186,147 @@ components:
         snapshot:
           type: object
           additionalProperties: true
+
+    PendingEdgesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingEdge'
+        total:
+          type: integer
+
+    PendingEdge:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - edge_type
+        - handshake_status
+        - source_ci
+        - target_ci
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+          enum: [depends_on, hosted_on, connects_to, reads_from]
+        handshake_status:
+          type: string
+          enum: [pending_confirmation, confirmed, flagged_mismatch, rejected]
+        source_ci:
+          $ref: '#/components/schemas/EdgeCIPeer'
+        target_ci:
+          $ref: '#/components/schemas/EdgeCIPeer'
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EdgeCIPeer:
+      type: object
+      additionalProperties: false
+      required:
+        - ci_id
+        - name
+        - ci_class
+        - environment
+        - owner_group_id
+        - owner_group_name
+        - department_name
+        - technical_contact
+      properties:
+        ci_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ci_class:
+          type: string
+          enum: [business_service, application, database, vm_cluster, physical_host, network_firewall]
+        environment:
+          type: string
+          enum: [prod, dr, staging]
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        department_name:
+          type: string
+        technical_contact:
+          type: string
+
+    EdgeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source_ci_id
+        - target_ci_id
+        - edge_type
+        - handshake_status
+        - created_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_ci_id:
+          type: string
+          format: uuid
+        target_ci_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+          enum: [depends_on, hosted_on, connects_to, reads_from]
+        handshake_status:
+          type: string
+          enum: [pending_confirmation, confirmed, flagged_mismatch, rejected]
+        created_by:
+          type: string
+          format: uuid
+        confirmed_by:
+          type: string
+          format: uuid
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FlagMismatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+
+    RejectEdgeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 512
