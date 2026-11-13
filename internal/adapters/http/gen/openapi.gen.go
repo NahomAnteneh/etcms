@@ -417,6 +417,23 @@ type DepartmentProgress struct {
 	TotalInvitations int    `json:"total_invitations"`
 }
 
+// DownwardDependenciesResponse defines model for DownwardDependenciesResponse.
+type DownwardDependenciesResponse struct {
+	CiId               openapi_types.UUID        `json:"ci_id"`
+	Edges              []GraphEdge               `json:"edges"`
+	Nodes              []DownwardDependencyNode  `json:"nodes"`
+	SharedDependencies *[]DownwardDependencyNode `json:"shared_dependencies,omitempty"`
+	TotalDependencies  int                       `json:"total_dependencies"`
+}
+
+// DownwardDependencyNode defines model for DownwardDependencyNode.
+type DownwardDependencyNode struct {
+	Ci                 CIEnvelope `json:"ci"`
+	Depth              int        `json:"depth"`
+	IsSharedDependency bool       `json:"is_shared_dependency"`
+	SubgraphInDegree   int        `json:"subgraph_in_degree"`
+}
+
 // EdgeCIPeer defines model for EdgeCIPeer.
 type EdgeCIPeer struct {
 	CiClass          EdgeCIPeerCiClass     `json:"ci_class"`
@@ -645,6 +662,11 @@ type SearchCIsParamsCiClass string
 // SearchCIsParamsEnvironment defines parameters for SearchCIs.
 type SearchCIsParamsEnvironment string
 
+// GetDownwardDependenciesParams defines parameters for GetDownwardDependencies.
+type GetDownwardDependenciesParams struct {
+	IncludeRetired *bool `form:"include_retired,omitempty" json:"include_retired,omitempty"`
+}
+
 // GetUpwardImpactParams defines parameters for GetUpwardImpact.
 type GetUpwardImpactParams struct {
 	IncludeRetired *bool `form:"include_retired,omitempty" json:"include_retired,omitempty"`
@@ -706,6 +728,9 @@ type ServerInterface interface {
 	// Get configuration item detail with graph summary and verification status
 	// (GET /api/v1/cis/{id})
 	GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Traverse downward dependency graph for a configuration item
+	// (GET /api/v1/cis/{id}/dependencies-downward)
+	GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams)
 	// Traverse upward impact graph for a configuration item
 	// (GET /api/v1/cis/{id}/impact-upward)
 	GetUpwardImpact(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUpwardImpactParams)
@@ -781,6 +806,12 @@ func (_ Unimplemented) SearchCIs(w http.ResponseWriter, r *http.Request, params 
 // Get configuration item detail with graph summary and verification status
 // (GET /api/v1/cis/{id})
 func (_ Unimplemented) GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Traverse downward dependency graph for a configuration item
+// (GET /api/v1/cis/{id}/dependencies-downward)
+func (_ Unimplemented) GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1055,6 +1086,50 @@ func (siw *ServerInterfaceWrapper) GetCIDetail(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCIDetail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDownwardDependencies operation middleware
+func (siw *ServerInterfaceWrapper) GetDownwardDependencies(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDownwardDependenciesParams
+
+	// ------------- Optional query parameter "include_retired" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "include_retired", r.URL.Query(), &params.IncludeRetired)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_retired", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDownwardDependencies(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1625,6 +1700,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/cis/{id}", wrapper.GetCIDetail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cis/{id}/dependencies-downward", wrapper.GetDownwardDependencies)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/cis/{id}/impact-upward", wrapper.GetUpwardImpact)
 	})
 	r.Group(func(r chi.Router) {
@@ -1911,6 +1989,51 @@ func (response GetCIDetail401ApplicationProblemPlusJSONResponse) VisitGetCIDetai
 type GetCIDetail404ApplicationProblemPlusJSONResponse ProblemDetails
 
 func (response GetCIDetail404ApplicationProblemPlusJSONResponse) VisitGetCIDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDownwardDependenciesRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params GetDownwardDependenciesParams
+}
+
+type GetDownwardDependenciesResponseObject interface {
+	VisitGetDownwardDependenciesResponse(w http.ResponseWriter) error
+}
+
+type GetDownwardDependencies200JSONResponse DownwardDependenciesResponse
+
+func (response GetDownwardDependencies200JSONResponse) VisitGetDownwardDependenciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDownwardDependencies400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetDownwardDependencies400ApplicationProblemPlusJSONResponse) VisitGetDownwardDependenciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDownwardDependencies401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetDownwardDependencies401ApplicationProblemPlusJSONResponse) VisitGetDownwardDependenciesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDownwardDependencies404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetDownwardDependencies404ApplicationProblemPlusJSONResponse) VisitGetDownwardDependenciesResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
 
@@ -2577,6 +2700,9 @@ type StrictServerInterface interface {
 	// Get configuration item detail with graph summary and verification status
 	// (GET /api/v1/cis/{id})
 	GetCIDetail(ctx context.Context, request GetCIDetailRequestObject) (GetCIDetailResponseObject, error)
+	// Traverse downward dependency graph for a configuration item
+	// (GET /api/v1/cis/{id}/dependencies-downward)
+	GetDownwardDependencies(ctx context.Context, request GetDownwardDependenciesRequestObject) (GetDownwardDependenciesResponseObject, error)
 	// Traverse upward impact graph for a configuration item
 	// (GET /api/v1/cis/{id}/impact-upward)
 	GetUpwardImpact(ctx context.Context, request GetUpwardImpactRequestObject) (GetUpwardImpactResponseObject, error)
@@ -2783,6 +2909,33 @@ func (sh *strictHandler) GetCIDetail(w http.ResponseWriter, r *http.Request, id 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetCIDetailResponseObject); ok {
 		if err := validResponse.VisitGetCIDetailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDownwardDependencies operation middleware
+func (sh *strictHandler) GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams) {
+	var request GetDownwardDependenciesRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDownwardDependencies(ctx, request.(GetDownwardDependenciesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDownwardDependencies")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDownwardDependenciesResponseObject); ok {
+		if err := validResponse.VisitGetDownwardDependenciesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

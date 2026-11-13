@@ -775,3 +775,42 @@ func (s *Server) GetUpwardImpact(ctx context.Context, request gen.GetUpwardImpac
 
 	return gen.GetUpwardImpact200JSONResponse(*resp), nil
 }
+
+// GetDownwardDependencies traverses downward dependency graph for a configuration item.
+func (s *Server) GetDownwardDependencies(ctx context.Context, request gen.GetDownwardDependenciesRequestObject) (gen.GetDownwardDependenciesResponseObject, error) {
+	_, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.GetDownwardDependencies401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	includeRetired := false
+	if request.Params.IncludeRetired != nil {
+		includeRetired = *request.Params.IncludeRetired
+	}
+
+	resp, err := s.ciService.GetDownwardDependencies(ctx, request.Id, includeRetired)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.GetDownwardDependencies404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.GetDownwardDependencies400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, err
+	}
+
+	return gen.GetDownwardDependencies200JSONResponse(*resp), nil
+}
+

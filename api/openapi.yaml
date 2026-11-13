@@ -753,6 +753,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/cis/{id}/dependencies-downward:
+    get:
+      summary: Traverse downward dependency graph for a configuration item
+      operationId: getDownwardDependencies
+      tags:
+        - Graph
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: include_retired
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Downward dependency traversal completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownwardDependenciesResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
   /api/v1/edges:
     post:
       summary: Create a single edge dependency post-baseline
@@ -1536,6 +1585,51 @@ components:
             - confirmed
             - flagged_mismatch
             - rejected
+
+    DownwardDependencyNode:
+      type: object
+      additionalProperties: false
+      required:
+        - ci
+        - depth
+        - subgraph_in_degree
+        - is_shared_dependency
+      properties:
+        ci:
+          $ref: '#/components/schemas/CIEnvelope'
+        depth:
+          type: integer
+        subgraph_in_degree:
+          type: integer
+        is_shared_dependency:
+          type: boolean
+
+    DownwardDependenciesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ci_id
+        - total_dependencies
+        - nodes
+        - edges
+      properties:
+        ci_id:
+          type: string
+          format: uuid
+        total_dependencies:
+          type: integer
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DownwardDependencyNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphEdge'
+        shared_dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/DownwardDependencyNode'
 
     SubmitIntakeRequest:
       type: object

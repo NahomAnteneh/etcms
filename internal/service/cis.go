@@ -604,3 +604,121 @@ func mapSiblingToEnvelope(s sqlcgen.GetSiblingDependenciesRow) gen.CIEnvelope {
 		},
 	}
 }
+
+// GetDownwardDependencies traverses downward outgoing dependencies for a CI and identifies shared dependencies.
+func (s *CIService) GetDownwardDependencies(ctx context.Context, startCIID uuid.UUID, includeRetired bool) (*gen.DownwardDependenciesResponse, error) {
+	// 1. Verify start CI exists
+	_, err := s.store.Queries().GetCIByID(ctx, startCIID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch CI: %w", err)
+	}
+
+	// 2. Fetch downstream nodes
+	nodes, err := s.store.Queries().GetDownwardDependencyNodes(ctx, sqlcgen.GetDownwardDependencyNodesParams{
+		StartCiID:      startCIID,
+		IncludeRetired: includeRetired,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query downward dependency nodes: %w", err)
+	}
+
+	// 3. Fetch connecting subgraph edges
+	edges, err := s.store.Queries().GetDownwardDependencyEdges(ctx, sqlcgen.GetDownwardDependencyEdgesParams{
+		StartCiID:      startCIID,
+		IncludeRetired: includeRetired,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query downward dependency edges: %w", err)
+	}
+
+
+	// 4. Map edges and compute in-degree from distinct immediate parents within the reachable subgraph
+	incomingParents := make(map[uuid.UUID]map[uuid.UUID]struct{})
+	graphEdges := make([]gen.GraphEdge, 0, len(edges))
+	for _, e := range edges {
+		graphEdges = append(graphEdges, gen.GraphEdge{
+			Id:              e.ID,
+			SourceCiId:      e.SourceCiID,
+			TargetCiId:      e.TargetCiID,
+			EdgeType:        gen.GraphEdgeEdgeType(e.EdgeType),
+			HandshakeStatus: gen.GraphEdgeHandshakeStatus(e.HandshakeStatus),
+		})
+
+		if _, exists := incomingParents[e.TargetCiID]; !exists {
+			incomingParents[e.TargetCiID] = make(map[uuid.UUID]struct{})
+		}
+		incomingParents[e.TargetCiID][e.SourceCiID] = struct{}{}
+	}
+
+	// 5. Construct downward dependency nodes & calculate is_shared_dependency
+	depNodes := make([]gen.DownwardDependencyNode, 0, len(nodes))
+	sharedDeps := make([]gen.DownwardDependencyNode, 0)
+
+	for _, n := range nodes {
+		inDegree := len(incomingParents[n.CiID])
+		isShared := inDegree >= 2
+
+		depNode := gen.DownwardDependencyNode{
+			Ci:                 mapDownwardNodeToEnvelope(n),
+			Depth:              int(n.Depth),
+			IsSharedDependency: isShared,
+			SubgraphInDegree:   inDegree,
+		}
+		depNodes = append(depNodes, depNode)
+		if isShared {
+			sharedDeps = append(sharedDeps, depNode)
+		}
+	}
+
+	return &gen.DownwardDependenciesResponse{
+		CiId:               startCIID,
+		Edges:              graphEdges,
+		Nodes:              depNodes,
+		SharedDependencies: &sharedDeps,
+		TotalDependencies:  len(depNodes),
+	}, nil
+}
+
+func mapDownwardNodeToEnvelope(n sqlcgen.GetDownwardDependencyNodesRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if n.PrimaryEndpoint.Valid {
+		primaryEndpoint = &n.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if n.ItamExternalRef.Valid {
+		itamRef = &n.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(n.ClassMetadata) > 0 {
+		_ = json.Unmarshal(n.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &n.CiID,
+		Name:             n.Name,
+		CiClass:          gen.CIEnvelopeCiClass(n.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(n.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(n.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(n.CriticalityTier),
+		OwnerGroupId:     n.OwnerGroupID,
+		TechnicalContact: n.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &n.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &n.CreatedAt,
+		UpdatedAt:        &n.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     n.OwnerGroupID,
+			OwnerGroupName:   n.OwnerGroupName,
+			DepartmentName:   n.DepartmentName,
+			TechnicalContact: n.TechnicalContact,
+			TeamLeadName:     n.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(n.TeamLeadEmail),
+		},
+	}
+}
+

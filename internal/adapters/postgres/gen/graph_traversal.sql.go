@@ -13,6 +13,212 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getDownwardDependencyEdges = `-- name: GetDownwardDependencyEdges :many
+WITH RECURSIVE downstream AS (
+    SELECT
+        e.target_ci_id AS ci_id,
+        1 AS depth
+    FROM ci_edges e
+    JOIN cis c ON c.ci_id = e.target_ci_id
+    WHERE e.source_ci_id = $1::uuid
+      AND (
+          $2::boolean = true
+          OR c.lifecycle_state IN ('in_service', 'planned')
+      )
+    UNION
+    SELECT
+        e.target_ci_id AS ci_id,
+        d.depth + 1 AS depth
+    FROM ci_edges e
+    JOIN downstream d ON e.source_ci_id = d.ci_id
+    JOIN cis c ON c.ci_id = e.target_ci_id
+    WHERE d.depth < 15
+      AND (
+          $2::boolean = true
+          OR c.lifecycle_state IN ('in_service', 'planned')
+      )
+),
+all_nodes AS (
+    SELECT $1::uuid AS ci_id
+    UNION
+    SELECT ci_id FROM downstream
+)
+SELECT DISTINCT
+    e.id,
+    e.source_ci_id,
+    e.target_ci_id,
+    e.edge_type,
+    e.handshake_status
+FROM ci_edges e
+JOIN all_nodes s ON e.source_ci_id = s.ci_id
+JOIN all_nodes t ON e.target_ci_id = t.ci_id
+ORDER BY e.edge_type, e.source_ci_id
+`
+
+type GetDownwardDependencyEdgesParams struct {
+	StartCiID      uuid.UUID `json:"start_ci_id"`
+	IncludeRetired bool      `json:"include_retired"`
+}
+
+type GetDownwardDependencyEdgesRow struct {
+	ID              uuid.UUID           `json:"id"`
+	SourceCiID      uuid.UUID           `json:"source_ci_id"`
+	TargetCiID      uuid.UUID           `json:"target_ci_id"`
+	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
+}
+
+func (q *Queries) GetDownwardDependencyEdges(ctx context.Context, arg GetDownwardDependencyEdgesParams) ([]GetDownwardDependencyEdgesRow, error) {
+	rows, err := q.db.Query(ctx, getDownwardDependencyEdges, arg.StartCiID, arg.IncludeRetired)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDownwardDependencyEdgesRow
+	for rows.Next() {
+		var i GetDownwardDependencyEdgesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SourceCiID,
+			&i.TargetCiID,
+			&i.EdgeType,
+			&i.HandshakeStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDownwardDependencyNodes = `-- name: GetDownwardDependencyNodes :many
+WITH RECURSIVE downstream AS (
+    SELECT
+        e.target_ci_id AS ci_id,
+        1 AS depth
+    FROM ci_edges e
+    JOIN cis c ON c.ci_id = e.target_ci_id
+    WHERE e.source_ci_id = $1::uuid
+      AND (
+          $2::boolean = true
+          OR c.lifecycle_state IN ('in_service', 'planned')
+      )
+    UNION
+    SELECT
+        e.target_ci_id AS ci_id,
+        d.depth + 1 AS depth
+    FROM ci_edges e
+    JOIN downstream d ON e.source_ci_id = d.ci_id
+    JOIN cis c ON c.ci_id = e.target_ci_id
+    WHERE d.depth < 15
+      AND (
+          $2::boolean = true
+          OR c.lifecycle_state IN ('in_service', 'planned')
+      )
+),
+deduped_downstream AS (
+    SELECT
+        ci_id,
+        min(depth)::integer AS depth
+    FROM downstream
+    GROUP BY ci_id
+)
+SELECT
+    c.ci_id,
+    c.name,
+    c.ci_class,
+    c.environment,
+    c.lifecycle_state,
+    c.criticality_tier,
+    c.owner_group_id,
+    c.technical_contact,
+    c.primary_endpoint,
+    c.last_verified_at,
+    c.itam_external_ref,
+    c.class_metadata,
+    c.created_at,
+    c.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email,
+    dd.depth
+FROM deduped_downstream dd
+JOIN cis c ON c.ci_id = dd.ci_id
+JOIN owner_groups og ON og.id = c.owner_group_id
+ORDER BY dd.depth ASC, c.name ASC
+`
+
+type GetDownwardDependencyNodesParams struct {
+	StartCiID      uuid.UUID `json:"start_ci_id"`
+	IncludeRetired bool      `json:"include_retired"`
+}
+
+type GetDownwardDependencyNodesRow struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+	DepartmentName   string              `json:"department_name"`
+	TeamLeadName     string              `json:"team_lead_name"`
+	TeamLeadEmail    string              `json:"team_lead_email"`
+	Depth            int32               `json:"depth"`
+}
+
+func (q *Queries) GetDownwardDependencyNodes(ctx context.Context, arg GetDownwardDependencyNodesParams) ([]GetDownwardDependencyNodesRow, error) {
+	rows, err := q.db.Query(ctx, getDownwardDependencyNodes, arg.StartCiID, arg.IncludeRetired)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDownwardDependencyNodesRow
+	for rows.Next() {
+		var i GetDownwardDependencyNodesRow
+		if err := rows.Scan(
+			&i.CiID,
+			&i.Name,
+			&i.CiClass,
+			&i.Environment,
+			&i.LifecycleState,
+			&i.CriticalityTier,
+			&i.OwnerGroupID,
+			&i.TechnicalContact,
+			&i.PrimaryEndpoint,
+			&i.LastVerifiedAt,
+			&i.ItamExternalRef,
+			&i.ClassMetadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerGroupName,
+			&i.DepartmentName,
+			&i.TeamLeadName,
+			&i.TeamLeadEmail,
+			&i.Depth,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSiblingDependencies = `-- name: GetSiblingDependencies :many
 WITH RECURSIVE upstream AS (
     SELECT

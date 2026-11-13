@@ -30,6 +30,8 @@ type Querier interface {
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (IntakeCampaign, error)
 	GetCampaignDepartmentProgress(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignDepartmentProgressRow, error)
 	GetCampaignInvitationsWithGroup(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignInvitationsWithGroupRow, error)
+	GetDownwardDependencyEdges(ctx context.Context, arg GetDownwardDependencyEdgesParams) ([]GetDownwardDependencyEdgesRow, error)
+	GetDownwardDependencyNodes(ctx context.Context, arg GetDownwardDependencyNodesParams) ([]GetDownwardDependencyNodesRow, error)
 	GetEdgeWithDetails(ctx context.Context, id uuid.UUID) (GetEdgeWithDetailsRow, error)
 	GetInvitationByTokenHash(ctx context.Context, tokenHash string) (GetInvitationByTokenHashRow, error)
 	GetOwnerGroupByID(ctx context.Context, id uuid.UUID) (OwnerGroup, error)
