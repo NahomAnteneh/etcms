@@ -1,0 +1,52 @@
+version: "2"
+run:
+  tests: true
+linters:
+  enable:
+    - exhaustive
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: false
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-comments
+          disabled: true
+        - name: error-strings
+          disabled: false
+        - name: error-naming
+          disabled: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - unparam
+        path: _test\.go
+    paths:
+      - internal/adapters/http/gen
+      - internal/adapters/postgres/gen
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
