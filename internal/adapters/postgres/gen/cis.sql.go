@@ -13,6 +13,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countSearchCIs = `-- name: CountSearchCIs :one
+SELECT count(*)::integer AS total_count
+FROM cis c
+WHERE c.lifecycle_state != 'retired'
+  AND ($1::text IS NULL OR $1::text = '' OR c.ci_class::text = $1::text)
+  AND ($2::text IS NULL OR $2::text = '' OR c.environment::text = $2::text)
+  AND ($3::uuid IS NULL OR $3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = $3)
+  AND (
+      $4::text = ''
+      OR (length($4::text) < 3 AND (c.name ILIKE $4::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $4::text || '%'))
+      OR (length($4::text) >= 3 AND (c.name % $4::text OR COALESCE(c.primary_endpoint, '') % $4::text OR similarity(c.name, $4::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), $4::text) > 0.1))
+  )
+`
+
+type CountSearchCIsParams struct {
+	CiClass      string    `json:"ci_class"`
+	Environment  string    `json:"environment"`
+	OwnerGroupID uuid.UUID `json:"owner_group_id"`
+	Query        string    `json:"query"`
+}
+
+func (q *Queries) CountSearchCIs(ctx context.Context, arg CountSearchCIsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countSearchCIs,
+		arg.CiClass,
+		arg.Environment,
+		arg.OwnerGroupID,
+		arg.Query,
+	)
+	var total_count int32
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
 const createCI = `-- name: CreateCI :one
 INSERT INTO cis (
     ci_id,
@@ -247,6 +280,76 @@ func (q *Queries) GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, 
 	return i, err
 }
 
+const getCIDetailAggregates = `-- name: GetCIDetailAggregates :one
+WITH RECURSIVE
+upstream AS (
+    SELECT e.source_ci_id AS ci_id, 1 AS depth
+    FROM ci_edges e
+    WHERE e.target_ci_id = $1::uuid
+    UNION
+    SELECT e.source_ci_id, u.depth + 1
+    FROM ci_edges e
+    JOIN upstream u ON e.target_ci_id = u.ci_id
+    WHERE u.depth < 15
+),
+downstream AS (
+    SELECT e.target_ci_id AS ci_id, 1 AS depth
+    FROM ci_edges e
+    WHERE e.source_ci_id = $1::uuid
+    UNION
+    SELECT e.target_ci_id, d.depth + 1
+    FROM ci_edges e
+    JOIN downstream d ON e.source_ci_id = d.ci_id
+    WHERE d.depth < 15
+)
+SELECT
+    (SELECT count(*)::integer FROM ci_edges WHERE target_ci_id = $1::uuid) AS direct_dependent_count,
+    (SELECT count(DISTINCT ci_id)::integer FROM upstream) AS total_upstream_count,
+    COALESCE((
+        SELECT c.criticality_tier::text
+        FROM upstream u
+        JOIN cis c ON c.ci_id = u.ci_id
+        ORDER BY
+            CASE c.criticality_tier
+                WHEN 'tier_0' THEN 0
+                WHEN 'tier_1' THEN 1
+                WHEN 'tier_2' THEN 2
+                WHEN 'tier_3' THEN 3
+                ELSE 4
+            END ASC
+        LIMIT 1
+    ), '')::text AS highest_criticality_tier,
+    (SELECT count(*)::integer FROM ci_edges WHERE source_ci_id = $1::uuid) AS direct_dependency_count,
+    (SELECT count(DISTINCT ci_id)::integer FROM downstream) AS total_downstream_count,
+    (SELECT count(*)::integer FROM ci_edges WHERE (source_ci_id = $1::uuid OR target_ci_id = $1::uuid) AND handshake_status = 'pending_confirmation') AS pending_edge_count,
+    (SELECT count(*)::integer FROM ci_flags WHERE ci_id = $1::uuid AND status = 'open') AS open_flag_count
+`
+
+type GetCIDetailAggregatesRow struct {
+	DirectDependentCount   int32  `json:"direct_dependent_count"`
+	TotalUpstreamCount     int32  `json:"total_upstream_count"`
+	HighestCriticalityTier string `json:"highest_criticality_tier"`
+	DirectDependencyCount  int32  `json:"direct_dependency_count"`
+	TotalDownstreamCount   int32  `json:"total_downstream_count"`
+	PendingEdgeCount       int32  `json:"pending_edge_count"`
+	OpenFlagCount          int32  `json:"open_flag_count"`
+}
+
+func (q *Queries) GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (GetCIDetailAggregatesRow, error) {
+	row := q.db.QueryRow(ctx, getCIDetailAggregates, ciID)
+	var i GetCIDetailAggregatesRow
+	err := row.Scan(
+		&i.DirectDependentCount,
+		&i.TotalUpstreamCount,
+		&i.HighestCriticalityTier,
+		&i.DirectDependencyCount,
+		&i.TotalDownstreamCount,
+		&i.PendingEdgeCount,
+		&i.OpenFlagCount,
+	)
+	return i, err
+}
+
 const searchCIs = `-- name: SearchCIs :many
 SELECT
     c.ci_id,
@@ -268,6 +371,7 @@ SELECT
     og.team_lead_name,
     og.team_lead_email,
     CASE
+        WHEN $1::text = '' THEN 1.0::real
         WHEN length($1::text) >= 3 THEN
             GREATEST(similarity(c.name, $1::text), similarity(COALESCE(c.primary_endpoint, ''), $1::text))
         WHEN c.name ILIKE $1::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $1::text || '%' THEN 1.0::real
@@ -288,10 +392,32 @@ WHERE c.lifecycle_state != 'retired'
   AND (
       $1::text = ''
       OR (length($1::text) < 3 AND (c.name ILIKE $1::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $1::text || '%'))
-      OR (length($1::text) >= 3 AND (c.name % $1::text OR COALESCE(c.primary_endpoint, '') % $1::text OR similarity(c.name, $1::text) > 0.1))
+      OR (length($1::text) >= 3 AND (c.name % $1::text OR COALESCE(c.primary_endpoint, '') % $1::text OR similarity(c.name, $1::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), $1::text) > 0.1))
+  )
+  AND (
+      $5::boolean = false
+      OR (
+          (CASE
+              WHEN $1::text = '' THEN 1.0::real
+              WHEN length($1::text) >= 3 THEN
+                  GREATEST(similarity(c.name, $1::text), similarity(COALESCE(c.primary_endpoint, ''), $1::text))
+              WHEN c.name ILIKE $1::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $1::text || '%' THEN 1.0::real
+              ELSE 0.0::real
+          END) < $6::real
+          OR (
+              (CASE
+                  WHEN $1::text = '' THEN 1.0::real
+                  WHEN length($1::text) >= 3 THEN
+                      GREATEST(similarity(c.name, $1::text), similarity(COALESCE(c.primary_endpoint, ''), $1::text))
+                  WHEN c.name ILIKE $1::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $1::text || '%' THEN 1.0::real
+                  ELSE 0.0::real
+              END) = $6::real
+              AND (c.name > $7::text OR (c.name = $7::text AND c.ci_id > $8::uuid))
+          )
+      )
   )
 ORDER BY score DESC, c.name ASC, c.ci_id ASC
-LIMIT CASE WHEN $5::integer <= 0 THEN 20 ELSE $5::integer END
+LIMIT CASE WHEN $9::integer <= 0 THEN 20 ELSE $9::integer END
 `
 
 type SearchCIsParams struct {
@@ -299,6 +425,10 @@ type SearchCIsParams struct {
 	CiClass      string    `json:"ci_class"`
 	Environment  string    `json:"environment"`
 	OwnerGroupID uuid.UUID `json:"owner_group_id"`
+	HasCursor    bool      `json:"has_cursor"`
+	LastScore    float32   `json:"last_score"`
+	LastName     string    `json:"last_name"`
+	LastCiID     uuid.UUID `json:"last_ci_id"`
 	LimitVal     int32     `json:"limit_val"`
 }
 
@@ -330,6 +460,10 @@ func (q *Queries) SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchC
 		arg.CiClass,
 		arg.Environment,
 		arg.OwnerGroupID,
+		arg.HasCursor,
+		arg.LastScore,
+		arg.LastName,
+		arg.LastCiID,
 		arg.LimitVal,
 	)
 	if err != nil {

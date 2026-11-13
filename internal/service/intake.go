@@ -385,50 +385,8 @@ func (s *IntakeService) SaveDraft(ctx context.Context, rawToken string, ifMatchH
 
 // SearchCIs performs trigram and prefix search against the active CI catalog.
 func (s *IntakeService) SearchCIs(ctx context.Context, params gen.SearchCIsParams) (*gen.CISearchResponse, error) {
-	query := ""
-	if params.Q != nil {
-		query = *params.Q
-	}
-	ciClass := ""
-	if params.CiClass != nil {
-		ciClass = string(*params.CiClass)
-	}
-	environment := ""
-	if params.Environment != nil {
-		environment = string(*params.Environment)
-	}
-	ownerGroupID := uuid.Nil
-	if params.OwnerGroupId != nil {
-		ownerGroupID = *params.OwnerGroupId
-	}
-	limit := int32(20)
-	if params.Limit != nil && *params.Limit > 0 {
-		limit = int32(*params.Limit)
-	}
-
-	rows, err := s.store.Queries().SearchCIs(ctx, sqlcgen.SearchCIsParams{
-		Query:        query,
-		CiClass:      ciClass,
-		Environment:  environment,
-		OwnerGroupID: ownerGroupID,
-		LimitVal:     limit,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search CIs: %w", err)
-	}
-
-	results := make([]gen.CISearchResult, 0, len(rows))
-	for _, r := range rows {
-		results = append(results, gen.CISearchResult{
-			Ci:    mapSearchRowToCIEnvelope(r),
-			Score: r.Score,
-		})
-	}
-
-	return &gen.CISearchResponse{
-		Items: results,
-		Total: len(results),
-	}, nil
+	ciSvc := NewCIService(s.store)
+	return ciSvc.SearchCIs(ctx, params)
 }
 
 func mapActiveCIRowToCIEnvelope(ci sqlcgen.GetActiveCIsByOwnerGroupRow) gen.CIEnvelope {

@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CountSearchCIs(ctx context.Context, arg CountSearchCIsParams) (int32, error)
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error)
 	CreateCI(ctx context.Context, arg CreateCIParams) (Ci, error)
@@ -25,6 +26,7 @@ type Querier interface {
 	GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]GetActiveCIsByOwnerGroupRow, error)
 	GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error)
 	GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error)
+	GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (GetCIDetailAggregatesRow, error)
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (IntakeCampaign, error)
 	GetCampaignDepartmentProgress(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignDepartmentProgressRow, error)
 	GetCampaignInvitationsWithGroup(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignInvitationsWithGroupRow, error)

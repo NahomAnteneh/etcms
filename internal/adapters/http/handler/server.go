@@ -312,8 +312,15 @@ func (s *Server) SearchCIs(ctx context.Context, request gen.SearchCIsRequestObje
 		}, nil
 	}
 
-	resp, err := s.intakeService.SearchCIs(ctx, request.Params)
+	resp, err := s.ciService.SearchCIs(ctx, request.Params)
 	if err != nil {
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.SearchCIs400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
 		return nil, err
 	}
 
@@ -696,4 +703,37 @@ func (s *Server) DeleteEdge(ctx context.Context, request gen.DeleteEdgeRequestOb
 	}
 
 	return gen.DeleteEdge204Response{}, nil
+}
+
+// GetCIDetail retrieves aggregated detail for a configuration item.
+func (s *Server) GetCIDetail(ctx context.Context, request gen.GetCIDetailRequestObject) (gen.GetCIDetailResponseObject, error) {
+	_, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.GetCIDetail401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	detail, err := s.ciService.GetCIDetail(ctx, request.Id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.GetCIDetail404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.GetCIDetail400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, err
+	}
+
+	return gen.GetCIDetail200JSONResponse(*detail), nil
 }

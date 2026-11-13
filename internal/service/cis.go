@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,41 @@ import (
 	"github.com/org/etcms-backend/internal/domain"
 )
 
+// SearchCursor holds the pagination keyset for deterministic catalog search ordering.
+type SearchCursor struct {
+	Score float32   `json:"s"`
+	Name  string    `json:"n"`
+	CIID  uuid.UUID `json:"id"`
+}
+
+func encodeSearchCursor(score float32, name string, ciID uuid.UUID) string {
+	c := SearchCursor{
+		Score: score,
+		Name:  name,
+		CIID:  ciID,
+	}
+	b, _ := json.Marshal(c)
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func decodeSearchCursor(raw string) (*SearchCursor, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	b, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid cursor encoding", domain.ErrBadParam)
+	}
+	var c SearchCursor
+	if err := json.Unmarshal(b, &c); err != nil {
+		return nil, fmt.Errorf("%w: invalid cursor payload", domain.ErrBadParam)
+	}
+	if c.CIID == uuid.Nil {
+		return nil, fmt.Errorf("%w: invalid cursor CI ID", domain.ErrBadParam)
+	}
+	return &c, nil
+}
+
 // CIService manages post-baseline Configuration Item lifecycles.
 type CIService struct {
 	store *postgres.Store
@@ -27,6 +63,199 @@ type CIService struct {
 // NewCIService creates a new CIService instance.
 func NewCIService(store *postgres.Store) *CIService {
 	return &CIService{store: store}
+}
+
+// SearchCIs performs hybrid prefix and trigram similarity search against the active CI catalog with deterministic keyset pagination.
+func (s *CIService) SearchCIs(ctx context.Context, params gen.SearchCIsParams) (*gen.CISearchResponse, error) {
+	query := ""
+	if params.Q != nil {
+		query = *params.Q
+	}
+	ciClass := ""
+	if params.CiClass != nil {
+		ciClass = string(*params.CiClass)
+	}
+	environment := ""
+	if params.Environment != nil {
+		environment = string(*params.Environment)
+	}
+	ownerGroupID := uuid.Nil
+	if params.OwnerGroupId != nil {
+		ownerGroupID = *params.OwnerGroupId
+	}
+	limit := int32(20)
+	if params.Limit != nil && *params.Limit > 0 {
+		limit = int32(*params.Limit)
+	}
+
+	var hasCursor bool
+	var lastScore float32
+	var lastName string
+	var lastCIID uuid.UUID
+
+	if params.Cursor != nil && *params.Cursor != "" {
+		cur, err := decodeSearchCursor(*params.Cursor)
+		if err != nil {
+			return nil, err
+		}
+		if cur != nil {
+			hasCursor = true
+			lastScore = cur.Score
+			lastName = cur.Name
+			lastCIID = cur.CIID
+		}
+	}
+
+	// Fetch limit + 1 to detect next page
+	fetchLimit := limit + 1
+
+	rows, err := s.store.Queries().SearchCIs(ctx, sqlcgen.SearchCIsParams{
+		Query:        query,
+		CiClass:      ciClass,
+		Environment:  environment,
+		OwnerGroupID: ownerGroupID,
+		HasCursor:    hasCursor,
+		LastScore:    lastScore,
+		LastName:     lastName,
+		LastCiID:     lastCIID,
+		LimitVal:     fetchLimit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search CIs: %w", err)
+	}
+
+	totalCount, err := s.store.Queries().CountSearchCIs(ctx, sqlcgen.CountSearchCIsParams{
+		Query:        query,
+		CiClass:      ciClass,
+		Environment:  environment,
+		OwnerGroupID: ownerGroupID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to count search CIs: %w", err)
+	}
+
+	var nextCursor *string
+	if int32(len(rows)) > limit {
+		lastItem := rows[limit-1]
+		enc := encodeSearchCursor(lastItem.Score, lastItem.Name, lastItem.CiID)
+		nextCursor = &enc
+		rows = rows[:limit]
+	}
+
+	results := make([]gen.CISearchResult, 0, len(rows))
+	for _, r := range rows {
+		envelope := mapSearchRowToCIEnvelope(r)
+		var ownership gen.OwnershipHeader
+		if envelope.Ownership != nil {
+			ownership = *envelope.Ownership
+		}
+		results = append(results, gen.CISearchResult{
+			Ci:        envelope,
+			Ownership: ownership,
+			Score:     r.Score,
+		})
+	}
+
+	return &gen.CISearchResponse{
+		Items:      results,
+		Total:      int(totalCount),
+		NextCursor: nextCursor,
+	}, nil
+}
+
+// GetCIDetail aggregates CI envelope, pinned ownership, graph summaries, and verification status.
+func (s *CIService) GetCIDetail(ctx context.Context, id uuid.UUID) (*gen.CIDetailResponse, error) {
+	// 1. Fetch CI with owner group details
+	ci, err := s.store.Queries().GetCIByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch CI: %w", err)
+	}
+
+	// 2. Fetch Aggregates
+	aggs, err := s.store.Queries().GetCIDetailAggregates(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch CI aggregates: %w", err)
+	}
+
+	// 3. Map envelope & pinned ownership
+	envelope := mapGetCIByIDRowToEnvelope(ci)
+
+	// 4. Stale check: last_verified_at < now - 60 days
+	isStale := time.Since(ci.LastVerifiedAt) > 60*24*time.Hour
+
+	var highestTier *gen.CIUpwardSummaryHighestCriticalityTier
+	if aggs.HighestCriticalityTier != "" {
+		tier := gen.CIUpwardSummaryHighestCriticalityTier(aggs.HighestCriticalityTier)
+		highestTier = &tier
+	}
+
+	var ownership gen.OwnershipHeader
+	if envelope.Ownership != nil {
+		ownership = *envelope.Ownership
+	}
+
+	return &gen.CIDetailResponse{
+		Ci:        envelope,
+		Ownership: ownership,
+		VerificationStatus: gen.CIVerificationStatus{
+			LastVerifiedAt:   ci.LastVerifiedAt,
+			IsStale:          isStale,
+			PendingEdgeCount: int(aggs.PendingEdgeCount),
+			OpenFlagCount:    int(aggs.OpenFlagCount),
+		},
+		UpwardSummary: gen.CIUpwardSummary{
+			DirectDependentCount:   int(aggs.DirectDependentCount),
+			TotalUpstreamCount:     int(aggs.TotalUpstreamCount),
+			HighestCriticalityTier: highestTier,
+		},
+		DownwardSummary: gen.CIDownwardSummary{
+			DirectDependencyCount: int(aggs.DirectDependencyCount),
+			TotalDownstreamCount:  int(aggs.TotalDownstreamCount),
+		},
+	}, nil
+}
+
+func mapGetCIByIDRowToEnvelope(ci sqlcgen.GetCIByIDRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if ci.PrimaryEndpoint.Valid {
+		primaryEndpoint = &ci.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if ci.ItamExternalRef.Valid {
+		itamRef = &ci.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(ci.ClassMetadata) > 0 {
+		_ = json.Unmarshal(ci.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &ci.CiID,
+		Name:             ci.Name,
+		CiClass:          gen.CIEnvelopeCiClass(ci.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(ci.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(ci.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(ci.CriticalityTier),
+		OwnerGroupId:     ci.OwnerGroupID,
+		TechnicalContact: ci.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &ci.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &ci.CreatedAt,
+		UpdatedAt:        &ci.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     ci.OwnerGroupID,
+			OwnerGroupName:   ci.OwnerGroupName,
+			DepartmentName:   ci.DepartmentName,
+			TechnicalContact: ci.TechnicalContact,
+			TeamLeadName:     ci.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(ci.TeamLeadEmail),
+		},
+	}
 }
 
 // CreateCI creates a single configuration item post-baseline with strict envelope and owner RBAC validation.

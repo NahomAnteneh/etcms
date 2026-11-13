@@ -55,6 +55,14 @@ const (
 	Retired    CIEnvelopeLifecycleState = "retired"
 )
 
+// Defines values for CIUpwardSummaryHighestCriticalityTier.
+const (
+	CIUpwardSummaryHighestCriticalityTierTier0 CIUpwardSummaryHighestCriticalityTier = "tier_0"
+	CIUpwardSummaryHighestCriticalityTierTier1 CIUpwardSummaryHighestCriticalityTier = "tier_1"
+	CIUpwardSummaryHighestCriticalityTierTier2 CIUpwardSummaryHighestCriticalityTier = "tier_2"
+	CIUpwardSummaryHighestCriticalityTierTier3 CIUpwardSummaryHighestCriticalityTier = "tier_3"
+)
+
 // Defines values for CampaignProgressResponseStatus.
 const (
 	CampaignProgressResponseStatusActive   CampaignProgressResponseStatus = "active"
@@ -81,10 +89,10 @@ const (
 
 // Defines values for CreateCIRequestCriticalityTier.
 const (
-	CreateCIRequestCriticalityTierTier0 CreateCIRequestCriticalityTier = "tier_0"
-	CreateCIRequestCriticalityTierTier1 CreateCIRequestCriticalityTier = "tier_1"
-	CreateCIRequestCriticalityTierTier2 CreateCIRequestCriticalityTier = "tier_2"
-	CreateCIRequestCriticalityTierTier3 CreateCIRequestCriticalityTier = "tier_3"
+	Tier0 CreateCIRequestCriticalityTier = "tier_0"
+	Tier1 CreateCIRequestCriticalityTier = "tier_1"
+	Tier2 CreateCIRequestCriticalityTier = "tier_2"
+	Tier3 CreateCIRequestCriticalityTier = "tier_3"
 )
 
 // Defines values for CreateCIRequestEnvironment.
@@ -216,6 +224,21 @@ type BaselineResponse struct {
 	VersionTag       string                  `json:"version_tag"`
 }
 
+// CIDetailResponse defines model for CIDetailResponse.
+type CIDetailResponse struct {
+	Ci                 CIEnvelope           `json:"ci"`
+	DownwardSummary    CIDownwardSummary    `json:"downward_summary"`
+	Ownership          OwnershipHeader      `json:"ownership"`
+	UpwardSummary      CIUpwardSummary      `json:"upward_summary"`
+	VerificationStatus CIVerificationStatus `json:"verification_status"`
+}
+
+// CIDownwardSummary defines model for CIDownwardSummary.
+type CIDownwardSummary struct {
+	DirectDependencyCount int `json:"direct_dependency_count"`
+	TotalDownstreamCount  int `json:"total_downstream_count"`
+}
+
 // CIEnvelope defines model for CIEnvelope.
 type CIEnvelope struct {
 	CiClass          CIEnvelopeCiClass         `json:"ci_class"`
@@ -256,8 +279,27 @@ type CISearchResponse struct {
 
 // CISearchResult defines model for CISearchResult.
 type CISearchResult struct {
-	Ci    CIEnvelope `json:"ci"`
-	Score float32    `json:"score"`
+	Ci        CIEnvelope      `json:"ci"`
+	Ownership OwnershipHeader `json:"ownership"`
+	Score     float32         `json:"score"`
+}
+
+// CIUpwardSummary defines model for CIUpwardSummary.
+type CIUpwardSummary struct {
+	DirectDependentCount   int                                    `json:"direct_dependent_count"`
+	HighestCriticalityTier *CIUpwardSummaryHighestCriticalityTier `json:"highest_criticality_tier"`
+	TotalUpstreamCount     int                                    `json:"total_upstream_count"`
+}
+
+// CIUpwardSummaryHighestCriticalityTier defines model for CIUpwardSummary.HighestCriticalityTier.
+type CIUpwardSummaryHighestCriticalityTier string
+
+// CIVerificationStatus defines model for CIVerificationStatus.
+type CIVerificationStatus struct {
+	IsStale          bool      `json:"is_stale"`
+	LastVerifiedAt   time.Time `json:"last_verified_at"`
+	OpenFlagCount    int       `json:"open_flag_count"`
+	PendingEdgeCount int       `json:"pending_edge_count"`
 }
 
 // CampaignInvitation defines model for CampaignInvitation.
@@ -603,6 +645,9 @@ type ServerInterface interface {
 	// Search configuration items
 	// (GET /api/v1/cis/search)
 	SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams)
+	// Get configuration item detail with graph summary and verification status
+	// (GET /api/v1/cis/{id})
+	GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Create a single edge dependency post-baseline
 	// (POST /api/v1/edges)
 	CreateEdge(w http.ResponseWriter, r *http.Request)
@@ -669,6 +714,12 @@ func (_ Unimplemented) CreateCI(w http.ResponseWriter, r *http.Request) {
 // Search configuration items
 // (GET /api/v1/cis/search)
 func (_ Unimplemented) SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get configuration item detail with graph summary and verification status
+// (GET /api/v1/cis/{id})
+func (_ Unimplemented) GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -904,6 +955,39 @@ func (siw *ServerInterfaceWrapper) SearchCIs(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchCIs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCIDetail operation middleware
+func (siw *ServerInterfaceWrapper) GetCIDetail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCIDetail(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1427,6 +1511,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/cis/search", wrapper.SearchCIs)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cis/{id}", wrapper.GetCIDetail)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/edges", wrapper.CreateEdge)
 	})
 	r.Group(func(r chi.Router) {
@@ -1668,6 +1755,50 @@ type SearchCIs401ApplicationProblemPlusJSONResponse ProblemDetails
 func (response SearchCIs401ApplicationProblemPlusJSONResponse) VisitSearchCIsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIDetailRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetCIDetailResponseObject interface {
+	VisitGetCIDetailResponse(w http.ResponseWriter) error
+}
+
+type GetCIDetail200JSONResponse CIDetailResponse
+
+func (response GetCIDetail200JSONResponse) VisitGetCIDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIDetail400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetCIDetail400ApplicationProblemPlusJSONResponse) VisitGetCIDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIDetail401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetCIDetail401ApplicationProblemPlusJSONResponse) VisitGetCIDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIDetail404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetCIDetail404ApplicationProblemPlusJSONResponse) VisitGetCIDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -2284,6 +2415,9 @@ type StrictServerInterface interface {
 	// Search configuration items
 	// (GET /api/v1/cis/search)
 	SearchCIs(ctx context.Context, request SearchCIsRequestObject) (SearchCIsResponseObject, error)
+	// Get configuration item detail with graph summary and verification status
+	// (GET /api/v1/cis/{id})
+	GetCIDetail(ctx context.Context, request GetCIDetailRequestObject) (GetCIDetailResponseObject, error)
 	// Create a single edge dependency post-baseline
 	// (POST /api/v1/edges)
 	CreateEdge(ctx context.Context, request CreateEdgeRequestObject) (CreateEdgeResponseObject, error)
@@ -2461,6 +2595,32 @@ func (sh *strictHandler) SearchCIs(w http.ResponseWriter, r *http.Request, param
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchCIsResponseObject); ok {
 		if err := validResponse.VisitSearchCIsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCIDetail operation middleware
+func (sh *strictHandler) GetCIDetail(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetCIDetailRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCIDetail(ctx, request.(GetCIDetailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCIDetail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCIDetailResponseObject); ok {
+		if err := validResponse.VisitGetCIDetailResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

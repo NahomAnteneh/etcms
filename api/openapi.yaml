@@ -662,6 +662,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/cis/{id}:
+    get:
+      summary: Get configuration item detail with graph summary and verification status
+      operationId: getCIDetail
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: CI detail retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIDetailResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
   /api/v1/edges:
     post:
       summary: Create a single edge dependency post-baseline
@@ -1269,10 +1311,13 @@ components:
       additionalProperties: false
       required:
         - ci
+        - ownership
         - score
       properties:
         ci:
           $ref: '#/components/schemas/CIEnvelope'
+        ownership:
+          $ref: '#/components/schemas/OwnershipHeader'
         score:
           type: number
           format: float
@@ -1293,6 +1338,78 @@ components:
         next_cursor:
           type: string
           nullable: true
+
+    CIDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ci
+        - ownership
+        - verification_status
+        - upward_summary
+        - downward_summary
+      properties:
+        ci:
+          $ref: '#/components/schemas/CIEnvelope'
+        ownership:
+          $ref: '#/components/schemas/OwnershipHeader'
+        verification_status:
+          $ref: '#/components/schemas/CIVerificationStatus'
+        upward_summary:
+          $ref: '#/components/schemas/CIUpwardSummary'
+        downward_summary:
+          $ref: '#/components/schemas/CIDownwardSummary'
+
+    CIVerificationStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - last_verified_at
+        - is_stale
+        - pending_edge_count
+        - open_flag_count
+      properties:
+        last_verified_at:
+          type: string
+          format: date-time
+        is_stale:
+          type: boolean
+        pending_edge_count:
+          type: integer
+        open_flag_count:
+          type: integer
+
+    CIUpwardSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - direct_dependent_count
+        - total_upstream_count
+      properties:
+        direct_dependent_count:
+          type: integer
+        total_upstream_count:
+          type: integer
+        highest_criticality_tier:
+          type: string
+          nullable: true
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+
+    CIDownwardSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - direct_dependency_count
+        - total_downstream_count
+      properties:
+        direct_dependency_count:
+          type: integer
+        total_downstream_count:
+          type: integer
 
     SubmitIntakeRequest:
       type: object

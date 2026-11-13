@@ -44,6 +44,7 @@ SELECT
     og.team_lead_name,
     og.team_lead_email,
     CASE
+        WHEN @query::text = '' THEN 1.0::real
         WHEN length(@query::text) >= 3 THEN
             GREATEST(similarity(c.name, @query::text), similarity(COALESCE(c.primary_endpoint, ''), @query::text))
         WHEN c.name ILIKE @query::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE @query::text || '%' THEN 1.0::real
@@ -64,10 +65,89 @@ WHERE c.lifecycle_state != 'retired'
   AND (
       @query::text = ''
       OR (length(@query::text) < 3 AND (c.name ILIKE @query::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE @query::text || '%'))
-      OR (length(@query::text) >= 3 AND (c.name % @query::text OR COALESCE(c.primary_endpoint, '') % @query::text OR similarity(c.name, @query::text) > 0.1))
+      OR (length(@query::text) >= 3 AND (c.name % @query::text OR COALESCE(c.primary_endpoint, '') % @query::text OR similarity(c.name, @query::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), @query::text) > 0.1))
+  )
+  AND (
+      @has_cursor::boolean = false
+      OR (
+          (CASE
+              WHEN @query::text = '' THEN 1.0::real
+              WHEN length(@query::text) >= 3 THEN
+                  GREATEST(similarity(c.name, @query::text), similarity(COALESCE(c.primary_endpoint, ''), @query::text))
+              WHEN c.name ILIKE @query::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE @query::text || '%' THEN 1.0::real
+              ELSE 0.0::real
+          END) < @last_score::real
+          OR (
+              (CASE
+                  WHEN @query::text = '' THEN 1.0::real
+                  WHEN length(@query::text) >= 3 THEN
+                      GREATEST(similarity(c.name, @query::text), similarity(COALESCE(c.primary_endpoint, ''), @query::text))
+                  WHEN c.name ILIKE @query::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE @query::text || '%' THEN 1.0::real
+                  ELSE 0.0::real
+              END) = @last_score::real
+              AND (c.name > @last_name::text OR (c.name = @last_name::text AND c.ci_id > @last_ci_id::uuid))
+          )
+      )
   )
 ORDER BY score DESC, c.name ASC, c.ci_id ASC
 LIMIT CASE WHEN @limit_val::integer <= 0 THEN 20 ELSE @limit_val::integer END;
+
+-- name: CountSearchCIs :one
+SELECT count(*)::integer AS total_count
+FROM cis c
+WHERE c.lifecycle_state != 'retired'
+  AND (@ci_class::text IS NULL OR @ci_class::text = '' OR c.ci_class::text = @ci_class::text)
+  AND (@environment::text IS NULL OR @environment::text = '' OR c.environment::text = @environment::text)
+  AND (@owner_group_id::uuid IS NULL OR @owner_group_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = @owner_group_id)
+  AND (
+      @query::text = ''
+      OR (length(@query::text) < 3 AND (c.name ILIKE @query::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE @query::text || '%'))
+      OR (length(@query::text) >= 3 AND (c.name % @query::text OR COALESCE(c.primary_endpoint, '') % @query::text OR similarity(c.name, @query::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), @query::text) > 0.1))
+  );
+
+-- name: GetCIDetailAggregates :one
+WITH RECURSIVE
+upstream AS (
+    SELECT e.source_ci_id AS ci_id, 1 AS depth
+    FROM ci_edges e
+    WHERE e.target_ci_id = @ci_id::uuid
+    UNION
+    SELECT e.source_ci_id, u.depth + 1
+    FROM ci_edges e
+    JOIN upstream u ON e.target_ci_id = u.ci_id
+    WHERE u.depth < 15
+),
+downstream AS (
+    SELECT e.target_ci_id AS ci_id, 1 AS depth
+    FROM ci_edges e
+    WHERE e.source_ci_id = @ci_id::uuid
+    UNION
+    SELECT e.target_ci_id, d.depth + 1
+    FROM ci_edges e
+    JOIN downstream d ON e.source_ci_id = d.ci_id
+    WHERE d.depth < 15
+)
+SELECT
+    (SELECT count(*)::integer FROM ci_edges WHERE target_ci_id = @ci_id::uuid) AS direct_dependent_count,
+    (SELECT count(DISTINCT ci_id)::integer FROM upstream) AS total_upstream_count,
+    COALESCE((
+        SELECT c.criticality_tier::text
+        FROM upstream u
+        JOIN cis c ON c.ci_id = u.ci_id
+        ORDER BY
+            CASE c.criticality_tier
+                WHEN 'tier_0' THEN 0
+                WHEN 'tier_1' THEN 1
+                WHEN 'tier_2' THEN 2
+                WHEN 'tier_3' THEN 3
+                ELSE 4
+            END ASC
+        LIMIT 1
+    ), '')::text AS highest_criticality_tier,
+    (SELECT count(*)::integer FROM ci_edges WHERE source_ci_id = @ci_id::uuid) AS direct_dependency_count,
+    (SELECT count(DISTINCT ci_id)::integer FROM downstream) AS total_downstream_count,
+    (SELECT count(*)::integer FROM ci_edges WHERE (source_ci_id = @ci_id::uuid OR target_ci_id = @ci_id::uuid) AND handshake_status = 'pending_confirmation') AS pending_edge_count,
+    (SELECT count(*)::integer FROM ci_flags WHERE ci_id = @ci_id::uuid AND status = 'open') AS open_flag_count;
 
 -- name: GetCIByID :one
 SELECT
