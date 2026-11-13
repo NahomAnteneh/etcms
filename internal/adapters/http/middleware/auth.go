@@ -2,11 +2,14 @@ package middleware
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/org/etcms-backend/internal/adapters/postgres"
@@ -107,6 +110,25 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 				act, err := a.resolveBearerToken(ctx, token)
 				if err == nil {
 					actor = act
+				}
+			}
+		}
+
+		// 3. Check X-Intake-Token header (intake wizard access)
+		if actor == nil {
+			intakeToken := r.Header.Get("X-Intake-Token")
+			if intakeToken != "" && a.store != nil {
+				hash := sha256.Sum256([]byte(intakeToken))
+				tokenHash := hex.EncodeToString(hash[:])
+				row, err := a.store.Queries().GetInvitationByTokenHash(ctx, tokenHash)
+				if err == nil && row.ExpiresAt.After(time.Now().UTC()) && row.InvitationStatus != gen.InvitationStatusEnumExpired {
+					actor = &domain.Actor{
+						ID:            row.InvitationID,
+						Email:         row.TeamLeadEmail,
+						Name:          row.TeamLeadName,
+						Role:          domain.RoleTeamLead,
+						OwnerGroupIDs: []uuid.UUID{row.OwnerGroupID},
+					}
 				}
 			}
 		}

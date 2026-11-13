@@ -354,6 +354,63 @@ func (q *Queries) GetInvitationByTokenHash(ctx context.Context, tokenHash string
 	return i, err
 }
 
+const getSubmissionByInvitationID = `-- name: GetSubmissionByInvitationID :one
+SELECT id, invitation_id, owner_group_id, status, payload, lock_version, submitted_at, created_at, updated_at
+FROM intake_submissions
+WHERE invitation_id = $1
+`
+
+func (q *Queries) GetSubmissionByInvitationID(ctx context.Context, invitationID uuid.UUID) (IntakeSubmission, error) {
+	row := q.db.QueryRow(ctx, getSubmissionByInvitationID, invitationID)
+	var i IntakeSubmission
+	err := row.Scan(
+		&i.ID,
+		&i.InvitationID,
+		&i.OwnerGroupID,
+		&i.Status,
+		&i.Payload,
+		&i.LockVersion,
+		&i.SubmittedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateIntakeDraft = `-- name: UpdateIntakeDraft :one
+UPDATE intake_submissions
+SET payload = $2,
+    lock_version = lock_version + 1,
+    updated_at = now()
+WHERE invitation_id = $1
+  AND lock_version = $3
+  AND status = 'draft'
+RETURNING id, invitation_id, owner_group_id, status, payload, lock_version, submitted_at, created_at, updated_at
+`
+
+type UpdateIntakeDraftParams struct {
+	InvitationID uuid.UUID `json:"invitation_id"`
+	Payload      []byte    `json:"payload"`
+	LockVersion  int32     `json:"lock_version"`
+}
+
+func (q *Queries) UpdateIntakeDraft(ctx context.Context, arg UpdateIntakeDraftParams) (IntakeSubmission, error) {
+	row := q.db.QueryRow(ctx, updateIntakeDraft, arg.InvitationID, arg.Payload, arg.LockVersion)
+	var i IntakeSubmission
+	err := row.Scan(
+		&i.ID,
+		&i.InvitationID,
+		&i.OwnerGroupID,
+		&i.Status,
+		&i.Payload,
+		&i.LockVersion,
+		&i.SubmittedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateInvitationAccess = `-- name: UpdateInvitationAccess :exec
 UPDATE intake_invitations
 SET last_accessed_at = $2,

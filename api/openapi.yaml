@@ -178,6 +178,11 @@ paths:
       responses:
         '200':
           description: Intake invitation context and active draft
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Current draft lock version quoted e.g. "1"
           content:
             application/json:
               schema:
@@ -194,6 +199,150 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+    patch:
+      summary: Auto-save intake draft
+      operationId: saveIntakeDraft
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: If-Match
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Quoted or raw lock version string (e.g. "1")
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveDraftRequest'
+      responses:
+        '200':
+          description: Draft auto-saved successfully
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Updated draft lock version quoted e.g. "2"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveDraftResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Token expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Token not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '412':
+          description: Precondition Failed - Optimistic lock version conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '413':
+          description: Payload Too Large - Exceeds 2MB limit
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/search:
+    get:
+      summary: Search configuration items
+      operationId: searchCIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+        - IntakeTokenAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Trigram or prefix search query string
+        - name: ci_class
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - business_service
+              - application
+              - database
+              - vm_cluster
+              - physical_host
+              - network_firewall
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - prod
+              - dr
+              - staging
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CISearchResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
 
 components:
   securitySchemes:
@@ -205,6 +354,10 @@ components:
       type: apiKey
       in: header
       name: X-Dev-User-ID
+    IntakeTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Intake-Token
 
   schemas:
     ProblemDetails:
@@ -627,6 +780,7 @@ components:
         - team_lead_email
         - status
         - lock_version
+        - existing_cis
       properties:
         invitation_id:
           type: string
@@ -659,3 +813,68 @@ components:
           additionalProperties: true
         lock_version:
           type: integer
+        existing_cis:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIEnvelope'
+
+    SaveDraftRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - payload
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+
+    SaveDraftResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - invitation_id
+        - lock_version
+        - updated_at
+        - payload
+      properties:
+        invitation_id:
+          type: string
+          format: uuid
+        lock_version:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+
+    CISearchResult:
+      type: object
+      additionalProperties: false
+      required:
+        - ci
+        - score
+      properties:
+        ci:
+          $ref: '#/components/schemas/CIEnvelope'
+        score:
+          type: number
+          format: float
+
+    CISearchResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CISearchResult'
+        total:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true

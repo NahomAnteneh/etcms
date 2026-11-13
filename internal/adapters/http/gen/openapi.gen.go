@@ -17,8 +17,42 @@ import (
 )
 
 const (
-	BearerAuthScopes = "BearerAuth.Scopes"
-	DevAuthScopes    = "DevAuth.Scopes"
+	BearerAuthScopes      = "BearerAuth.Scopes"
+	DevAuthScopes         = "DevAuth.Scopes"
+	IntakeTokenAuthScopes = "IntakeTokenAuth.Scopes"
+)
+
+// Defines values for CIEnvelopeCiClass.
+const (
+	CIEnvelopeCiClassApplication     CIEnvelopeCiClass = "application"
+	CIEnvelopeCiClassBusinessService CIEnvelopeCiClass = "business_service"
+	CIEnvelopeCiClassDatabase        CIEnvelopeCiClass = "database"
+	CIEnvelopeCiClassNetworkFirewall CIEnvelopeCiClass = "network_firewall"
+	CIEnvelopeCiClassPhysicalHost    CIEnvelopeCiClass = "physical_host"
+	CIEnvelopeCiClassVmCluster       CIEnvelopeCiClass = "vm_cluster"
+)
+
+// Defines values for CIEnvelopeCriticalityTier.
+const (
+	Tier0 CIEnvelopeCriticalityTier = "tier_0"
+	Tier1 CIEnvelopeCriticalityTier = "tier_1"
+	Tier2 CIEnvelopeCriticalityTier = "tier_2"
+	Tier3 CIEnvelopeCriticalityTier = "tier_3"
+)
+
+// Defines values for CIEnvelopeEnvironment.
+const (
+	CIEnvelopeEnvironmentDr      CIEnvelopeEnvironment = "dr"
+	CIEnvelopeEnvironmentProd    CIEnvelopeEnvironment = "prod"
+	CIEnvelopeEnvironmentStaging CIEnvelopeEnvironment = "staging"
+)
+
+// Defines values for CIEnvelopeLifecycleState.
+const (
+	Deprecated CIEnvelopeLifecycleState = "deprecated"
+	InService  CIEnvelopeLifecycleState = "in_service"
+	Planned    CIEnvelopeLifecycleState = "planned"
+	Retired    CIEnvelopeLifecycleState = "retired"
 )
 
 // Defines values for CampaignProgressResponseStatus.
@@ -68,6 +102,67 @@ const (
 	TeamLead      UserRole = "team_lead"
 	Viewer        UserRole = "viewer"
 )
+
+// Defines values for SearchCIsParamsCiClass.
+const (
+	SearchCIsParamsCiClassApplication     SearchCIsParamsCiClass = "application"
+	SearchCIsParamsCiClassBusinessService SearchCIsParamsCiClass = "business_service"
+	SearchCIsParamsCiClassDatabase        SearchCIsParamsCiClass = "database"
+	SearchCIsParamsCiClassNetworkFirewall SearchCIsParamsCiClass = "network_firewall"
+	SearchCIsParamsCiClassPhysicalHost    SearchCIsParamsCiClass = "physical_host"
+	SearchCIsParamsCiClassVmCluster       SearchCIsParamsCiClass = "vm_cluster"
+)
+
+// Defines values for SearchCIsParamsEnvironment.
+const (
+	SearchCIsParamsEnvironmentDr      SearchCIsParamsEnvironment = "dr"
+	SearchCIsParamsEnvironmentProd    SearchCIsParamsEnvironment = "prod"
+	SearchCIsParamsEnvironmentStaging SearchCIsParamsEnvironment = "staging"
+)
+
+// CIEnvelope defines model for CIEnvelope.
+type CIEnvelope struct {
+	CiClass          CIEnvelopeCiClass         `json:"ci_class"`
+	CiId             *openapi_types.UUID       `json:"ci_id,omitempty"`
+	ClassMetadata    map[string]string         `json:"class_metadata"`
+	CreatedAt        *time.Time                `json:"created_at,omitempty"`
+	CriticalityTier  CIEnvelopeCriticalityTier `json:"criticality_tier"`
+	Environment      CIEnvelopeEnvironment     `json:"environment"`
+	ItamExternalRef  *string                   `json:"itam_external_ref"`
+	LastVerifiedAt   *time.Time                `json:"last_verified_at,omitempty"`
+	LifecycleState   CIEnvelopeLifecycleState  `json:"lifecycle_state"`
+	Name             string                    `json:"name"`
+	OwnerGroupId     openapi_types.UUID        `json:"owner_group_id"`
+	Ownership        *OwnershipHeader          `json:"ownership,omitempty"`
+	PrimaryEndpoint  *string                   `json:"primary_endpoint"`
+	TechnicalContact string                    `json:"technical_contact"`
+	UpdatedAt        *time.Time                `json:"updated_at,omitempty"`
+}
+
+// CIEnvelopeCiClass defines model for CIEnvelope.CiClass.
+type CIEnvelopeCiClass string
+
+// CIEnvelopeCriticalityTier defines model for CIEnvelope.CriticalityTier.
+type CIEnvelopeCriticalityTier string
+
+// CIEnvelopeEnvironment defines model for CIEnvelope.Environment.
+type CIEnvelopeEnvironment string
+
+// CIEnvelopeLifecycleState defines model for CIEnvelope.LifecycleState.
+type CIEnvelopeLifecycleState string
+
+// CISearchResponse defines model for CISearchResponse.
+type CISearchResponse struct {
+	Items      []CISearchResult `json:"items"`
+	NextCursor *string          `json:"next_cursor"`
+	Total      int              `json:"total"`
+}
+
+// CISearchResult defines model for CISearchResult.
+type CISearchResult struct {
+	Ci    CIEnvelope `json:"ci"`
+	Score float32    `json:"score"`
+}
 
 // CampaignInvitation defines model for CampaignInvitation.
 type CampaignInvitation struct {
@@ -145,6 +240,7 @@ type IntakeContextResponse struct {
 	Deadline       time.Time                   `json:"deadline"`
 	DepartmentName string                      `json:"department_name"`
 	DraftPayload   *map[string]interface{}     `json:"draft_payload,omitempty"`
+	ExistingCis    []CIEnvelope                `json:"existing_cis"`
 	InvitationId   openapi_types.UUID          `json:"invitation_id"`
 	LockVersion    int                         `json:"lock_version"`
 	OwnerGroupId   openapi_types.UUID          `json:"owner_group_id"`
@@ -166,6 +262,16 @@ type OwnerGroup struct {
 	Slug           string              `json:"slug"`
 	TeamLeadEmail  openapi_types.Email `json:"team_lead_email"`
 	TeamLeadName   string              `json:"team_lead_name"`
+}
+
+// OwnershipHeader defines model for OwnershipHeader.
+type OwnershipHeader struct {
+	DepartmentName   string              `json:"department_name"`
+	OwnerGroupId     openapi_types.UUID  `json:"owner_group_id"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+	TeamLeadEmail    openapi_types.Email `json:"team_lead_email"`
+	TeamLeadName     string              `json:"team_lead_name"`
+	TechnicalContact string              `json:"technical_contact"`
 }
 
 // ProblemDetails defines model for ProblemDetails.
@@ -195,6 +301,19 @@ type ReadyResponseDatabase string
 // ReadyResponseStatus defines model for ReadyResponse.Status.
 type ReadyResponseStatus string
 
+// SaveDraftRequest defines model for SaveDraftRequest.
+type SaveDraftRequest struct {
+	Payload map[string]interface{} `json:"payload"`
+}
+
+// SaveDraftResponse defines model for SaveDraftResponse.
+type SaveDraftResponse struct {
+	InvitationId openapi_types.UUID     `json:"invitation_id"`
+	LockVersion  int                    `json:"lock_version"`
+	Payload      map[string]interface{} `json:"payload"`
+	UpdatedAt    time.Time              `json:"updated_at"`
+}
+
 // User defines model for User.
 type User struct {
 	CreatedAt           time.Time            `json:"created_at"`
@@ -209,8 +328,34 @@ type User struct {
 // UserRole defines model for User.Role.
 type UserRole string
 
+// SearchCIsParams defines parameters for SearchCIs.
+type SearchCIsParams struct {
+	// Q Trigram or prefix search query string
+	Q            *string                     `form:"q,omitempty" json:"q,omitempty"`
+	CiClass      *SearchCIsParamsCiClass     `form:"ci_class,omitempty" json:"ci_class,omitempty"`
+	Environment  *SearchCIsParamsEnvironment `form:"environment,omitempty" json:"environment,omitempty"`
+	OwnerGroupId *openapi_types.UUID         `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
+	Limit        *int                        `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor       *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// SearchCIsParamsCiClass defines parameters for SearchCIs.
+type SearchCIsParamsCiClass string
+
+// SearchCIsParamsEnvironment defines parameters for SearchCIs.
+type SearchCIsParamsEnvironment string
+
+// SaveIntakeDraftParams defines parameters for SaveIntakeDraft.
+type SaveIntakeDraftParams struct {
+	// IfMatch Quoted or raw lock version string (e.g. "1")
+	IfMatch string `json:"If-Match"`
+}
+
 // CreateIntakeCampaignJSONRequestBody defines body for CreateIntakeCampaign for application/json ContentType.
 type CreateIntakeCampaignJSONRequestBody = CreateCampaignRequest
+
+// SaveIntakeDraftJSONRequestBody defines body for SaveIntakeDraft for application/json ContentType.
+type SaveIntakeDraftJSONRequestBody = SaveDraftRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -220,12 +365,18 @@ type ServerInterface interface {
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Search configuration items
+	// (GET /api/v1/cis/search)
+	SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams)
 	// Liveness probe
 	// (GET /api/v1/healthz)
 	GetHealthz(w http.ResponseWriter, r *http.Request)
 	// Resolve intake invitation magic link token
 	// (GET /api/v1/intake/{token})
 	GetIntakeInvitation(w http.ResponseWriter, r *http.Request, token string)
+	// Auto-save intake draft
+	// (PATCH /api/v1/intake/{token})
+	SaveIntakeDraft(w http.ResponseWriter, r *http.Request, token string, params SaveIntakeDraftParams)
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(w http.ResponseWriter, r *http.Request)
@@ -253,6 +404,12 @@ func (_ Unimplemented) GetCampaignProgress(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Search configuration items
+// (GET /api/v1/cis/search)
+func (_ Unimplemented) SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Liveness probe
 // (GET /api/v1/healthz)
 func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
@@ -262,6 +419,12 @@ func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
 // Resolve intake invitation magic link token
 // (GET /api/v1/intake/{token})
 func (_ Unimplemented) GetIntakeInvitation(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Auto-save intake draft
+// (PATCH /api/v1/intake/{token})
+func (_ Unimplemented) SaveIntakeDraft(w http.ResponseWriter, r *http.Request, token string, params SaveIntakeDraftParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -347,6 +510,83 @@ func (siw *ServerInterfaceWrapper) GetCampaignProgress(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SearchCIs operation middleware
+func (siw *ServerInterfaceWrapper) SearchCIs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, IntakeTokenAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchCIsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "q", r.URL.Query(), &params.Q)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "ci_class" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "ci_class", r.URL.Query(), &params.CiClass)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ci_class", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "environment" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "environment", r.URL.Query(), &params.Environment)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "environment", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "owner_group_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "owner_group_id", r.URL.Query(), &params.OwnerGroupId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_group_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cursor", r.URL.Query(), &params.Cursor)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchCIs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHealthz operation middleware
 func (siw *ServerInterfaceWrapper) GetHealthz(w http.ResponseWriter, r *http.Request) {
 
@@ -377,6 +617,59 @@ func (siw *ServerInterfaceWrapper) GetIntakeInvitation(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetIntakeInvitation(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveIntakeDraft operation middleware
+func (siw *ServerInterfaceWrapper) SaveIntakeDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveIntakeDraftParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveIntakeDraft(w, r, token, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -564,10 +857,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}/progress", wrapper.GetCampaignProgress)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cis/search", wrapper.SearchCIs)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/healthz", wrapper.GetHealthz)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/intake/{token}", wrapper.GetIntakeInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/api/v1/intake/{token}", wrapper.SaveIntakeDraft)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups", wrapper.ListOwnerGroups)
@@ -679,6 +978,41 @@ func (response GetCampaignProgress404ApplicationProblemPlusJSONResponse) VisitGe
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SearchCIsRequestObject struct {
+	Params SearchCIsParams
+}
+
+type SearchCIsResponseObject interface {
+	VisitSearchCIsResponse(w http.ResponseWriter) error
+}
+
+type SearchCIs200JSONResponse CISearchResponse
+
+func (response SearchCIs200JSONResponse) VisitSearchCIsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchCIs400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SearchCIs400ApplicationProblemPlusJSONResponse) VisitSearchCIsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchCIs401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SearchCIs401ApplicationProblemPlusJSONResponse) VisitSearchCIsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetHealthzRequestObject struct {
 }
 
@@ -703,13 +1037,21 @@ type GetIntakeInvitationResponseObject interface {
 	VisitGetIntakeInvitationResponse(w http.ResponseWriter) error
 }
 
-type GetIntakeInvitation200JSONResponse IntakeContextResponse
+type GetIntakeInvitation200ResponseHeaders struct {
+	ETag string
+}
+
+type GetIntakeInvitation200JSONResponse struct {
+	Body    IntakeContextResponse
+	Headers GetIntakeInvitation200ResponseHeaders
+}
 
 func (response GetIntakeInvitation200JSONResponse) VisitGetIntakeInvitationResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
 	w.WriteHeader(200)
 
-	return json.NewEncoder(w).Encode(response)
+	return json.NewEncoder(w).Encode(response.Body)
 }
 
 type GetIntakeInvitation401ApplicationProblemPlusJSONResponse ProblemDetails
@@ -726,6 +1068,87 @@ type GetIntakeInvitation404ApplicationProblemPlusJSONResponse ProblemDetails
 func (response GetIntakeInvitation404ApplicationProblemPlusJSONResponse) VisitGetIntakeInvitationResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SaveIntakeDraftRequestObject struct {
+	Token  string `json:"token"`
+	Params SaveIntakeDraftParams
+	Body   *SaveIntakeDraftJSONRequestBody
+}
+
+type SaveIntakeDraftResponseObject interface {
+	VisitSaveIntakeDraftResponse(w http.ResponseWriter) error
+}
+
+type SaveIntakeDraft200ResponseHeaders struct {
+	ETag string
+}
+
+type SaveIntakeDraft200JSONResponse struct {
+	Body    SaveDraftResponse
+	Headers SaveIntakeDraft200ResponseHeaders
+}
+
+func (response SaveIntakeDraft200JSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type SaveIntakeDraft400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SaveIntakeDraft400ApplicationProblemPlusJSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SaveIntakeDraft401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SaveIntakeDraft401ApplicationProblemPlusJSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SaveIntakeDraft404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SaveIntakeDraft404ApplicationProblemPlusJSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SaveIntakeDraft412ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SaveIntakeDraft412ApplicationProblemPlusJSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(412)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SaveIntakeDraft413ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SaveIntakeDraft413ApplicationProblemPlusJSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(413)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SaveIntakeDraft422ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response SaveIntakeDraft422ApplicationProblemPlusJSONResponse) VisitSaveIntakeDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -813,12 +1236,18 @@ type StrictServerInterface interface {
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(ctx context.Context, request GetCampaignProgressRequestObject) (GetCampaignProgressResponseObject, error)
+	// Search configuration items
+	// (GET /api/v1/cis/search)
+	SearchCIs(ctx context.Context, request SearchCIsRequestObject) (SearchCIsResponseObject, error)
 	// Liveness probe
 	// (GET /api/v1/healthz)
 	GetHealthz(ctx context.Context, request GetHealthzRequestObject) (GetHealthzResponseObject, error)
 	// Resolve intake invitation magic link token
 	// (GET /api/v1/intake/{token})
 	GetIntakeInvitation(ctx context.Context, request GetIntakeInvitationRequestObject) (GetIntakeInvitationResponseObject, error)
+	// Auto-save intake draft
+	// (PATCH /api/v1/intake/{token})
+	SaveIntakeDraft(ctx context.Context, request SaveIntakeDraftRequestObject) (SaveIntakeDraftResponseObject, error)
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(ctx context.Context, request ListOwnerGroupsRequestObject) (ListOwnerGroupsResponseObject, error)
@@ -916,6 +1345,32 @@ func (sh *strictHandler) GetCampaignProgress(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// SearchCIs operation middleware
+func (sh *strictHandler) SearchCIs(w http.ResponseWriter, r *http.Request, params SearchCIsParams) {
+	var request SearchCIsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchCIs(ctx, request.(SearchCIsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchCIs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchCIsResponseObject); ok {
+		if err := validResponse.VisitSearchCIsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHealthz operation middleware
 func (sh *strictHandler) GetHealthz(w http.ResponseWriter, r *http.Request) {
 	var request GetHealthzRequestObject
@@ -959,6 +1414,40 @@ func (sh *strictHandler) GetIntakeInvitation(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetIntakeInvitationResponseObject); ok {
 		if err := validResponse.VisitGetIntakeInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SaveIntakeDraft operation middleware
+func (sh *strictHandler) SaveIntakeDraft(w http.ResponseWriter, r *http.Request, token string, params SaveIntakeDraftParams) {
+	var request SaveIntakeDraftRequestObject
+
+	request.Token = token
+	request.Params = params
+
+	var body SaveIntakeDraftJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SaveIntakeDraft(ctx, request.(SaveIntakeDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SaveIntakeDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SaveIntakeDraftResponseObject); ok {
+		if err := validResponse.VisitSaveIntakeDraftResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

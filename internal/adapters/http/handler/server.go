@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -222,5 +223,94 @@ func (s *Server) GetIntakeInvitation(ctx context.Context, request gen.GetIntakeI
 		return nil, err
 	}
 
-	return gen.GetIntakeInvitation200JSONResponse(*resp), nil
+	return gen.GetIntakeInvitation200JSONResponse{
+		Body: *resp,
+		Headers: gen.GetIntakeInvitation200ResponseHeaders{
+			ETag: fmt.Sprintf("\"%d\"", resp.LockVersion),
+		},
+	}, nil
+}
+
+// SaveIntakeDraft auto-saves a draft submission with optimistic concurrency control.
+func (s *Server) SaveIntakeDraft(ctx context.Context, request gen.SaveIntakeDraftRequestObject) (gen.SaveIntakeDraftResponseObject, error) {
+	if request.Body == nil {
+		return gen.SaveIntakeDraft400ApplicationProblemPlusJSONResponse{
+			Title:  "Bad Request",
+			Status: 400,
+			Detail: "Missing request body",
+		}, nil
+	}
+
+	resp, err := s.intakeService.SaveDraft(ctx, request.Token, request.Params.IfMatch, request.Body.Payload)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidIfMatch) {
+			return gen.SaveIntakeDraft400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: "If-Match header must be a valid integer lock version",
+			}, nil
+		}
+		if errors.Is(err, service.ErrTokenNotFound) {
+			return gen.SaveIntakeDraft404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Intake invitation token not found",
+			}, nil
+		}
+		if errors.Is(err, service.ErrTokenExpired) {
+			return gen.SaveIntakeDraft401ApplicationProblemPlusJSONResponse{
+				Title:  "Unauthorized",
+				Status: 401,
+				Detail: "Intake invitation token has expired",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrLockVersionMismatch) {
+			return gen.SaveIntakeDraft412ApplicationProblemPlusJSONResponse{
+				Title:  "Precondition Failed",
+				Status: 412,
+				Detail: "Lock version conflict; draft was modified by another session",
+			}, nil
+		}
+		if errors.Is(err, domain.ErrUnapprovedITAMField) {
+			return gen.SaveIntakeDraft422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrSubmissionNotDraft) {
+			return gen.SaveIntakeDraft422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
+				Detail: "Intake submission has already been submitted and cannot be modified",
+			}, nil
+		}
+		return nil, err
+	}
+
+	return gen.SaveIntakeDraft200JSONResponse{
+		Body: *resp,
+		Headers: gen.SaveIntakeDraft200ResponseHeaders{
+			ETag: fmt.Sprintf("\"%d\"", resp.LockVersion),
+		},
+	}, nil
+}
+
+// SearchCIs performs catalog search for configuration items.
+func (s *Server) SearchCIs(ctx context.Context, request gen.SearchCIsRequestObject) (gen.SearchCIsResponseObject, error) {
+	_, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.SearchCIs401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	resp, err := s.intakeService.SearchCIs(ctx, request.Params)
+	if err != nil {
+		return nil, err
+	}
+
+	return gen.SearchCIs200JSONResponse(*resp), nil
 }

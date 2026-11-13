@@ -90,3 +90,18 @@ UPDATE intake_invitations
 SET last_accessed_at = $2,
     status = CASE WHEN status = 'sent' THEN 'opened'::invitation_status_enum ELSE status END
 WHERE id = $1;
+
+-- name: UpdateIntakeDraft :one
+UPDATE intake_submissions
+SET payload = $2,
+    lock_version = lock_version + 1,
+    updated_at = now()
+WHERE invitation_id = $1
+  AND lock_version = $3
+  AND status = 'draft'
+RETURNING id, invitation_id, owner_group_id, status, payload, lock_version, submitted_at, created_at, updated_at;
+
+-- name: GetSubmissionByInvitationID :one
+SELECT id, invitation_id, owner_group_id, status, payload, lock_version, submitted_at, created_at, updated_at
+FROM intake_submissions
+WHERE invitation_id = $1;

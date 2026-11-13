@@ -1,7 +1,9 @@
 package http
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -21,9 +23,22 @@ func NewRouter(store *postgres.Store, authConfig middleware.AuthConfig, version 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(middleware.MaxBodySize(2 * 1024 * 1024))
 	r.Use(auth.Middleware)
 
 	server := handler.NewServer(store, version)
-	strictHandler := gen.NewStrictHandler(server, nil)
+	strictHandler := gen.NewStrictHandlerWithOptions(server, nil, gen.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) || strings.Contains(err.Error(), "request body too large") {
+				middleware.WriteProblemDetails(w, http.StatusRequestEntityTooLarge, "Payload Too Large", "Request body exceeds maximum allowed size of 2MB")
+				return
+			}
+			middleware.WriteProblemDetails(w, http.StatusBadRequest, "Bad Request", err.Error())
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			middleware.WriteProblemDetails(w, http.StatusInternalServerError, "Internal Server Error", "An unexpected error occurred")
+		},
+	})
 	return gen.HandlerFromMux(strictHandler, r), nil
 }

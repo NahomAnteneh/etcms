@@ -15,15 +15,19 @@ type Querier interface {
 	CreateIntakeCampaign(ctx context.Context, arg CreateIntakeCampaignParams) (IntakeCampaign, error)
 	CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (IntakeInvitation, error)
 	CreateIntakeSubmission(ctx context.Context, arg CreateIntakeSubmissionParams) (IntakeSubmission, error)
+	GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]GetActiveCIsByOwnerGroupRow, error)
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (IntakeCampaign, error)
 	GetCampaignDepartmentProgress(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignDepartmentProgressRow, error)
 	GetCampaignInvitationsWithGroup(ctx context.Context, campaignID uuid.UUID) ([]GetCampaignInvitationsWithGroupRow, error)
 	GetInvitationByTokenHash(ctx context.Context, tokenHash string) (GetInvitationByTokenHashRow, error)
 	GetOwnerGroupByID(ctx context.Context, id uuid.UUID) (OwnerGroup, error)
+	GetSubmissionByInvitationID(ctx context.Context, invitationID uuid.UUID) (IntakeSubmission, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserOwnerGroupIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	ListOwnerGroups(ctx context.Context) ([]OwnerGroup, error)
+	SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchCIsRow, error)
+	UpdateIntakeDraft(ctx context.Context, arg UpdateIntakeDraftParams) (IntakeSubmission, error)
 	UpdateInvitationAccess(ctx context.Context, arg UpdateInvitationAccessParams) error
 }
 

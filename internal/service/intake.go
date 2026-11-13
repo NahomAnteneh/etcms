@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -247,7 +249,7 @@ func (s *IntakeService) GetCampaignProgress(ctx context.Context, campaignID uuid
 	}, nil
 }
 
-// ResolveToken resolves a magic link token, verifying expiration and updating status.
+// ResolveToken resolves a magic link token, verifying expiration, fetching existing group CIs, and updating status.
 func (s *IntakeService) ResolveToken(ctx context.Context, rawToken string) (*gen.IntakeContextResponse, error) {
 	tokenHash := HashToken(rawToken)
 
@@ -285,6 +287,17 @@ func (s *IntakeService) ResolveToken(ctx context.Context, rawToken string) (*gen
 		status = gen.Submitted
 	}
 
+	// Retrieve existing active CIs owned by this owner group
+	activeCIRows, err := s.store.Queries().GetActiveCIsByOwnerGroup(ctx, row.OwnerGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve active CIs for group: %w", err)
+	}
+
+	existingCIs := make([]gen.CIEnvelope, 0, len(activeCIRows))
+	for _, ciRow := range activeCIRows {
+		existingCIs = append(existingCIs, mapActiveCIRowToCIEnvelope(ciRow))
+	}
+
 	return &gen.IntakeContextResponse{
 		InvitationId:   row.InvitationID,
 		CampaignId:     row.CampaignID,
@@ -298,5 +311,202 @@ func (s *IntakeService) ResolveToken(ctx context.Context, rawToken string) (*gen
 		Status:         status,
 		DraftPayload:   &draftPayload,
 		LockVersion:    lockVersion,
+		ExistingCis:    existingCIs,
 	}, nil
+}
+
+// SaveDraft auto-saves a draft submission with optimistic concurrency control via If-Match.
+func (s *IntakeService) SaveDraft(ctx context.Context, rawToken string, ifMatchHeader string, payload map[string]interface{}) (*gen.SaveDraftResponse, error) {
+	if err := domain.ValidateAntiITAM(payload); err != nil {
+		return nil, err
+	}
+
+	cleaned := strings.Trim(strings.TrimSpace(ifMatchHeader), "\"")
+	if strings.HasPrefix(cleaned, "W/") {
+		cleaned = strings.Trim(strings.TrimPrefix(cleaned, "W/"), "\"")
+	}
+	expectedLockVersion, err := strconv.Atoi(cleaned)
+	if err != nil {
+		return nil, domain.ErrInvalidIfMatch
+	}
+
+	tokenHash := HashToken(rawToken)
+	row, err := s.store.Queries().GetInvitationByTokenHash(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTokenNotFound
+		}
+		return nil, fmt.Errorf("failed to lookup token: %w", err)
+	}
+
+	now := time.Now().UTC()
+	if row.ExpiresAt.Before(now) || row.InvitationStatus == sqlcgen.InvitationStatusEnumExpired {
+		return nil, ErrTokenExpired
+	}
+
+	if row.InvitationStatus == sqlcgen.InvitationStatusEnumSubmitted {
+		return nil, domain.ErrSubmissionNotDraft
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal draft payload: %w", err)
+	}
+
+	updatedSub, err := s.store.Queries().UpdateIntakeDraft(ctx, sqlcgen.UpdateIntakeDraftParams{
+		InvitationID: row.InvitationID,
+		Payload:      payloadBytes,
+		LockVersion:  int32(expectedLockVersion),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Query submission to provide exact error reason
+			sub, subErr := s.store.Queries().GetSubmissionByInvitationID(ctx, row.InvitationID)
+			if subErr == nil {
+				if sub.Status != sqlcgen.SubmissionStatusEnumDraft {
+					return nil, domain.ErrSubmissionNotDraft
+				}
+				if sub.LockVersion != int32(expectedLockVersion) {
+					return nil, domain.ErrLockVersionMismatch
+				}
+			}
+			return nil, domain.ErrLockVersionMismatch
+		}
+		return nil, fmt.Errorf("failed to update draft: %w", err)
+	}
+
+	return &gen.SaveDraftResponse{
+		InvitationId: row.InvitationID,
+		LockVersion:  int(updatedSub.LockVersion),
+		UpdatedAt:    updatedSub.UpdatedAt,
+		Payload:      payload,
+	}, nil
+}
+
+// SearchCIs performs trigram and prefix search against the active CI catalog.
+func (s *IntakeService) SearchCIs(ctx context.Context, params gen.SearchCIsParams) (*gen.CISearchResponse, error) {
+	query := ""
+	if params.Q != nil {
+		query = *params.Q
+	}
+	ciClass := ""
+	if params.CiClass != nil {
+		ciClass = string(*params.CiClass)
+	}
+	environment := ""
+	if params.Environment != nil {
+		environment = string(*params.Environment)
+	}
+	ownerGroupID := uuid.Nil
+	if params.OwnerGroupId != nil {
+		ownerGroupID = *params.OwnerGroupId
+	}
+	limit := int32(20)
+	if params.Limit != nil && *params.Limit > 0 {
+		limit = int32(*params.Limit)
+	}
+
+	rows, err := s.store.Queries().SearchCIs(ctx, sqlcgen.SearchCIsParams{
+		Query:        query,
+		CiClass:      ciClass,
+		Environment:  environment,
+		OwnerGroupID: ownerGroupID,
+		LimitVal:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search CIs: %w", err)
+	}
+
+	results := make([]gen.CISearchResult, 0, len(rows))
+	for _, r := range rows {
+		results = append(results, gen.CISearchResult{
+			Ci:    mapSearchRowToCIEnvelope(r),
+			Score: r.Score,
+		})
+	}
+
+	return &gen.CISearchResponse{
+		Items: results,
+		Total: len(results),
+	}, nil
+}
+
+func mapActiveCIRowToCIEnvelope(ci sqlcgen.GetActiveCIsByOwnerGroupRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if ci.PrimaryEndpoint.Valid {
+		primaryEndpoint = &ci.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if ci.ItamExternalRef.Valid {
+		itamRef = &ci.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(ci.ClassMetadata) > 0 {
+		_ = json.Unmarshal(ci.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &ci.CiID,
+		Name:             ci.Name,
+		CiClass:          gen.CIEnvelopeCiClass(ci.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(ci.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(ci.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(ci.CriticalityTier),
+		OwnerGroupId:     ci.OwnerGroupID,
+		TechnicalContact: ci.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &ci.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &ci.CreatedAt,
+		UpdatedAt:        &ci.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     ci.OwnerGroupID,
+			OwnerGroupName:   ci.OwnerGroupName,
+			DepartmentName:   ci.DepartmentName,
+			TechnicalContact: ci.TechnicalContact,
+			TeamLeadName:     ci.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(ci.TeamLeadEmail),
+		},
+	}
+}
+
+func mapSearchRowToCIEnvelope(ci sqlcgen.SearchCIsRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if ci.PrimaryEndpoint.Valid {
+		primaryEndpoint = &ci.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if ci.ItamExternalRef.Valid {
+		itamRef = &ci.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(ci.ClassMetadata) > 0 {
+		_ = json.Unmarshal(ci.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &ci.CiID,
+		Name:             ci.Name,
+		CiClass:          gen.CIEnvelopeCiClass(ci.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(ci.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(ci.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(ci.CriticalityTier),
+		OwnerGroupId:     ci.OwnerGroupID,
+		TechnicalContact: ci.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &ci.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &ci.CreatedAt,
+		UpdatedAt:        &ci.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     ci.OwnerGroupID,
+			OwnerGroupName:   ci.OwnerGroupName,
+			DepartmentName:   ci.DepartmentName,
+			TechnicalContact: ci.TechnicalContact,
+			TeamLeadName:     ci.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(ci.TeamLeadEmail),
+		},
+	}
 }
