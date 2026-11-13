@@ -13,6 +13,7 @@ import (
 	"github.com/org/etcms-backend/internal/adapters/postgres"
 	"github.com/org/etcms-backend/internal/domain"
 	"github.com/org/etcms-backend/internal/service"
+	"github.com/org/etcms-backend/internal/worker"
 )
 
 // Server implements gen.StrictServerInterface.
@@ -22,6 +23,9 @@ type Server struct {
 	edgeService   *service.EdgeService
 	ciService     *service.CIService
 	digestService *service.DigestService
+	auditService  *service.AuditService
+	healthService *service.HealthService
+	scheduler     *worker.DigestScheduler
 	version       string
 }
 
@@ -36,6 +40,9 @@ func NewServer(store *postgres.Store, version string) *Server {
 		edgeService:   service.NewEdgeService(store),
 		ciService:     service.NewCIService(store),
 		digestService: service.NewDigestService(store),
+		auditService:  service.NewAuditService(store),
+		healthService: service.NewHealthService(store),
+		scheduler:     worker.NewDigestScheduler(store, nil),
 		version:       version,
 	}
 }
@@ -1059,6 +1066,160 @@ func (s *Server) GetActiveDigest(ctx context.Context, request gen.GetActiveDiges
 
 	return gen.GetActiveDigest200JSONResponse(*res), nil
 }
+
+// TriggerDigestRun manually triggers a digest scheduler evaluation pass.
+func (s *Server) TriggerDigestRun(ctx context.Context, request gen.TriggerDigestRunRequestObject) (gen.TriggerDigestRunResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.TriggerDigestRun401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	if !actor.HasRole(domain.RolePlatformAdmin) {
+		return gen.TriggerDigestRun403ApplicationProblemPlusJSONResponse{
+			Title:  "Forbidden",
+			Status: 403,
+			Detail: "Only platform_admin may manually trigger digest cycles",
+		}, nil
+	}
+
+	now := time.Now().UTC()
+	if err := s.scheduler.RunOnce(ctx, now); err != nil {
+		return nil, fmt.Errorf("failed to run digest cycle evaluation: %w", err)
+	}
+
+	groups, err := s.store.Queries().ListAllOwnerGroups(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list owner groups: %w", err)
+	}
+
+	return gen.TriggerDigestRun200JSONResponse{
+		Status:          "completed",
+		CyclesProcessed: len(groups),
+		Timestamp:       now,
+	}, nil
+}
+
+// ExportAuditLogs streams immutable audit logs in CSV or NDJSON format with formula injection protection.
+func (s *Server) ExportAuditLogs(ctx context.Context, request gen.ExportAuditLogsRequestObject) (gen.ExportAuditLogsResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.ExportAuditLogs401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	reader, contentType, disposition, err := s.auditService.ExportAuditLogs(ctx, &actor, request.Params)
+	if err != nil {
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.ExportAuditLogs403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.ExportAuditLogs400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to export audit logs: %w", err)
+	}
+
+	if contentType == "application/x-ndjson" {
+		return gen.ExportAuditLogs200ApplicationxNdjsonResponse{
+			Body: reader,
+			Headers: gen.ExportAuditLogs200ResponseHeaders{
+				ContentDisposition: disposition,
+			},
+		}, nil
+	}
+
+	return gen.ExportAuditLogs200TextcsvResponse{
+		Body: reader,
+		Headers: gen.ExportAuditLogs200ResponseHeaders{
+			ContentDisposition: disposition,
+		},
+	}, nil
+}
+
+// GetCIAuditLogs retrieves a cursor-paginated timeline of audit log entries for a configuration item.
+func (s *Server) GetCIAuditLogs(ctx context.Context, request gen.GetCIAuditLogsRequestObject) (gen.GetCIAuditLogsResponseObject, error) {
+	_, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.GetCIAuditLogs401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	res, err := s.auditService.GetCIAuditLogs(ctx, request.Id, request.Params)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.GetCIAuditLogs404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrBadParam) {
+			return gen.GetCIAuditLogs400ApplicationProblemPlusJSONResponse{
+				Title:  "Bad Request",
+				Status: 400,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to get CI audit logs: %w", err)
+	}
+
+	return gen.GetCIAuditLogs200JSONResponse(*res), nil
+}
+
+// GetHealthMetrics retrieves CMDB governance health metrics.
+func (s *Server) GetHealthMetrics(ctx context.Context, request gen.GetHealthMetricsRequestObject) (gen.GetHealthMetricsResponseObject, error) {
+	_, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.GetHealthMetrics401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	if request.Params.OwnerGroupId != nil && *request.Params.OwnerGroupId != uuid.Nil {
+		_, err := s.store.Queries().GetOwnerGroupByID(ctx, *request.Params.OwnerGroupId)
+		if err != nil {
+			return gen.GetHealthMetrics404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: "Owner group not found",
+			}, nil
+		}
+	}
+
+	res, err := s.healthService.GetHealthMetrics(ctx, request.Params.OwnerGroupId)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.GetHealthMetrics404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to get health metrics: %w", err)
+	}
+
+	return gen.GetHealthMetrics200JSONResponse(*res), nil
+}
+
 
 
 

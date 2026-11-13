@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	ActionDigestItemsForCI(ctx context.Context, arg ActionDigestItemsForCIParams) error
 	ClosePreviousOpenCycles(ctx context.Context, arg ClosePreviousOpenCyclesParams) ([]uuid.UUID, error)
+	CountCIAuditLogs(ctx context.Context, entityID uuid.UUID) (int32, error)
 	CountSearchCIs(ctx context.Context, arg CountSearchCIsParams) (int32, error)
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBaseline(ctx context.Context, arg CreateBaselineParams) (Baseline, error)
@@ -26,12 +27,14 @@ type Querier interface {
 	DeleteEdge(ctx context.Context, id uuid.UUID) error
 	EnsureTeamLeadUser(ctx context.Context, arg EnsureTeamLeadUserParams) (User, error)
 	ExpireUnActionedItemsForCycles(ctx context.Context, cycleIds []uuid.UUID) error
+	ExportAuditLogs(ctx context.Context, arg ExportAuditLogsParams) ([]ExportAuditLogsRow, error)
 	FinalizeIntakeInvitation(ctx context.Context, id uuid.UUID) error
 	FinalizeIntakeSubmission(ctx context.Context, arg FinalizeIntakeSubmissionParams) error
 	GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]GetActiveCIsByOwnerGroupRow, error)
 	GetActiveDigestCycleByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) (DigestCycle, error)
 	GetActiveUpstreamDependents(ctx context.Context, targetCiID uuid.UUID) ([]GetActiveUpstreamDependentsRow, error)
 	GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error)
+	GetCIAuditLogs(ctx context.Context, arg GetCIAuditLogsParams) ([]GetCIAuditLogsRow, error)
 	GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error)
 	GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (GetCIDetailAggregatesRow, error)
 	GetCIFlagByID(ctx context.Context, id uuid.UUID) (CiFlag, error)
@@ -44,6 +47,10 @@ type Querier interface {
 	GetDownwardDependencyEdges(ctx context.Context, arg GetDownwardDependencyEdgesParams) ([]GetDownwardDependencyEdgesRow, error)
 	GetDownwardDependencyNodes(ctx context.Context, arg GetDownwardDependencyNodesParams) ([]GetDownwardDependencyNodesRow, error)
 	GetEdgeWithDetails(ctx context.Context, id uuid.UUID) (GetEdgeWithDetailsRow, error)
+	GetHealthDigestCompletion(ctx context.Context, ownerGroupID uuid.UUID) (GetHealthDigestCompletionRow, error)
+	GetHealthFreshness(ctx context.Context, ownerGroupID uuid.UUID) (GetHealthFreshnessRow, error)
+	GetHealthOrphans(ctx context.Context, ownerGroupID uuid.UUID) (int32, error)
+	GetHealthPendingEdges(ctx context.Context, ownerGroupID uuid.UUID) (GetHealthPendingEdgesRow, error)
 	GetInvitationByTokenHash(ctx context.Context, tokenHash string) (GetInvitationByTokenHashRow, error)
 	GetOwnerGroupByID(ctx context.Context, id uuid.UUID) (OwnerGroup, error)
 	GetSiblingDependencies(ctx context.Context, arg GetSiblingDependenciesParams) ([]GetSiblingDependenciesRow, error)

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -305,6 +306,12 @@ const (
 	Viewer        UserRole = "viewer"
 )
 
+// Defines values for ExportAuditLogsParamsFormat.
+const (
+	Csv    ExportAuditLogsParamsFormat = "csv"
+	Ndjson ExportAuditLogsParamsFormat = "ndjson"
+)
+
 // Defines values for SearchCIsParamsCiClass.
 const (
 	Application     SearchCIsParamsCiClass = "application"
@@ -333,6 +340,20 @@ type ActiveDigestResponse struct {
 	WindowStart    *time.Time          `json:"window_start"`
 }
 
+// AuditLogEntry defines model for AuditLogEntry.
+type AuditLogEntry struct {
+	Action                string                 `json:"action"`
+	ActorEmail            string                 `json:"actor_email"`
+	ActorId               openapi_types.UUID     `json:"actor_id"`
+	ActorName             string                 `json:"actor_name"`
+	AffectedOwnerGroupIds []openapi_types.UUID   `json:"affected_owner_group_ids"`
+	CreatedAt             time.Time              `json:"created_at"`
+	Diff                  map[string]interface{} `json:"diff"`
+	EntityId              openapi_types.UUID     `json:"entity_id"`
+	EntityType            string                 `json:"entity_type"`
+	Id                    openapi_types.UUID     `json:"id"`
+}
+
 // BaselineResponse defines model for BaselineResponse.
 type BaselineResponse struct {
 	BaselineId       openapi_types.UUID      `json:"baseline_id"`
@@ -345,6 +366,13 @@ type BaselineResponse struct {
 	PublishedBy      openapi_types.UUID      `json:"published_by"`
 	Snapshot         *map[string]interface{} `json:"snapshot,omitempty"`
 	VersionTag       string                  `json:"version_tag"`
+}
+
+// CIAuditLogsResponse defines model for CIAuditLogsResponse.
+type CIAuditLogsResponse struct {
+	Items      []AuditLogEntry `json:"items"`
+	NextCursor *string         `json:"next_cursor"`
+	Total      int             `json:"total"`
 }
 
 // CIDetailResponse defines model for CIDetailResponse.
@@ -564,6 +592,13 @@ type DigestItemEnvironment string
 // DigestItemStatus defines model for DigestItem.Status.
 type DigestItemStatus string
 
+// DigestTriggerResponse defines model for DigestTriggerResponse.
+type DigestTriggerResponse struct {
+	CyclesProcessed int       `json:"cycles_processed"`
+	Status          string    `json:"status"`
+	Timestamp       time.Time `json:"timestamp"`
+}
+
 // DownwardDependenciesResponse defines model for DownwardDependenciesResponse.
 type DownwardDependenciesResponse struct {
 	CiId               openapi_types.UUID        `json:"ci_id"`
@@ -639,6 +674,22 @@ type GraphEdgeEdgeType string
 // GraphEdgeHandshakeStatus defines model for GraphEdge.HandshakeStatus.
 type GraphEdgeHandshakeStatus string
 
+// HealthMetricsResponse defines model for HealthMetricsResponse.
+type HealthMetricsResponse struct {
+	ActionedClosedDigestItems int                        `json:"actioned_closed_digest_items"`
+	DigestCompletionRate      float32                    `json:"digest_completion_rate"`
+	FreshCisCount             int                        `json:"fresh_cis_count"`
+	FreshnessRate             float32                    `json:"freshness_rate"`
+	GeneratedAt               time.Time                  `json:"generated_at"`
+	Groups                    *[]OwnerGroupHealthMetrics `json:"groups"`
+	OldestPendingAgeDays      float32                    `json:"oldest_pending_age_days"`
+	OrphanCiCount             int                        `json:"orphan_ci_count"`
+	PendingEdgesCount         int                        `json:"pending_edges_count"`
+	StaleCisCount             int                        `json:"stale_cis_count"`
+	TotalClosedDigestItems    int                        `json:"total_closed_digest_items"`
+	TotalInServiceCis         int                        `json:"total_in_service_cis"`
+}
+
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status    HealthResponseStatus `json:"status"`
@@ -678,6 +729,22 @@ type OwnerGroup struct {
 	Slug           string              `json:"slug"`
 	TeamLeadEmail  openapi_types.Email `json:"team_lead_email"`
 	TeamLeadName   string              `json:"team_lead_name"`
+}
+
+// OwnerGroupHealthMetrics defines model for OwnerGroupHealthMetrics.
+type OwnerGroupHealthMetrics struct {
+	ActionedClosedDigestItems int                `json:"actioned_closed_digest_items"`
+	DigestCompletionRate      float32            `json:"digest_completion_rate"`
+	FreshCisCount             int                `json:"fresh_cis_count"`
+	FreshnessRate             float32            `json:"freshness_rate"`
+	OldestPendingAgeDays      float32            `json:"oldest_pending_age_days"`
+	OrphanCiCount             int                `json:"orphan_ci_count"`
+	OwnerGroupId              openapi_types.UUID `json:"owner_group_id"`
+	OwnerGroupName            string             `json:"owner_group_name"`
+	PendingEdgesCount         int                `json:"pending_edges_count"`
+	StaleCisCount             int                `json:"stale_cis_count"`
+	TotalClosedDigestItems    int                `json:"total_closed_digest_items"`
+	TotalInServiceCis         int                `json:"total_in_service_cis"`
 }
 
 // OwnershipHeader defines model for OwnershipHeader.
@@ -830,6 +897,24 @@ type User struct {
 // UserRole defines model for User.Role.
 type UserRole string
 
+// ExportAuditLogsParams defines parameters for ExportAuditLogs.
+type ExportAuditLogsParams struct {
+	// OwnerGroupId Filter audit logs by affected owner group ID (required for non-admin)
+	OwnerGroupId *openapi_types.UUID `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
+
+	// Format Export format
+	Format *ExportAuditLogsParamsFormat `form:"format,omitempty" json:"format,omitempty"`
+
+	// From Start of audit window filter
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+
+	// To End of audit window filter
+	To *time.Time `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// ExportAuditLogsParamsFormat defines parameters for ExportAuditLogs.
+type ExportAuditLogsParamsFormat string
+
 // SearchCIsParams defines parameters for SearchCIs.
 type SearchCIsParams struct {
 	// Q Trigram or prefix search query string
@@ -847,6 +932,14 @@ type SearchCIsParamsCiClass string
 // SearchCIsParamsEnvironment defines parameters for SearchCIs.
 type SearchCIsParamsEnvironment string
 
+// GetCIAuditLogsParams defines parameters for GetCIAuditLogs.
+type GetCIAuditLogsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Keyset pagination cursor
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // GetDownwardDependenciesParams defines parameters for GetDownwardDependencies.
 type GetDownwardDependenciesParams struct {
 	IncludeRetired *bool `form:"include_retired,omitempty" json:"include_retired,omitempty"`
@@ -861,6 +954,12 @@ type GetUpwardImpactParams struct {
 type RetireCIParams struct {
 	// Force Force retirement bypassing dependent check (strictly restricted to platform_admin)
 	Force *bool `form:"force,omitempty" json:"force,omitempty"`
+}
+
+// GetHealthMetricsParams defines parameters for GetHealthMetrics.
+type GetHealthMetricsParams struct {
+	// OwnerGroupId Optional filter by specific owner group ID
+	OwnerGroupId *openapi_types.UUID `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
 }
 
 // SaveIntakeDraftParams defines parameters for SaveIntakeDraft.
@@ -916,12 +1015,18 @@ type SubmitIntakeJSONRequestBody = SubmitIntakeRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Manually trigger digest scheduler run (ops / testing)
+	// (POST /api/v1/admin/digests/trigger)
+	TriggerDigestRun(w http.ResponseWriter, r *http.Request)
 	// Create a decentralized intake campaign
 	// (POST /api/v1/admin/intake/campaigns)
 	CreateIntakeCampaign(w http.ResponseWriter, r *http.Request)
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Stream immutable audit logs exported in CSV or NDJSON format
+	// (GET /api/v1/audit-logs/export)
+	ExportAuditLogs(w http.ResponseWriter, r *http.Request, params ExportAuditLogsParams)
 	// Create a single configuration item post-baseline
 	// (POST /api/v1/cis)
 	CreateCI(w http.ResponseWriter, r *http.Request)
@@ -934,6 +1039,9 @@ type ServerInterface interface {
 	// Update configuration item attributes with domain RBAC and volatile-only stamping
 	// (PATCH /api/v1/cis/{id})
 	UpdateCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Retrieve cursor-paginated timeline of audit logs for a configuration item
+	// (GET /api/v1/cis/{id}/audit-logs)
+	GetCIAuditLogs(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetCIAuditLogsParams)
 	// Traverse downward dependency graph for a configuration item
 	// (GET /api/v1/cis/{id}/dependencies-downward)
 	GetDownwardDependencies(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDownwardDependenciesParams)
@@ -964,6 +1072,9 @@ type ServerInterface interface {
 	// Reject cross-boundary edge
 	// (POST /api/v1/edges/{id}/reject)
 	RejectEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// CMDB governance health metrics API
+	// (GET /api/v1/health/metrics)
+	GetHealthMetrics(w http.ResponseWriter, r *http.Request, params GetHealthMetricsParams)
 	// Liveness probe
 	// (GET /api/v1/healthz)
 	GetHealthz(w http.ResponseWriter, r *http.Request)
@@ -997,6 +1108,12 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// Manually trigger digest scheduler run (ops / testing)
+// (POST /api/v1/admin/digests/trigger)
+func (_ Unimplemented) TriggerDigestRun(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create a decentralized intake campaign
 // (POST /api/v1/admin/intake/campaigns)
 func (_ Unimplemented) CreateIntakeCampaign(w http.ResponseWriter, r *http.Request) {
@@ -1006,6 +1123,12 @@ func (_ Unimplemented) CreateIntakeCampaign(w http.ResponseWriter, r *http.Reque
 // Get intake campaign progress by department
 // (GET /api/v1/admin/intake/campaigns/{id}/progress)
 func (_ Unimplemented) GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream immutable audit logs exported in CSV or NDJSON format
+// (GET /api/v1/audit-logs/export)
+func (_ Unimplemented) ExportAuditLogs(w http.ResponseWriter, r *http.Request, params ExportAuditLogsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1030,6 +1153,12 @@ func (_ Unimplemented) GetCIDetail(w http.ResponseWriter, r *http.Request, id op
 // Update configuration item attributes with domain RBAC and volatile-only stamping
 // (PATCH /api/v1/cis/{id})
 func (_ Unimplemented) UpdateCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retrieve cursor-paginated timeline of audit logs for a configuration item
+// (GET /api/v1/cis/{id}/audit-logs)
+func (_ Unimplemented) GetCIAuditLogs(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetCIAuditLogsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1090,6 +1219,12 @@ func (_ Unimplemented) FlagEdgeMismatch(w http.ResponseWriter, r *http.Request, 
 // Reject cross-boundary edge
 // (POST /api/v1/edges/{id}/reject)
 func (_ Unimplemented) RejectEdge(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CMDB governance health metrics API
+// (GET /api/v1/health/metrics)
+func (_ Unimplemented) GetHealthMetrics(w http.ResponseWriter, r *http.Request, params GetHealthMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1156,6 +1291,28 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// TriggerDigestRun operation middleware
+func (siw *ServerInterfaceWrapper) TriggerDigestRun(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TriggerDigestRun(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateIntakeCampaign operation middleware
 func (siw *ServerInterfaceWrapper) CreateIntakeCampaign(w http.ResponseWriter, r *http.Request) {
 
@@ -1202,6 +1359,65 @@ func (siw *ServerInterfaceWrapper) GetCampaignProgress(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCampaignProgress(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportAuditLogs operation middleware
+func (siw *ServerInterfaceWrapper) ExportAuditLogs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExportAuditLogsParams
+
+	// ------------- Optional query parameter "owner_group_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "owner_group_id", r.URL.Query(), &params.OwnerGroupId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_group_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "format" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "format", r.URL.Query(), &params.Format)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "format", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "from", r.URL.Query(), &params.From)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "to", r.URL.Query(), &params.To)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportAuditLogs(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1367,6 +1583,58 @@ func (siw *ServerInterfaceWrapper) UpdateCI(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateCI(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCIAuditLogs operation middleware
+func (siw *ServerInterfaceWrapper) GetCIAuditLogs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCIAuditLogsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cursor", r.URL.Query(), &params.Cursor)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCIAuditLogs(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1719,6 +1987,41 @@ func (siw *ServerInterfaceWrapper) RejectEdge(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RejectEdge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHealthMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetHealthMetrics(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetHealthMetricsParams
+
+	// ------------- Optional query parameter "owner_group_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "owner_group_id", r.URL.Query(), &params.OwnerGroupId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_group_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHealthMetrics(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2111,10 +2414,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/digests/trigger", wrapper.TriggerDigestRun)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/admin/intake/campaigns", wrapper.CreateIntakeCampaign)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}/progress", wrapper.GetCampaignProgress)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/audit-logs/export", wrapper.ExportAuditLogs)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/cis", wrapper.CreateCI)
@@ -2127,6 +2436,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/api/v1/cis/{id}", wrapper.UpdateCI)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cis/{id}/audit-logs", wrapper.GetCIAuditLogs)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/cis/{id}/dependencies-downward", wrapper.GetDownwardDependencies)
@@ -2159,6 +2471,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/api/v1/edges/{id}/reject", wrapper.RejectEdge)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/health/metrics", wrapper.GetHealthMetrics)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/healthz", wrapper.GetHealthz)
 	})
 	r.Group(func(r chi.Router) {
@@ -2187,6 +2502,40 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
+}
+
+type TriggerDigestRunRequestObject struct {
+}
+
+type TriggerDigestRunResponseObject interface {
+	VisitTriggerDigestRunResponse(w http.ResponseWriter) error
+}
+
+type TriggerDigestRun200JSONResponse DigestTriggerResponse
+
+func (response TriggerDigestRun200JSONResponse) VisitTriggerDigestRunResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TriggerDigestRun401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response TriggerDigestRun401ApplicationProblemPlusJSONResponse) VisitTriggerDigestRunResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TriggerDigestRun403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response TriggerDigestRun403ApplicationProblemPlusJSONResponse) VisitTriggerDigestRunResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type CreateIntakeCampaignRequestObject struct {
@@ -2282,6 +2631,87 @@ type GetCampaignProgress404ApplicationProblemPlusJSONResponse ProblemDetails
 func (response GetCampaignProgress404ApplicationProblemPlusJSONResponse) VisitGetCampaignProgressResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ExportAuditLogsRequestObject struct {
+	Params ExportAuditLogsParams
+}
+
+type ExportAuditLogsResponseObject interface {
+	VisitExportAuditLogsResponse(w http.ResponseWriter) error
+}
+
+type ExportAuditLogs200ResponseHeaders struct {
+	ContentDisposition string
+}
+
+type ExportAuditLogs200ApplicationxNdjsonResponse struct {
+	Body          io.Reader
+	Headers       ExportAuditLogs200ResponseHeaders
+	ContentLength int64
+}
+
+func (response ExportAuditLogs200ApplicationxNdjsonResponse) VisitExportAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprint(response.Headers.ContentDisposition))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type ExportAuditLogs200TextcsvResponse struct {
+	Body          io.Reader
+	Headers       ExportAuditLogs200ResponseHeaders
+	ContentLength int64
+}
+
+func (response ExportAuditLogs200TextcsvResponse) VisitExportAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "text/csv")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprint(response.Headers.ContentDisposition))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type ExportAuditLogs400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ExportAuditLogs400ApplicationProblemPlusJSONResponse) VisitExportAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ExportAuditLogs401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ExportAuditLogs401ApplicationProblemPlusJSONResponse) VisitExportAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ExportAuditLogs403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ExportAuditLogs403ApplicationProblemPlusJSONResponse) VisitExportAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -2495,6 +2925,51 @@ type UpdateCI422ApplicationProblemPlusJSONResponse ProblemDetails
 func (response UpdateCI422ApplicationProblemPlusJSONResponse) VisitUpdateCIResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIAuditLogsRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params GetCIAuditLogsParams
+}
+
+type GetCIAuditLogsResponseObject interface {
+	VisitGetCIAuditLogsResponse(w http.ResponseWriter) error
+}
+
+type GetCIAuditLogs200JSONResponse CIAuditLogsResponse
+
+func (response GetCIAuditLogs200JSONResponse) VisitGetCIAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIAuditLogs400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetCIAuditLogs400ApplicationProblemPlusJSONResponse) VisitGetCIAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIAuditLogs401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetCIAuditLogs401ApplicationProblemPlusJSONResponse) VisitGetCIAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCIAuditLogs404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetCIAuditLogs404ApplicationProblemPlusJSONResponse) VisitGetCIAuditLogsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -3034,6 +3509,50 @@ func (response RejectEdge409ApplicationProblemPlusJSONResponse) VisitRejectEdgeR
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetHealthMetricsRequestObject struct {
+	Params GetHealthMetricsParams
+}
+
+type GetHealthMetricsResponseObject interface {
+	VisitGetHealthMetricsResponse(w http.ResponseWriter) error
+}
+
+type GetHealthMetrics200JSONResponse HealthMetricsResponse
+
+func (response GetHealthMetrics200JSONResponse) VisitGetHealthMetricsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetHealthMetrics400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetHealthMetrics400ApplicationProblemPlusJSONResponse) VisitGetHealthMetricsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetHealthMetrics401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetHealthMetrics401ApplicationProblemPlusJSONResponse) VisitGetHealthMetricsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetHealthMetrics404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetHealthMetrics404ApplicationProblemPlusJSONResponse) VisitGetHealthMetricsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetHealthzRequestObject struct {
 }
 
@@ -3403,12 +3922,18 @@ func (response GetCurrentUser401ApplicationProblemPlusJSONResponse) VisitGetCurr
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Manually trigger digest scheduler run (ops / testing)
+	// (POST /api/v1/admin/digests/trigger)
+	TriggerDigestRun(ctx context.Context, request TriggerDigestRunRequestObject) (TriggerDigestRunResponseObject, error)
 	// Create a decentralized intake campaign
 	// (POST /api/v1/admin/intake/campaigns)
 	CreateIntakeCampaign(ctx context.Context, request CreateIntakeCampaignRequestObject) (CreateIntakeCampaignResponseObject, error)
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(ctx context.Context, request GetCampaignProgressRequestObject) (GetCampaignProgressResponseObject, error)
+	// Stream immutable audit logs exported in CSV or NDJSON format
+	// (GET /api/v1/audit-logs/export)
+	ExportAuditLogs(ctx context.Context, request ExportAuditLogsRequestObject) (ExportAuditLogsResponseObject, error)
 	// Create a single configuration item post-baseline
 	// (POST /api/v1/cis)
 	CreateCI(ctx context.Context, request CreateCIRequestObject) (CreateCIResponseObject, error)
@@ -3421,6 +3946,9 @@ type StrictServerInterface interface {
 	// Update configuration item attributes with domain RBAC and volatile-only stamping
 	// (PATCH /api/v1/cis/{id})
 	UpdateCI(ctx context.Context, request UpdateCIRequestObject) (UpdateCIResponseObject, error)
+	// Retrieve cursor-paginated timeline of audit logs for a configuration item
+	// (GET /api/v1/cis/{id}/audit-logs)
+	GetCIAuditLogs(ctx context.Context, request GetCIAuditLogsRequestObject) (GetCIAuditLogsResponseObject, error)
 	// Traverse downward dependency graph for a configuration item
 	// (GET /api/v1/cis/{id}/dependencies-downward)
 	GetDownwardDependencies(ctx context.Context, request GetDownwardDependenciesRequestObject) (GetDownwardDependenciesResponseObject, error)
@@ -3451,6 +3979,9 @@ type StrictServerInterface interface {
 	// Reject cross-boundary edge
 	// (POST /api/v1/edges/{id}/reject)
 	RejectEdge(ctx context.Context, request RejectEdgeRequestObject) (RejectEdgeResponseObject, error)
+	// CMDB governance health metrics API
+	// (GET /api/v1/health/metrics)
+	GetHealthMetrics(ctx context.Context, request GetHealthMetricsRequestObject) (GetHealthMetricsResponseObject, error)
 	// Liveness probe
 	// (GET /api/v1/healthz)
 	GetHealthz(ctx context.Context, request GetHealthzRequestObject) (GetHealthzResponseObject, error)
@@ -3509,6 +4040,30 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// TriggerDigestRun operation middleware
+func (sh *strictHandler) TriggerDigestRun(w http.ResponseWriter, r *http.Request) {
+	var request TriggerDigestRunRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TriggerDigestRun(ctx, request.(TriggerDigestRunRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TriggerDigestRun")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TriggerDigestRunResponseObject); ok {
+		if err := validResponse.VisitTriggerDigestRunResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateIntakeCampaign operation middleware
 func (sh *strictHandler) CreateIntakeCampaign(w http.ResponseWriter, r *http.Request) {
 	var request CreateIntakeCampaignRequestObject
@@ -3559,6 +4114,32 @@ func (sh *strictHandler) GetCampaignProgress(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetCampaignProgressResponseObject); ok {
 		if err := validResponse.VisitGetCampaignProgressResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportAuditLogs operation middleware
+func (sh *strictHandler) ExportAuditLogs(w http.ResponseWriter, r *http.Request, params ExportAuditLogsParams) {
+	var request ExportAuditLogsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportAuditLogs(ctx, request.(ExportAuditLogsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportAuditLogs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExportAuditLogsResponseObject); ok {
+		if err := validResponse.VisitExportAuditLogsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3675,6 +4256,33 @@ func (sh *strictHandler) UpdateCI(w http.ResponseWriter, r *http.Request, id ope
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateCIResponseObject); ok {
 		if err := validResponse.VisitUpdateCIResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCIAuditLogs operation middleware
+func (sh *strictHandler) GetCIAuditLogs(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetCIAuditLogsParams) {
+	var request GetCIAuditLogsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCIAuditLogs(ctx, request.(GetCIAuditLogsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCIAuditLogs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCIAuditLogsResponseObject); ok {
+		if err := validResponse.VisitGetCIAuditLogsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3964,6 +4572,32 @@ func (sh *strictHandler) RejectEdge(w http.ResponseWriter, r *http.Request, id o
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RejectEdgeResponseObject); ok {
 		if err := validResponse.VisitRejectEdgeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHealthMetrics operation middleware
+func (sh *strictHandler) GetHealthMetrics(w http.ResponseWriter, r *http.Request, params GetHealthMetricsParams) {
+	var request GetHealthMetricsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHealthMetrics(ctx, request.(GetHealthMetricsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHealthMetrics")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetHealthMetricsResponseObject); ok {
+		if err := validResponse.VisitGetHealthMetricsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

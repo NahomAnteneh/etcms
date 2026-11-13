@@ -36,6 +36,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/health/metrics:
+    get:
+      summary: CMDB governance health metrics API
+      operationId: getHealthMetrics
+      tags:
+        - Health
+        - Governance
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional filter by specific owner group ID
+      responses:
+        '200':
+          description: CMDB governance health metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthMetricsResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
   /api/v1/users/me:
     get:
       summary: Get currently authenticated user profile
@@ -448,6 +492,109 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         '404':
           description: Not Found (user has no primary owner group or group not found)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/digests/trigger:
+    post:
+      summary: Manually trigger digest scheduler run (ops / testing)
+      operationId: triggerDigestRun
+      tags:
+        - Admin
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: Digest cycle run triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DigestTriggerResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (strictly restricted to platform_admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/audit-logs/export:
+    get:
+      summary: Stream immutable audit logs exported in CSV or NDJSON format
+      operationId: exportAuditLogs
+      tags:
+        - Audit
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Filter audit logs by affected owner group ID (required for non-admin)
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [csv, ndjson]
+            default: csv
+          description: Export format
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Start of audit window filter
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: End of audit window filter
+      responses:
+        '200':
+          description: Exported audit logs stream
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: File attachment directive
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/x-ndjson:
+              schema:
+                type: string
+        '400':
+          description: Bad request (invalid UUID or date-time)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (non-admin attempting to export without owner group or foreign group)
           content:
             application/problem+json:
               schema:
@@ -1051,6 +1198,61 @@ paths:
                 $ref: '#/components/schemas/DownwardDependenciesResponse'
         '400':
           description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/audit-logs:
+    get:
+      summary: Retrieve cursor-paginated timeline of audit logs for a configuration item
+      operationId: getCIAuditLogs
+      tags:
+        - CIs
+        - Audit
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Keyset pagination cursor
+      responses:
+        '200':
+          description: Audit logs timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIAuditLogsResponse'
+        '400':
+          description: Bad request (invalid UUID or cursor)
           content:
             application/problem+json:
               schema:
@@ -2408,5 +2610,176 @@ components:
         created_at:
           type: string
           format: date-time
+
+    CIAuditLogsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        total:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true
+
+    AuditLogEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - actor_id
+        - actor_name
+        - actor_email
+        - action
+        - diff
+        - affected_owner_group_ids
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        actor_name:
+          type: string
+        actor_email:
+          type: string
+        action:
+          type: string
+        diff:
+          type: object
+          additionalProperties: true
+        affected_owner_group_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    DigestTriggerResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - cycles_processed
+        - timestamp
+      properties:
+        status:
+          type: string
+        cycles_processed:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+
+    HealthMetricsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - freshness_rate
+        - total_in_service_cis
+        - fresh_cis_count
+        - stale_cis_count
+        - orphan_ci_count
+        - pending_edges_count
+        - oldest_pending_age_days
+        - digest_completion_rate
+        - total_closed_digest_items
+        - actioned_closed_digest_items
+        - generated_at
+      properties:
+        freshness_rate:
+          type: number
+          format: float
+        total_in_service_cis:
+          type: integer
+        fresh_cis_count:
+          type: integer
+        stale_cis_count:
+          type: integer
+        orphan_ci_count:
+          type: integer
+        pending_edges_count:
+          type: integer
+        oldest_pending_age_days:
+          type: number
+          format: float
+        digest_completion_rate:
+          type: number
+          format: float
+        total_closed_digest_items:
+          type: integer
+        actioned_closed_digest_items:
+          type: integer
+        groups:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/OwnerGroupHealthMetrics'
+        generated_at:
+          type: string
+          format: date-time
+
+    OwnerGroupHealthMetrics:
+      type: object
+      additionalProperties: false
+      required:
+        - owner_group_id
+        - owner_group_name
+        - freshness_rate
+        - total_in_service_cis
+        - fresh_cis_count
+        - stale_cis_count
+        - orphan_ci_count
+        - pending_edges_count
+        - oldest_pending_age_days
+        - digest_completion_rate
+        - total_closed_digest_items
+        - actioned_closed_digest_items
+      properties:
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        freshness_rate:
+          type: number
+          format: float
+        total_in_service_cis:
+          type: integer
+        fresh_cis_count:
+          type: integer
+        stale_cis_count:
+          type: integer
+        orphan_ci_count:
+          type: integer
+        pending_edges_count:
+          type: integer
+        oldest_pending_age_days:
+          type: number
+          format: float
+        digest_completion_rate:
+          type: number
+          format: float
+        total_closed_digest_items:
+          type: integer
+        actioned_closed_digest_items:
+          type: integer
 
 
