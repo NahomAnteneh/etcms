@@ -311,3 +311,94 @@ SELECT id, ci_id, flagged_by, reason, status, created_at, resolved_at, resolved_
 FROM ci_flags
 WHERE id = $1;
 
+-- name: VerifyCI :one
+WITH updated AS (
+    UPDATE cis
+    SET
+        last_verified_at = @verified_at,
+        updated_at = @verified_at
+    WHERE ci_id = @ci_id
+    RETURNING *
+)
+SELECT
+    u.ci_id,
+    u.name,
+    u.ci_class,
+    u.environment,
+    u.lifecycle_state,
+    u.criticality_tier,
+    u.owner_group_id,
+    u.technical_contact,
+    u.primary_endpoint,
+    u.last_verified_at,
+    u.itam_external_ref,
+    u.class_metadata,
+    u.created_at,
+    u.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM updated u
+JOIN owner_groups og ON og.id = u.owner_group_id;
+
+-- name: ResolveCIFlagsForCI :exec
+UPDATE ci_flags
+SET
+    status = 'resolved',
+    resolved_at = @resolved_at,
+    resolved_by = @resolved_by
+WHERE ci_id = @ci_id
+  AND status = 'open';
+
+-- name: GetActiveUpstreamDependents :many
+SELECT
+    c.ci_id,
+    c.name,
+    c.ci_class,
+    c.environment,
+    c.lifecycle_state,
+    c.criticality_tier,
+    c.owner_group_id,
+    c.technical_contact,
+    c.primary_endpoint,
+    og.name AS owner_group_name
+FROM ci_edges e
+JOIN cis c ON c.ci_id = e.source_ci_id
+JOIN owner_groups og ON og.id = c.owner_group_id
+WHERE e.target_ci_id = @target_ci_id
+  AND c.lifecycle_state = 'in_service'
+ORDER BY c.name ASC;
+
+-- name: RetireCI :one
+WITH updated AS (
+    UPDATE cis
+    SET
+        lifecycle_state = 'retired',
+        updated_at = @retired_at
+    WHERE ci_id = @ci_id
+    RETURNING *
+)
+SELECT
+    u.ci_id,
+    u.name,
+    u.ci_class,
+    u.environment,
+    u.lifecycle_state,
+    u.criticality_tier,
+    u.owner_group_id,
+    u.technical_contact,
+    u.primary_endpoint,
+    u.last_verified_at,
+    u.itam_external_ref,
+    u.class_metadata,
+    u.created_at,
+    u.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM updated u
+JOIN owner_groups og ON og.id = u.owner_group_id;
+
+

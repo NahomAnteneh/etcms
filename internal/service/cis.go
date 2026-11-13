@@ -1066,3 +1066,256 @@ func mapDownwardNodeToEnvelope(n sqlcgen.GetDownwardDependencyNodesRow) gen.CIEn
 	}
 }
 
+// VerifyCI explicitly verifies a CI's operational accuracy, resolves open flags, and marks digest items actioned.
+func (s *CIService) VerifyCI(ctx context.Context, actor *domain.Actor, id uuid.UUID) (*gen.CIEnvelope, error) {
+	ci, err := s.store.Queries().GetCIByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch CI: %w", err)
+	}
+
+	if !actor.BelongsToOwnerGroup(ci.OwnerGroupID) {
+		return nil, fmt.Errorf("%w: caller does not belong to owner group %s", domain.ErrForbidden, ci.OwnerGroupID)
+	}
+
+	var envelope *gen.CIEnvelope
+	err = s.store.WithAuditTx(ctx, *actor, func(tx pgx.Tx, q *sqlcgen.Queries) error {
+		now := time.Now().UTC()
+
+		verifiedRow, err := q.VerifyCI(ctx, sqlcgen.VerifyCIParams{
+			CiID:       id,
+			VerifiedAt: now,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to verify CI: %w", err)
+		}
+
+		err = q.ResolveCIFlagsForCI(ctx, sqlcgen.ResolveCIFlagsForCIParams{
+			CiID:       id,
+			ResolvedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			ResolvedBy: pgtype.UUID{Bytes: actor.ID, Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to resolve CI flags: %w", err)
+		}
+
+		err = q.ActionDigestItemsForCI(ctx, sqlcgen.ActionDigestItemsForCIParams{
+			CiID:       id,
+			ActionedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			ActionType: pgtype.Text{String: "verify", Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to action digest items: %w", err)
+		}
+
+		diffMap := map[string]any{
+			"last_verified_at": map[string]any{
+				"old": ci.LastVerifiedAt,
+				"new": verifiedRow.LastVerifiedAt,
+			},
+		}
+		diffBytes, _ := json.Marshal(diffMap)
+
+		_, err = q.CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+			ID:                    uuid.New(),
+			EntityType:            "ci",
+			EntityID:              id,
+			AffectedOwnerGroupIds: []uuid.UUID{ci.OwnerGroupID},
+			ActorID:               actor.ID,
+			Action:                "verify",
+			Diff:                  diffBytes,
+			CreatedAt:             now,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create audit log for CI verification: %w", err)
+		}
+
+		env := mapVerifyCIRowToEnvelope(verifiedRow)
+		envelope = &env
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return envelope, nil
+}
+
+// RetireCI transitions a CI to retired status, enforcing upstream dependency checks unless force=true (admin only).
+func (s *CIService) RetireCI(ctx context.Context, actor *domain.Actor, id uuid.UUID, force bool) (*gen.CIEnvelope, error) {
+	ci, err := s.store.Queries().GetCIByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: CI not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch CI: %w", err)
+	}
+
+	if !actor.BelongsToOwnerGroup(ci.OwnerGroupID) {
+		return nil, fmt.Errorf("%w: caller does not belong to owner group %s", domain.ErrForbidden, ci.OwnerGroupID)
+	}
+
+	if force {
+		if !actor.HasRole(domain.RolePlatformAdmin) {
+			return nil, fmt.Errorf("%w: force retirement is strictly restricted to platform_admin", domain.ErrForbidden)
+		}
+	} else {
+		dependents, err := s.store.Queries().GetActiveUpstreamDependents(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check upstream dependents: %w", err)
+		}
+		if len(dependents) > 0 {
+			depList := make([]domain.DependentCI, len(dependents))
+			for i, d := range dependents {
+				depList[i] = domain.DependentCI{
+					CIID:        d.CiID,
+					Name:        d.Name,
+					CIClass:     string(d.CiClass),
+					Environment: string(d.Environment),
+				}
+			}
+			return nil, &domain.ConflictError{
+				Message:      fmt.Sprintf("cannot retire CI %s (%s): %d active dependent CIs exist", ci.Name, id, len(dependents)),
+				DependentCIs: depList,
+			}
+		}
+	}
+
+	var envelope *gen.CIEnvelope
+	err = s.store.WithAuditTx(ctx, *actor, func(tx pgx.Tx, q *sqlcgen.Queries) error {
+		now := time.Now().UTC()
+
+		retiredRow, err := q.RetireCI(ctx, sqlcgen.RetireCIParams{
+			CiID:      id,
+			RetiredAt: now,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to retire CI: %w", err)
+		}
+
+		err = q.ActionDigestItemsForCI(ctx, sqlcgen.ActionDigestItemsForCIParams{
+			CiID:       id,
+			ActionedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			ActionType: pgtype.Text{String: "retire", Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to action digest items: %w", err)
+		}
+
+		diffMap := map[string]any{
+			"lifecycle_state": map[string]any{
+				"old": ci.LifecycleState,
+				"new": "retired",
+			},
+			"force": force,
+		}
+		diffBytes, _ := json.Marshal(diffMap)
+
+		_, err = q.CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+			ID:                    uuid.New(),
+			EntityType:            "ci",
+			EntityID:              id,
+			AffectedOwnerGroupIds: []uuid.UUID{ci.OwnerGroupID},
+			ActorID:               actor.ID,
+			Action:                "retire",
+			Diff:                  diffBytes,
+			CreatedAt:             now,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create audit log for CI retirement: %w", err)
+		}
+
+		env := mapRetireCIRowToEnvelope(retiredRow)
+		envelope = &env
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return envelope, nil
+}
+
+func mapVerifyCIRowToEnvelope(u sqlcgen.VerifyCIRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if u.PrimaryEndpoint.Valid {
+		primaryEndpoint = &u.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if u.ItamExternalRef.Valid {
+		itamRef = &u.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(u.ClassMetadata) > 0 {
+		_ = json.Unmarshal(u.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &u.CiID,
+		Name:             u.Name,
+		CiClass:          gen.CIEnvelopeCiClass(u.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(u.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(u.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(u.CriticalityTier),
+		OwnerGroupId:     u.OwnerGroupID,
+		TechnicalContact: u.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &u.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &u.CreatedAt,
+		UpdatedAt:        &u.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     u.OwnerGroupID,
+			OwnerGroupName:   u.OwnerGroupName,
+			DepartmentName:   u.DepartmentName,
+			TechnicalContact: u.TechnicalContact,
+			TeamLeadName:     u.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(u.TeamLeadEmail),
+		},
+	}
+}
+
+func mapRetireCIRowToEnvelope(u sqlcgen.RetireCIRow) gen.CIEnvelope {
+	var primaryEndpoint *string
+	if u.PrimaryEndpoint.Valid {
+		primaryEndpoint = &u.PrimaryEndpoint.String
+	}
+	var itamRef *string
+	if u.ItamExternalRef.Valid {
+		itamRef = &u.ItamExternalRef.String
+	}
+	classMetadata := make(map[string]string)
+	if len(u.ClassMetadata) > 0 {
+		_ = json.Unmarshal(u.ClassMetadata, &classMetadata)
+	}
+
+	return gen.CIEnvelope{
+		CiId:             &u.CiID,
+		Name:             u.Name,
+		CiClass:          gen.CIEnvelopeCiClass(u.CiClass),
+		Environment:      gen.CIEnvelopeEnvironment(u.Environment),
+		LifecycleState:   gen.CIEnvelopeLifecycleState(u.LifecycleState),
+		CriticalityTier:  gen.CIEnvelopeCriticalityTier(u.CriticalityTier),
+		OwnerGroupId:     u.OwnerGroupID,
+		TechnicalContact: u.TechnicalContact,
+		PrimaryEndpoint:  primaryEndpoint,
+		ItamExternalRef:  itamRef,
+		LastVerifiedAt:   &u.LastVerifiedAt,
+		ClassMetadata:    classMetadata,
+		CreatedAt:        &u.CreatedAt,
+		UpdatedAt:        &u.UpdatedAt,
+		Ownership: &gen.OwnershipHeader{
+			OwnerGroupId:     u.OwnerGroupID,
+			OwnerGroupName:   u.OwnerGroupName,
+			DepartmentName:   u.DepartmentName,
+			TechnicalContact: u.TechnicalContact,
+			TeamLeadName:     u.TeamLeadName,
+			TeamLeadEmail:    openapi_types.Email(u.TeamLeadEmail),
+		},
+	}
+}
+
+

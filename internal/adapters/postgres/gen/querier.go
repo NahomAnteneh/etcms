@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	ActionDigestItemsForCI(ctx context.Context, arg ActionDigestItemsForCIParams) error
 	ClosePreviousOpenCycles(ctx context.Context, arg ClosePreviousOpenCyclesParams) ([]uuid.UUID, error)
 	CountSearchCIs(ctx context.Context, arg CountSearchCIsParams) (int32, error)
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
@@ -29,6 +30,7 @@ type Querier interface {
 	FinalizeIntakeSubmission(ctx context.Context, arg FinalizeIntakeSubmissionParams) error
 	GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]GetActiveCIsByOwnerGroupRow, error)
 	GetActiveDigestCycleByOwnerGroup(ctx context.Context, ownerGroupID uuid.UUID) (DigestCycle, error)
+	GetActiveUpstreamDependents(ctx context.Context, targetCiID uuid.UUID) ([]GetActiveUpstreamDependentsRow, error)
 	GetBaselineByCampaignAndGroup(ctx context.Context, arg GetBaselineByCampaignAndGroupParams) (Baseline, error)
 	GetCIByID(ctx context.Context, ciID uuid.UUID) (GetCIByIDRow, error)
 	GetCIDetailAggregates(ctx context.Context, ciID uuid.UUID) (GetCIDetailAggregatesRow, error)
@@ -58,6 +60,8 @@ type Querier interface {
 	ListOwnerGroups(ctx context.Context) ([]OwnerGroup, error)
 	ListPendingEdgesForGroup(ctx context.Context, ownerGroupID uuid.UUID) ([]ListPendingEdgesForGroupRow, error)
 	ListPendingEdgesForGroups(ctx context.Context, ownerGroupIds []uuid.UUID) ([]ListPendingEdgesForGroupsRow, error)
+	ResolveCIFlagsForCI(ctx context.Context, arg ResolveCIFlagsForCIParams) error
+	RetireCI(ctx context.Context, arg RetireCIParams) (RetireCIRow, error)
 	SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchCIsRow, error)
 	UpdateCI(ctx context.Context, arg UpdateCIParams) (UpdateCIRow, error)
 	UpdateEdgeHandshake(ctx context.Context, arg UpdateEdgeHandshakeParams) (CiEdge, error)
@@ -65,6 +69,7 @@ type Querier interface {
 	UpdateInvitationAccess(ctx context.Context, arg UpdateInvitationAccessParams) error
 	UpsertCI(ctx context.Context, arg UpsertCIParams) (Ci, error)
 	UpsertEdge(ctx context.Context, arg UpsertEdgeParams) (CiEdge, error)
+	VerifyCI(ctx context.Context, arg VerifyCIParams) (VerifyCIRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

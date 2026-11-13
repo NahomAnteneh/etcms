@@ -119,3 +119,16 @@ SELECT id, name, slug, department_name, team_lead_name, team_lead_email, created
 FROM owner_groups
 ORDER BY name ASC;
 
+-- name: ActionDigestItemsForCI :exec
+UPDATE digest_items di
+SET
+    status = 'actioned',
+    actioned_at = @actioned_at,
+    action_type = @action_type
+FROM digest_cycles dc
+WHERE di.cycle_id = dc.id
+  AND di.ci_id = @ci_id
+  AND dc.status = 'open'
+  AND di.status = 'open';
+
+

@@ -257,6 +257,70 @@ func (q *Queries) GetActiveCIsByOwnerGroup(ctx context.Context, ownerGroupID uui
 	return items, nil
 }
 
+const getActiveUpstreamDependents = `-- name: GetActiveUpstreamDependents :many
+SELECT
+    c.ci_id,
+    c.name,
+    c.ci_class,
+    c.environment,
+    c.lifecycle_state,
+    c.criticality_tier,
+    c.owner_group_id,
+    c.technical_contact,
+    c.primary_endpoint,
+    og.name AS owner_group_name
+FROM ci_edges e
+JOIN cis c ON c.ci_id = e.source_ci_id
+JOIN owner_groups og ON og.id = c.owner_group_id
+WHERE e.target_ci_id = $1
+  AND c.lifecycle_state = 'in_service'
+ORDER BY c.name ASC
+`
+
+type GetActiveUpstreamDependentsRow struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+}
+
+func (q *Queries) GetActiveUpstreamDependents(ctx context.Context, targetCiID uuid.UUID) ([]GetActiveUpstreamDependentsRow, error) {
+	rows, err := q.db.Query(ctx, getActiveUpstreamDependents, targetCiID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveUpstreamDependentsRow
+	for rows.Next() {
+		var i GetActiveUpstreamDependentsRow
+		if err := rows.Scan(
+			&i.CiID,
+			&i.Name,
+			&i.CiClass,
+			&i.Environment,
+			&i.LifecycleState,
+			&i.CriticalityTier,
+			&i.OwnerGroupID,
+			&i.TechnicalContact,
+			&i.PrimaryEndpoint,
+			&i.OwnerGroupName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCIByID = `-- name: GetCIByID :one
 SELECT
     c.ci_id,
@@ -417,6 +481,111 @@ func (q *Queries) GetCIFlagByID(ctx context.Context, id uuid.UUID) (CiFlag, erro
 		&i.CreatedAt,
 		&i.ResolvedAt,
 		&i.ResolvedBy,
+	)
+	return i, err
+}
+
+const resolveCIFlagsForCI = `-- name: ResolveCIFlagsForCI :exec
+UPDATE ci_flags
+SET
+    status = 'resolved',
+    resolved_at = $1,
+    resolved_by = $2
+WHERE ci_id = $3
+  AND status = 'open'
+`
+
+type ResolveCIFlagsForCIParams struct {
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+	ResolvedBy pgtype.UUID        `json:"resolved_by"`
+	CiID       uuid.UUID          `json:"ci_id"`
+}
+
+func (q *Queries) ResolveCIFlagsForCI(ctx context.Context, arg ResolveCIFlagsForCIParams) error {
+	_, err := q.db.Exec(ctx, resolveCIFlagsForCI, arg.ResolvedAt, arg.ResolvedBy, arg.CiID)
+	return err
+}
+
+const retireCI = `-- name: RetireCI :one
+WITH updated AS (
+    UPDATE cis
+    SET
+        lifecycle_state = 'retired',
+        updated_at = $1
+    WHERE ci_id = $2
+    RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, itam_external_ref, class_metadata, created_at, updated_at
+)
+SELECT
+    u.ci_id,
+    u.name,
+    u.ci_class,
+    u.environment,
+    u.lifecycle_state,
+    u.criticality_tier,
+    u.owner_group_id,
+    u.technical_contact,
+    u.primary_endpoint,
+    u.last_verified_at,
+    u.itam_external_ref,
+    u.class_metadata,
+    u.created_at,
+    u.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM updated u
+JOIN owner_groups og ON og.id = u.owner_group_id
+`
+
+type RetireCIParams struct {
+	RetiredAt time.Time `json:"retired_at"`
+	CiID      uuid.UUID `json:"ci_id"`
+}
+
+type RetireCIRow struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+	DepartmentName   string              `json:"department_name"`
+	TeamLeadName     string              `json:"team_lead_name"`
+	TeamLeadEmail    string              `json:"team_lead_email"`
+}
+
+func (q *Queries) RetireCI(ctx context.Context, arg RetireCIParams) (RetireCIRow, error) {
+	row := q.db.QueryRow(ctx, retireCI, arg.RetiredAt, arg.CiID)
+	var i RetireCIRow
+	err := row.Scan(
+		&i.CiID,
+		&i.Name,
+		&i.CiClass,
+		&i.Environment,
+		&i.LifecycleState,
+		&i.CriticalityTier,
+		&i.OwnerGroupID,
+		&i.TechnicalContact,
+		&i.PrimaryEndpoint,
+		&i.LastVerifiedAt,
+		&i.ItamExternalRef,
+		&i.ClassMetadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerGroupName,
+		&i.DepartmentName,
+		&i.TeamLeadName,
+		&i.TeamLeadEmail,
 	)
 	return i, err
 }
@@ -841,6 +1010,90 @@ func (q *Queries) UpsertEdge(ctx context.Context, arg UpsertEdgeParams) (CiEdge,
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const verifyCI = `-- name: VerifyCI :one
+WITH updated AS (
+    UPDATE cis
+    SET
+        last_verified_at = $1,
+        updated_at = $1
+    WHERE ci_id = $2
+    RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, itam_external_ref, class_metadata, created_at, updated_at
+)
+SELECT
+    u.ci_id,
+    u.name,
+    u.ci_class,
+    u.environment,
+    u.lifecycle_state,
+    u.criticality_tier,
+    u.owner_group_id,
+    u.technical_contact,
+    u.primary_endpoint,
+    u.last_verified_at,
+    u.itam_external_ref,
+    u.class_metadata,
+    u.created_at,
+    u.updated_at,
+    og.name AS owner_group_name,
+    og.department_name,
+    og.team_lead_name,
+    og.team_lead_email
+FROM updated u
+JOIN owner_groups og ON og.id = u.owner_group_id
+`
+
+type VerifyCIParams struct {
+	VerifiedAt time.Time `json:"verified_at"`
+	CiID       uuid.UUID `json:"ci_id"`
+}
+
+type VerifyCIRow struct {
+	CiID             uuid.UUID           `json:"ci_id"`
+	Name             string              `json:"name"`
+	CiClass          CiClassEnum         `json:"ci_class"`
+	Environment      EnvironmentEnum     `json:"environment"`
+	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
+	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
+	OwnerGroupID     uuid.UUID           `json:"owner_group_id"`
+	TechnicalContact string              `json:"technical_contact"`
+	PrimaryEndpoint  pgtype.Text         `json:"primary_endpoint"`
+	LastVerifiedAt   time.Time           `json:"last_verified_at"`
+	ItamExternalRef  pgtype.Text         `json:"itam_external_ref"`
+	ClassMetadata    []byte              `json:"class_metadata"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	OwnerGroupName   string              `json:"owner_group_name"`
+	DepartmentName   string              `json:"department_name"`
+	TeamLeadName     string              `json:"team_lead_name"`
+	TeamLeadEmail    string              `json:"team_lead_email"`
+}
+
+func (q *Queries) VerifyCI(ctx context.Context, arg VerifyCIParams) (VerifyCIRow, error) {
+	row := q.db.QueryRow(ctx, verifyCI, arg.VerifiedAt, arg.CiID)
+	var i VerifyCIRow
+	err := row.Scan(
+		&i.CiID,
+		&i.Name,
+		&i.CiClass,
+		&i.Environment,
+		&i.LifecycleState,
+		&i.CriticalityTier,
+		&i.OwnerGroupID,
+		&i.TechnicalContact,
+		&i.PrimaryEndpoint,
+		&i.LastVerifiedAt,
+		&i.ItamExternalRef,
+		&i.ClassMetadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerGroupName,
+		&i.DepartmentName,
+		&i.TeamLeadName,
+		&i.TeamLeadEmail,
 	)
 	return i, err
 }

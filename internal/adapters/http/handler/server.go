@@ -21,6 +21,7 @@ type Server struct {
 	intakeService *service.IntakeService
 	edgeService   *service.EdgeService
 	ciService     *service.CIService
+	digestService *service.DigestService
 	version       string
 }
 
@@ -34,6 +35,7 @@ func NewServer(store *postgres.Store, version string) *Server {
 		intakeService: service.NewIntakeService(store),
 		edgeService:   service.NewEdgeService(store),
 		ciService:     service.NewCIService(store),
+		digestService: service.NewDigestService(store),
 		version:       version,
 	}
 }
@@ -925,5 +927,138 @@ func (s *Server) CreateCIFlag(ctx context.Context, request gen.CreateCIFlagReque
 
 	return gen.CreateCIFlag201JSONResponse(*res), nil
 }
+
+// VerifyCI explicitly verifies configuration item operational accuracy.
+func (s *Server) VerifyCI(ctx context.Context, request gen.VerifyCIRequestObject) (gen.VerifyCIResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.VerifyCI401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	res, err := s.ciService.VerifyCI(ctx, &actor, request.Id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.VerifyCI404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.VerifyCI403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to verify CI: %w", err)
+	}
+
+	return gen.VerifyCI200JSONResponse(*res), nil
+}
+
+// RetireCI retires a configuration item with upstream dependency safety check.
+func (s *Server) RetireCI(ctx context.Context, request gen.RetireCIRequestObject) (gen.RetireCIResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.RetireCI401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	force := false
+	if request.Params.Force != nil {
+		force = *request.Params.Force
+	}
+
+	res, err := s.ciService.RetireCI(ctx, &actor, request.Id, force)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.RetireCI404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.RetireCI403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: err.Error(),
+			}, nil
+		}
+		var conflictErr *domain.ConflictError
+		if errors.As(err, &conflictErr) {
+			deps := make([]struct {
+				CiClass     gen.ProblemDetailsDependentCisCiClass     `json:"ci_class"`
+				CiId        openapi_types.UUID                        `json:"ci_id"`
+				Environment gen.ProblemDetailsDependentCisEnvironment `json:"environment"`
+				Name        string                                    `json:"name"`
+			}, len(conflictErr.DependentCIs))
+			for i, d := range conflictErr.DependentCIs {
+				deps[i] = struct {
+					CiClass     gen.ProblemDetailsDependentCisCiClass     `json:"ci_class"`
+					CiId        openapi_types.UUID                        `json:"ci_id"`
+					Environment gen.ProblemDetailsDependentCisEnvironment `json:"environment"`
+					Name        string                                    `json:"name"`
+				}{
+					CiId:        d.CIID,
+					Name:        d.Name,
+					CiClass:     gen.ProblemDetailsDependentCisCiClass(d.CIClass),
+					Environment: gen.ProblemDetailsDependentCisEnvironment(d.Environment),
+				}
+			}
+			return gen.RetireCI409ApplicationProblemPlusJSONResponse{
+				Title:        "Conflict",
+				Status:       409,
+				Detail:       conflictErr.Message,
+				DependentCis: &deps,
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to retire CI: %w", err)
+	}
+
+	return gen.RetireCI200JSONResponse(*res), nil
+}
+
+// GetActiveDigest retrieves the active digest cycle and queued CIs for the caller's owner group.
+func (s *Server) GetActiveDigest(ctx context.Context, request gen.GetActiveDigestRequestObject) (gen.GetActiveDigestResponseObject, error) {
+	actor, ok := middleware.ActorFromContext(ctx)
+	if !ok {
+		return gen.GetActiveDigest401ApplicationProblemPlusJSONResponse{
+			Title:  "Unauthorized",
+			Status: 401,
+			Detail: "Authentication required",
+		}, nil
+	}
+
+	res, err := s.digestService.GetActiveDigest(ctx, &actor, request.Params.OwnerGroupId)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return gen.GetActiveDigest404ApplicationProblemPlusJSONResponse{
+				Title:  "Not Found",
+				Status: 404,
+				Detail: err.Error(),
+			}, nil
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			return gen.GetActiveDigest403ApplicationProblemPlusJSONResponse{
+				Title:  "Forbidden",
+				Status: 403,
+				Detail: err.Error(),
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to get active digest: %w", err)
+	}
+
+	return gen.GetActiveDigest200JSONResponse(*res), nil
+}
+
 
 

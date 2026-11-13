@@ -57,9 +57,9 @@ const (
 
 // Defines values for CIFlagResponseStatus.
 const (
-	Dismissed CIFlagResponseStatus = "dismissed"
-	Open      CIFlagResponseStatus = "open"
-	Resolved  CIFlagResponseStatus = "resolved"
+	CIFlagResponseStatusDismissed CIFlagResponseStatus = "dismissed"
+	CIFlagResponseStatusOpen      CIFlagResponseStatus = "open"
+	CIFlagResponseStatusResolved  CIFlagResponseStatus = "resolved"
 )
 
 // Defines values for CIUpwardSummaryHighestCriticalityTier.
@@ -115,6 +115,38 @@ const (
 	CreateEdgeRequestEdgeTypeDependsOn  CreateEdgeRequestEdgeType = "depends_on"
 	CreateEdgeRequestEdgeTypeHostedOn   CreateEdgeRequestEdgeType = "hosted_on"
 	CreateEdgeRequestEdgeTypeReadsFrom  CreateEdgeRequestEdgeType = "reads_from"
+)
+
+// Defines values for DigestItemCiClass.
+const (
+	DigestItemCiClassApplication     DigestItemCiClass = "application"
+	DigestItemCiClassBusinessService DigestItemCiClass = "business_service"
+	DigestItemCiClassDatabase        DigestItemCiClass = "database"
+	DigestItemCiClassNetworkFirewall DigestItemCiClass = "network_firewall"
+	DigestItemCiClassPhysicalHost    DigestItemCiClass = "physical_host"
+	DigestItemCiClassVmCluster       DigestItemCiClass = "vm_cluster"
+)
+
+// Defines values for DigestItemCriticalityTier.
+const (
+	DigestItemCriticalityTierTier0 DigestItemCriticalityTier = "tier_0"
+	DigestItemCriticalityTierTier1 DigestItemCriticalityTier = "tier_1"
+	DigestItemCriticalityTierTier2 DigestItemCriticalityTier = "tier_2"
+	DigestItemCriticalityTierTier3 DigestItemCriticalityTier = "tier_3"
+)
+
+// Defines values for DigestItemEnvironment.
+const (
+	DigestItemEnvironmentDr      DigestItemEnvironment = "dr"
+	DigestItemEnvironmentProd    DigestItemEnvironment = "prod"
+	DigestItemEnvironmentStaging DigestItemEnvironment = "staging"
+)
+
+// Defines values for DigestItemStatus.
+const (
+	DigestItemStatusActioned DigestItemStatus = "actioned"
+	DigestItemStatusExpired  DigestItemStatus = "expired"
+	DigestItemStatusOpen     DigestItemStatus = "open"
 )
 
 // Defines values for EdgeCIPeerCiClass.
@@ -197,6 +229,23 @@ const (
 	Rejected            PendingEdgeHandshakeStatus = "rejected"
 )
 
+// Defines values for ProblemDetailsDependentCisCiClass.
+const (
+	ProblemDetailsDependentCisCiClassApplication     ProblemDetailsDependentCisCiClass = "application"
+	ProblemDetailsDependentCisCiClassBusinessService ProblemDetailsDependentCisCiClass = "business_service"
+	ProblemDetailsDependentCisCiClassDatabase        ProblemDetailsDependentCisCiClass = "database"
+	ProblemDetailsDependentCisCiClassNetworkFirewall ProblemDetailsDependentCisCiClass = "network_firewall"
+	ProblemDetailsDependentCisCiClassPhysicalHost    ProblemDetailsDependentCisCiClass = "physical_host"
+	ProblemDetailsDependentCisCiClassVmCluster       ProblemDetailsDependentCisCiClass = "vm_cluster"
+)
+
+// Defines values for ProblemDetailsDependentCisEnvironment.
+const (
+	ProblemDetailsDependentCisEnvironmentDr      ProblemDetailsDependentCisEnvironment = "dr"
+	ProblemDetailsDependentCisEnvironmentProd    ProblemDetailsDependentCisEnvironment = "prod"
+	ProblemDetailsDependentCisEnvironmentStaging ProblemDetailsDependentCisEnvironment = "staging"
+)
+
 // Defines values for ReadyResponseDatabase.
 const (
 	Connected    ReadyResponseDatabase = "connected"
@@ -243,10 +292,10 @@ const (
 
 // Defines values for UpwardImpactResponseHighestCriticalityTier.
 const (
-	Tier0 UpwardImpactResponseHighestCriticalityTier = "tier_0"
-	Tier1 UpwardImpactResponseHighestCriticalityTier = "tier_1"
-	Tier2 UpwardImpactResponseHighestCriticalityTier = "tier_2"
-	Tier3 UpwardImpactResponseHighestCriticalityTier = "tier_3"
+	UpwardImpactResponseHighestCriticalityTierTier0 UpwardImpactResponseHighestCriticalityTier = "tier_0"
+	UpwardImpactResponseHighestCriticalityTierTier1 UpwardImpactResponseHighestCriticalityTier = "tier_1"
+	UpwardImpactResponseHighestCriticalityTierTier2 UpwardImpactResponseHighestCriticalityTier = "tier_2"
+	UpwardImpactResponseHighestCriticalityTierTier3 UpwardImpactResponseHighestCriticalityTier = "tier_3"
 )
 
 // Defines values for UserRole.
@@ -272,6 +321,17 @@ const (
 	Prod    SearchCIsParamsEnvironment = "prod"
 	Staging SearchCIsParamsEnvironment = "staging"
 )
+
+// ActiveDigestResponse defines model for ActiveDigestResponse.
+type ActiveDigestResponse struct {
+	CycleId        *openapi_types.UUID `json:"cycle_id"`
+	Items          []DigestItem        `json:"items"`
+	OwnerGroupId   openapi_types.UUID  `json:"owner_group_id"`
+	OwnerGroupName string              `json:"owner_group_name"`
+	Status         *string             `json:"status"`
+	WindowEnd      *time.Time          `json:"window_end"`
+	WindowStart    *time.Time          `json:"window_start"`
+}
 
 // BaselineResponse defines model for BaselineResponse.
 type BaselineResponse struct {
@@ -477,6 +537,33 @@ type DepartmentProgress struct {
 	TotalInvitations int    `json:"total_invitations"`
 }
 
+// DigestItem defines model for DigestItem.
+type DigestItem struct {
+	ActionType      *string                   `json:"action_type"`
+	ActionedAt      *time.Time                `json:"actioned_at"`
+	CiClass         DigestItemCiClass         `json:"ci_class"`
+	CiId            openapi_types.UUID        `json:"ci_id"`
+	CreatedAt       time.Time                 `json:"created_at"`
+	CriticalityTier DigestItemCriticalityTier `json:"criticality_tier"`
+	Environment     DigestItemEnvironment     `json:"environment"`
+	Id              openapi_types.UUID        `json:"id"`
+	Name            string                    `json:"name"`
+	Status          DigestItemStatus          `json:"status"`
+	TriggerReason   string                    `json:"trigger_reason"`
+}
+
+// DigestItemCiClass defines model for DigestItem.CiClass.
+type DigestItemCiClass string
+
+// DigestItemCriticalityTier defines model for DigestItem.CriticalityTier.
+type DigestItemCriticalityTier string
+
+// DigestItemEnvironment defines model for DigestItem.Environment.
+type DigestItemEnvironment string
+
+// DigestItemStatus defines model for DigestItem.Status.
+type DigestItemStatus string
+
 // DownwardDependenciesResponse defines model for DownwardDependenciesResponse.
 type DownwardDependenciesResponse struct {
 	CiId               openapi_types.UUID        `json:"ci_id"`
@@ -629,6 +716,12 @@ type PendingEdgesResponse struct {
 
 // ProblemDetails defines model for ProblemDetails.
 type ProblemDetails struct {
+	DependentCis *[]struct {
+		CiClass     ProblemDetailsDependentCisCiClass     `json:"ci_class"`
+		CiId        openapi_types.UUID                    `json:"ci_id"`
+		Environment ProblemDetailsDependentCisEnvironment `json:"environment"`
+		Name        string                                `json:"name"`
+	} `json:"dependent_cis"`
 	Detail        string  `json:"detail"`
 	Instance      *string `json:"instance"`
 	InvalidParams *[]struct {
@@ -640,6 +733,12 @@ type ProblemDetails struct {
 	Title      string               `json:"title"`
 	Type       *string              `json:"type"`
 }
+
+// ProblemDetailsDependentCisCiClass defines model for ProblemDetails.DependentCis.CiClass.
+type ProblemDetailsDependentCisCiClass string
+
+// ProblemDetailsDependentCisEnvironment defines model for ProblemDetails.DependentCis.Environment.
+type ProblemDetailsDependentCisEnvironment string
 
 // ReadyResponse defines model for ReadyResponse.
 type ReadyResponse struct {
@@ -758,6 +857,12 @@ type GetUpwardImpactParams struct {
 	IncludeRetired *bool `form:"include_retired,omitempty" json:"include_retired,omitempty"`
 }
 
+// RetireCIParams defines parameters for RetireCI.
+type RetireCIParams struct {
+	// Force Force retirement bypassing dependent check (strictly restricted to platform_admin)
+	Force *bool `form:"force,omitempty" json:"force,omitempty"`
+}
+
 // SaveIntakeDraftParams defines parameters for SaveIntakeDraft.
 type SaveIntakeDraftParams struct {
 	// IfMatch Quoted or raw lock version string (e.g. "1")
@@ -768,6 +873,12 @@ type SaveIntakeDraftParams struct {
 type SubmitIntakeParams struct {
 	// IdempotencyKey Optional idempotency key for safe retries
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
+// GetActiveDigestParams defines parameters for GetActiveDigest.
+type GetActiveDigestParams struct {
+	// OwnerGroupId Optional owner group ID (defaults to authenticated user's primary owner group)
+	OwnerGroupId *openapi_types.UUID `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
 }
 
 // ListPendingEdgesParams defines parameters for ListPendingEdges.
@@ -832,6 +943,12 @@ type ServerInterface interface {
 	// Traverse upward impact graph for a configuration item
 	// (GET /api/v1/cis/{id}/impact-upward)
 	GetUpwardImpact(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUpwardImpactParams)
+	// Retire configuration item with upstream dependency safety check
+	// (POST /api/v1/cis/{id}/retire)
+	RetireCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RetireCIParams)
+	// Explicitly verify configuration item operational accuracy
+	// (POST /api/v1/cis/{id}/verify)
+	VerifyCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Create a single edge dependency post-baseline
 	// (POST /api/v1/edges)
 	CreateEdge(w http.ResponseWriter, r *http.Request)
@@ -862,6 +979,9 @@ type ServerInterface interface {
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(w http.ResponseWriter, r *http.Request)
+	// Get active digest cycle and queued items for caller's owner group
+	// (GET /api/v1/owner-groups/me/digest)
+	GetActiveDigest(w http.ResponseWriter, r *http.Request, params GetActiveDigestParams)
 	// List pending cross-boundary edges awaiting confirmation
 	// (GET /api/v1/owner-groups/pending-edges)
 	ListPendingEdges(w http.ResponseWriter, r *http.Request, params ListPendingEdgesParams)
@@ -931,6 +1051,18 @@ func (_ Unimplemented) GetUpwardImpact(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Retire configuration item with upstream dependency safety check
+// (POST /api/v1/cis/{id}/retire)
+func (_ Unimplemented) RetireCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RetireCIParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Explicitly verify configuration item operational accuracy
+// (POST /api/v1/cis/{id}/verify)
+func (_ Unimplemented) VerifyCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create a single edge dependency post-baseline
 // (POST /api/v1/edges)
 func (_ Unimplemented) CreateEdge(w http.ResponseWriter, r *http.Request) {
@@ -988,6 +1120,12 @@ func (_ Unimplemented) SubmitIntake(w http.ResponseWriter, r *http.Request, toke
 // List all owner groups
 // (GET /api/v1/owner-groups)
 func (_ Unimplemented) ListOwnerGroups(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get active digest cycle and queued items for caller's owner group
+// (GET /api/v1/owner-groups/me/digest)
+func (_ Unimplemented) GetActiveDigest(w http.ResponseWriter, r *http.Request, params GetActiveDigestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1359,6 +1497,83 @@ func (siw *ServerInterfaceWrapper) GetUpwardImpact(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// RetireCI operation middleware
+func (siw *ServerInterfaceWrapper) RetireCI(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RetireCIParams
+
+	// ------------- Optional query parameter "force" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "force", r.URL.Query(), &params.Force)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "force", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetireCI(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyCI operation middleware
+func (siw *ServerInterfaceWrapper) VerifyCI(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyCI(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateEdge operation middleware
 func (siw *ServerInterfaceWrapper) CreateEdge(w http.ResponseWriter, r *http.Request) {
 
@@ -1676,6 +1891,41 @@ func (siw *ServerInterfaceWrapper) ListOwnerGroups(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetActiveDigest operation middleware
+func (siw *ServerInterfaceWrapper) GetActiveDigest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetActiveDigestParams
+
+	// ------------- Optional query parameter "owner_group_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "owner_group_id", r.URL.Query(), &params.OwnerGroupId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_group_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetActiveDigest(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPendingEdges operation middleware
 func (siw *ServerInterfaceWrapper) ListPendingEdges(w http.ResponseWriter, r *http.Request) {
 
@@ -1888,6 +2138,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/cis/{id}/impact-upward", wrapper.GetUpwardImpact)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/cis/{id}/retire", wrapper.RetireCI)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/cis/{id}/verify", wrapper.VerifyCI)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/edges", wrapper.CreateEdge)
 	})
 	r.Group(func(r chi.Router) {
@@ -1916,6 +2172,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups", wrapper.ListOwnerGroups)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/owner-groups/me/digest", wrapper.GetActiveDigest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups/pending-edges", wrapper.ListPendingEdges)
@@ -2378,6 +2637,122 @@ func (response GetUpwardImpact401ApplicationProblemPlusJSONResponse) VisitGetUpw
 type GetUpwardImpact404ApplicationProblemPlusJSONResponse ProblemDetails
 
 func (response GetUpwardImpact404ApplicationProblemPlusJSONResponse) VisitGetUpwardImpactResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RetireCIRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params RetireCIParams
+}
+
+type RetireCIResponseObject interface {
+	VisitRetireCIResponse(w http.ResponseWriter) error
+}
+
+type RetireCI200JSONResponse CIEnvelope
+
+func (response RetireCI200JSONResponse) VisitRetireCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RetireCI400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RetireCI400ApplicationProblemPlusJSONResponse) VisitRetireCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RetireCI401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RetireCI401ApplicationProblemPlusJSONResponse) VisitRetireCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RetireCI403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RetireCI403ApplicationProblemPlusJSONResponse) VisitRetireCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RetireCI404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RetireCI404ApplicationProblemPlusJSONResponse) VisitRetireCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RetireCI409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RetireCI409ApplicationProblemPlusJSONResponse) VisitRetireCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type VerifyCIRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type VerifyCIResponseObject interface {
+	VisitVerifyCIResponse(w http.ResponseWriter) error
+}
+
+type VerifyCI200JSONResponse CIEnvelope
+
+func (response VerifyCI200JSONResponse) VisitVerifyCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type VerifyCI400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response VerifyCI400ApplicationProblemPlusJSONResponse) VisitVerifyCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type VerifyCI401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response VerifyCI401ApplicationProblemPlusJSONResponse) VisitVerifyCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type VerifyCI403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response VerifyCI403ApplicationProblemPlusJSONResponse) VisitVerifyCIResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type VerifyCI404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response VerifyCI404ApplicationProblemPlusJSONResponse) VisitVerifyCIResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
 
@@ -2897,6 +3272,50 @@ func (response ListOwnerGroups401ApplicationProblemPlusJSONResponse) VisitListOw
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetActiveDigestRequestObject struct {
+	Params GetActiveDigestParams
+}
+
+type GetActiveDigestResponseObject interface {
+	VisitGetActiveDigestResponse(w http.ResponseWriter) error
+}
+
+type GetActiveDigest200JSONResponse ActiveDigestResponse
+
+func (response GetActiveDigest200JSONResponse) VisitGetActiveDigestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetActiveDigest401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetActiveDigest401ApplicationProblemPlusJSONResponse) VisitGetActiveDigestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetActiveDigest403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetActiveDigest403ApplicationProblemPlusJSONResponse) VisitGetActiveDigestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetActiveDigest404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetActiveDigest404ApplicationProblemPlusJSONResponse) VisitGetActiveDigestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListPendingEdgesRequestObject struct {
 	Params ListPendingEdgesParams
 }
@@ -3011,6 +3430,12 @@ type StrictServerInterface interface {
 	// Traverse upward impact graph for a configuration item
 	// (GET /api/v1/cis/{id}/impact-upward)
 	GetUpwardImpact(ctx context.Context, request GetUpwardImpactRequestObject) (GetUpwardImpactResponseObject, error)
+	// Retire configuration item with upstream dependency safety check
+	// (POST /api/v1/cis/{id}/retire)
+	RetireCI(ctx context.Context, request RetireCIRequestObject) (RetireCIResponseObject, error)
+	// Explicitly verify configuration item operational accuracy
+	// (POST /api/v1/cis/{id}/verify)
+	VerifyCI(ctx context.Context, request VerifyCIRequestObject) (VerifyCIResponseObject, error)
 	// Create a single edge dependency post-baseline
 	// (POST /api/v1/edges)
 	CreateEdge(ctx context.Context, request CreateEdgeRequestObject) (CreateEdgeResponseObject, error)
@@ -3041,6 +3466,9 @@ type StrictServerInterface interface {
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(ctx context.Context, request ListOwnerGroupsRequestObject) (ListOwnerGroupsResponseObject, error)
+	// Get active digest cycle and queued items for caller's owner group
+	// (GET /api/v1/owner-groups/me/digest)
+	GetActiveDigest(ctx context.Context, request GetActiveDigestRequestObject) (GetActiveDigestResponseObject, error)
 	// List pending cross-boundary edges awaiting confirmation
 	// (GET /api/v1/owner-groups/pending-edges)
 	ListPendingEdges(ctx context.Context, request ListPendingEdgesRequestObject) (ListPendingEdgesResponseObject, error)
@@ -3341,6 +3769,59 @@ func (sh *strictHandler) GetUpwardImpact(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// RetireCI operation middleware
+func (sh *strictHandler) RetireCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RetireCIParams) {
+	var request RetireCIRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetireCI(ctx, request.(RetireCIRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetireCI")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetireCIResponseObject); ok {
+		if err := validResponse.VisitRetireCIResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyCI operation middleware
+func (sh *strictHandler) VerifyCI(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request VerifyCIRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyCI(ctx, request.(VerifyCIRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyCI")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyCIResponseObject); ok {
+		if err := validResponse.VisitVerifyCIResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateEdge operation middleware
 func (sh *strictHandler) CreateEdge(w http.ResponseWriter, r *http.Request) {
 	var request CreateEdgeRequestObject
@@ -3625,6 +4106,32 @@ func (sh *strictHandler) ListOwnerGroups(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListOwnerGroupsResponseObject); ok {
 		if err := validResponse.VisitListOwnerGroupsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetActiveDigest operation middleware
+func (sh *strictHandler) GetActiveDigest(w http.ResponseWriter, r *http.Request, params GetActiveDigestParams) {
+	var request GetActiveDigestRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetActiveDigest(ctx, request.(GetActiveDigestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetActiveDigest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetActiveDigestResponseObject); ok {
+		if err := validResponse.VisitGetActiveDigestResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -13,6 +13,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const actionDigestItemsForCI = `-- name: ActionDigestItemsForCI :exec
+UPDATE digest_items di
+SET
+    status = 'actioned',
+    actioned_at = $1,
+    action_type = $2
+FROM digest_cycles dc
+WHERE di.cycle_id = dc.id
+  AND di.ci_id = $3
+  AND dc.status = 'open'
+  AND di.status = 'open'
+`
+
+type ActionDigestItemsForCIParams struct {
+	ActionedAt pgtype.Timestamptz `json:"actioned_at"`
+	ActionType pgtype.Text        `json:"action_type"`
+	CiID       uuid.UUID          `json:"ci_id"`
+}
+
+func (q *Queries) ActionDigestItemsForCI(ctx context.Context, arg ActionDigestItemsForCIParams) error {
+	_, err := q.db.Exec(ctx, actionDigestItemsForCI, arg.ActionedAt, arg.ActionType, arg.CiID)
+	return err
+}
+
 const closePreviousOpenCycles = `-- name: ClosePreviousOpenCycles :many
 UPDATE digest_cycles
 SET status = 'closed', closed_at = $1

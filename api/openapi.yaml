@@ -410,6 +410,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/owner-groups/me/digest:
+    get:
+      summary: Get active digest cycle and queued items for caller's owner group
+      operationId: getActiveDigest
+      tags:
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional owner group ID (defaults to authenticated user's primary owner group)
+      responses:
+        '200':
+          description: Active digest cycle and queued CIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveDigestResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (user does not belong to owner group and is not platform admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not Found (user has no primary owner group or group not found)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
   /api/v1/owner-groups/pending-edges:
     get:
       summary: List pending cross-boundary edges awaiting confirmation
@@ -816,6 +859,117 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/cis/{id}/verify:
+    post:
+      summary: Explicitly verify configuration item operational accuracy
+      operationId: verifyCI
+      tags:
+        - CIs
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Configuration item verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (user does not belong to CI owner group and is not platform admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/retire:
+    post:
+      summary: Retire configuration item with upstream dependency safety check
+      operationId: retireCI
+      tags:
+        - CIs
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Force retirement bypassing dependent check (strictly restricted to platform_admin)
+      responses:
+        '200':
+          description: Configuration item retired successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request (invalid UUID format or illegal query parameter)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (non-owner or non-admin attempting force=true)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (active upstream dependents exist and force is not true)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
   /api/v1/cis/{id}/impact-upward:
     get:
       summary: Traverse upward impact graph for a configuration item
@@ -1068,6 +1222,38 @@ components:
             type: array
             items:
               type: string
+        dependent_cis:
+          type: array
+          nullable: true
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - ci_id
+              - name
+              - ci_class
+              - environment
+            properties:
+              ci_id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              ci_class:
+                type: string
+                enum:
+                  - business_service
+                  - application
+                  - database
+                  - vm_cluster
+                  - physical_host
+                  - network_firewall
+              environment:
+                type: string
+                enum:
+                  - prod
+                  - dr
+                  - staging
 
     HealthResponse:
       type: object
@@ -2126,4 +2312,101 @@ components:
           type: string
           format: uuid
           nullable: true
+
+    ActiveDigestResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - owner_group_id
+        - owner_group_name
+        - items
+      properties:
+        cycle_id:
+          type: string
+          format: uuid
+          nullable: true
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        window_start:
+          type: string
+          format: date-time
+          nullable: true
+        window_end:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DigestItem'
+
+    DigestItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - ci_id
+        - name
+        - ci_class
+        - environment
+        - criticality_tier
+        - trigger_reason
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        ci_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ci_class:
+          type: string
+          enum:
+            - business_service
+            - application
+            - database
+            - vm_cluster
+            - physical_host
+            - network_firewall
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        trigger_reason:
+          type: string
+        status:
+          type: string
+          enum:
+            - open
+            - actioned
+            - expired
+        actioned_at:
+          type: string
+          format: date-time
+          nullable: true
+        action_type:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
 

@@ -1,6 +1,10 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 var (
 	ErrForbidden           = errors.New("forbidden: insufficient permissions")
@@ -13,6 +17,28 @@ var (
 	ErrInvalidEdge         = errors.New("invalid edge: self-dependency is forbidden")
 	ErrBadParam            = errors.New("bad request: invalid parameter")
 )
+
+// DependentCI represents an upstream dependency blocking CI retirement.
+type DependentCI struct {
+	CIID        uuid.UUID
+	Name        string
+	CIClass     string
+	Environment string
+}
+
+// ConflictError represents a state-machine or dependency conflict error.
+type ConflictError struct {
+	Message      string
+	DependentCIs []DependentCI
+}
+
+func (e *ConflictError) Error() string {
+	return e.Message
+}
+
+func (e *ConflictError) Unwrap() error {
+	return ErrConflict
+}
 
 // ValidationError represents semantic or business rule validation errors with node-level details.
 type ValidationError struct {
