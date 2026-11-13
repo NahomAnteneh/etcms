@@ -310,7 +310,7 @@ func TestPostBaselineSingleCIAndEdgeLifecycle(t *testing.T) {
 
 	// === POST /api/v1/edges ===
 
-	t.Run("POST /api/v1/edges - 400 Bad Request on self-loop dependency", func(t *testing.T) {
+	t.Run("POST /api/v1/edges - 422 Unprocessable Entity on self-loop dependency", func(t *testing.T) {
 		body := map[string]interface{}{
 			"source_ci_id": createdCIID.String(),
 			"target_ci_id": createdCIID.String(),
@@ -324,7 +324,7 @@ func TestPostBaselineSingleCIAndEdgeLifecycle(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		router.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 	})
 
 	t.Run("POST /api/v1/edges - 404 Not Found if source CI does not exist", func(t *testing.T) {

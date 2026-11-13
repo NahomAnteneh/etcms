@@ -434,12 +434,7 @@ func (s *EdgeService) CreateEdge(ctx context.Context, actor domain.Actor, req ge
 		return nil, fmt.Errorf("%w: source CI is retired", domain.ErrConflict)
 	}
 
-	// 4. Caller must belong to source CI's owner group (or platform admin)
-	if !actor.BelongsToOwnerGroup(sourceCI.OwnerGroupID) {
-		return nil, domain.ErrForbidden
-	}
-
-	// 5. Verify Target CI exists and is not retired
+	// 4. Verify Target CI exists and is not retired
 	targetCI, err := s.store.Queries().GetCIByID(ctx, req.TargetCiId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -449,6 +444,11 @@ func (s *EdgeService) CreateEdge(ctx context.Context, actor domain.Actor, req ge
 	}
 	if targetCI.LifecycleState == sqlcgen.LifecycleStateEnumRetired {
 		return nil, fmt.Errorf("%w: target CI is retired", domain.ErrConflict)
+	}
+
+	// 5. Caller must belong to source OR target CI's owner group (or platform admin)
+	if !actor.BelongsToOwnerGroup(sourceCI.OwnerGroupID) && !actor.BelongsToOwnerGroup(targetCI.OwnerGroupID) {
+		return nil, domain.ErrForbidden
 	}
 
 	now := time.Now().UTC()

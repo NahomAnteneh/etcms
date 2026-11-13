@@ -629,10 +629,11 @@ func (s *Server) CreateEdge(ctx context.Context, request gen.CreateEdgeRequestOb
 
 	res, err := s.edgeService.CreateEdge(ctx, actor, *request.Body)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidEdge) {
-			return gen.CreateEdge400ApplicationProblemPlusJSONResponse{
-				Title:  "Bad Request",
-				Status: 400,
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) || errors.Is(err, domain.ErrInvalidEdge) {
+			return gen.CreateEdge422ApplicationProblemPlusJSONResponse{
+				Title:  "Unprocessable Entity",
+				Status: 422,
 				Detail: err.Error(),
 			}, nil
 		}
