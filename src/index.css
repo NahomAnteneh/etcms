@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-obsidian-900 text-obsidian-100 font-sans antialiased;
+    color-scheme: dark;
+  }
+}
+
+/* Custom Sleek Scrollbar for High-Density Tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* React Flow Dark Canvas overrides */
+.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__controls button {
+  background: #111827 !important;
+  border-bottom: 1px solid #1f2937 !important;
+  color: #9ca3af !important;
+  fill: #9ca3af !important;
+}
+
+.react-flow__controls button:hover {
+  background: #1f2937 !important;
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
