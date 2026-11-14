@@ -198,7 +198,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
   if (isLoadingSession) {
     return (
-      <div className="min-h-screen bg-obsidian-900 flex items-center justify-center text-xs text-obsidian-400">
+      <div className="min-h-screen bg-canvas flex items-center justify-center text-xs text-muted">
         Authenticating magic link token...
       </div>
     );
@@ -206,11 +206,11 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
   if (publicationSuccess) {
     return (
-      <div className="min-h-screen bg-obsidian-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-obsidian-850 border border-emerald-800/80 rounded-xl p-8 text-center space-y-4 shadow-2xl">
-          <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto" />
-          <h2 className="text-xl font-bold text-white">Baseline v1.0 Successfully Published!</h2>
-          <p className="text-xs text-obsidian-300 leading-relaxed">
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
+        <div className="w-full max-w-lg bg-surface border border-hairline rounded-lg p-8 text-center space-y-4 shadow-[0_4px_12px_rgba(16,24,40,0.10)]">
+          <CheckCircle className="w-12 h-12 text-inservice mx-auto stroke-[1.5]" />
+          <h2 className="text-xl font-semibold text-primary">Baseline v1.0 Successfully Published!</h2>
+          <p className="text-xs text-secondary leading-relaxed">
             Your services and cross-boundary dependency relationships have been registered into the operational CMDB. Upstream dependencies targeting other teams have been placed in their verification inbox for confirmation.
           </p>
         </div>
@@ -219,46 +219,46 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
   }
 
   return (
-    <div className="min-h-screen bg-obsidian-900 text-obsidian-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-canvas text-primary flex flex-col antialiased">
       {/* Top Banner */}
-      <header className="h-14 bg-obsidian-850 border-b border-obsidian-750 px-6 flex items-center justify-between select-none">
+      <header className="h-14 bg-surface border-b border-hairline px-6 flex items-center justify-between select-none">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+          <div className="w-7 h-7 rounded-md bg-accent flex items-center justify-center text-white font-bold text-xs">
             ET
           </div>
           <div>
-            <div className="text-sm font-semibold text-white">
-              Service Intake: <span className="text-blue-400">{session?.department_name}</span>
+            <div className="text-sm font-semibold text-primary">
+              Service Intake: <span className="text-accent">{session?.department_name}</span>
             </div>
-            <div className="text-3xs text-obsidian-400">Team Lead: {session?.team_lead_email}</div>
+            <div className="text-3xs text-muted font-mono">Team Lead: {session?.team_lead_email}</div>
           </div>
         </div>
 
         {/* Step Indicator & Auto-Save Badge */}
         <div className="flex items-center gap-4">
-          <div className="text-2xs font-mono text-obsidian-400 flex items-center gap-1.5">
-            <Save className="w-3.5 h-3.5 text-blue-400" />
+          <div className="text-2xs font-mono text-muted flex items-center gap-1.5">
+            <Save className="w-3.5 h-3.5 text-accent stroke-[1.5]" />
             <span>{autoSaveStatus}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-obsidian-950 p-1 rounded border border-obsidian-750 text-2xs font-mono">
+          <div className="flex items-center gap-1 bg-surface-sunken p-1 rounded-md border border-subtle text-2xs font-mono">
             <span
-              className={`px-2 py-0.5 rounded ${
-                step === 1 ? 'bg-blue-600 text-white font-bold' : 'text-obsidian-400'
+              className={`px-2 py-0.5 rounded-sm transition-colors ${
+                step === 1 ? 'bg-accent text-white font-semibold' : 'text-muted'
               }`}
             >
               1. Services
             </span>
             <span
-              className={`px-2 py-0.5 rounded ${
-                step === 2 ? 'bg-blue-600 text-white font-bold' : 'text-obsidian-400'
+              className={`px-2 py-0.5 rounded-sm transition-colors ${
+                step === 2 ? 'bg-accent text-white font-semibold' : 'text-muted'
               }`}
             >
               2. Search-First Deps
             </span>
             <span
-              className={`px-2 py-0.5 rounded ${
-                step === 3 ? 'bg-blue-600 text-white font-bold' : 'text-obsidian-400'
+              className={`px-2 py-0.5 rounded-sm transition-colors ${
+                step === 3 ? 'bg-accent text-white font-semibold' : 'text-muted'
               }`}
             >
               3. Review & Submit
@@ -278,36 +278,36 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Step 1: Register Team Services & Applications</h2>
-                <p className="text-xs text-obsidian-400">
+                <h2 className="text-lg font-semibold text-primary">Step 1: Register Team Services & Applications</h2>
+                <p className="text-xs text-secondary">
                   Provide the 10-field operational envelope for each service owned by your team. Asset-tracking fields (cost, vendor, warranty) are strictly excluded.
                 </p>
               </div>
               <Button variant="secondary" size="sm" onClick={addCI}>
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Service
+                <Plus className="w-3.5 h-3.5 mr-1 stroke-[1.5]" /> Add Service
               </Button>
             </div>
 
             <div className="space-y-4">
               {cis.map((ci, index) => (
-                <Card key={ci.temp_id} className="bg-obsidian-850/80 border-obsidian-750 p-4 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-obsidian-750">
-                    <span className="text-xs font-mono font-semibold uppercase text-blue-400">
+                <Card key={ci.temp_id} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-subtle">
+                    <span className="text-xs font-mono font-semibold uppercase text-accent">
                       Service #{index + 1} ({ci.temp_id})
                     </span>
                     {cis.length > 1 && (
                       <button
                         onClick={() => removeCI(index)}
-                        className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1"
+                        className="text-tier0 hover:text-red-800 text-xs flex items-center gap-1 cursor-pointer"
                       >
-                        <Trash2 className="w-3 h-3" /> Remove
+                        <Trash2 className="w-3 h-3 stroke-[1.5]" /> Remove
                       </button>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
                         Service / Application Name *
                       </label>
                       <Input
@@ -318,13 +318,13 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
                         CI Class *
                       </label>
                       <select
                         value={ci.ci_class}
                         onChange={(e) => updateCI(index, 'ci_class', e.target.value as any)}
-                        className="h-8 w-full rounded border border-obsidian-700 bg-obsidian-950 px-2 text-xs text-white"
+                        className="h-8 w-full rounded-md border border-control bg-surface px-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                       >
                         <option value="application">Application</option>
                         <option value="business_service">Business Service</option>
@@ -336,13 +336,13 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
                         Environment *
                       </label>
                       <select
                         value={ci.environment}
                         onChange={(e) => updateCI(index, 'environment', e.target.value as any)}
-                        className="h-8 w-full rounded border border-obsidian-700 bg-obsidian-950 px-2 text-xs text-white"
+                        className="h-8 w-full rounded-md border border-control bg-surface px-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                       >
                         <option value="prod">Production</option>
                         <option value="dr">Disaster Recovery</option>
@@ -351,13 +351,13 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
                         Criticality Tier *
                       </label>
                       <select
                         value={ci.criticality_tier}
                         onChange={(e) => updateCI(index, 'criticality_tier', e.target.value as any)}
-                        className="h-8 w-full rounded border border-obsidian-700 bg-obsidian-950 px-2 text-white text-xs"
+                        className="h-8 w-full rounded-md border border-control bg-surface px-2 text-primary text-xs focus:outline-none focus:ring-2 focus:ring-accent"
                       >
                         <option value="tier_0">Tier 0 (Mission Critical)</option>
                         <option value="tier_1">Tier 1 (High)</option>
@@ -367,7 +367,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
                         Technical Contact *
                       </label>
                       <Input
@@ -378,7 +378,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div className="sm:col-span-3">
-                      <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
                         Primary Endpoint (VIP, FQDN, or URL)
                       </label>
                       <Input
@@ -392,7 +392,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-obsidian-750">
+            <div className="flex items-center justify-between pt-4 border-t border-subtle">
               <Button variant="secondary" size="sm" onClick={saveDraft}>
                 Save Draft
               </Button>
@@ -405,7 +405,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                 }}
                 disabled={cis.some((c) => !c.name.trim())}
               >
-                Next: Search-First Dependencies <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                Next: Search-First Dependencies <ArrowRight className="w-3.5 h-3.5 ml-1 stroke-[1.5]" />
               </Button>
             </div>
           </div>
@@ -415,19 +415,19 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-bold text-white">Step 2: Search-First Dependency Mapping</h2>
-              <p className="text-xs text-obsidian-400">
+              <h2 className="text-lg font-semibold text-primary">Step 2: Search-First Dependency Mapping</h2>
+              <p className="text-xs text-secondary">
                 To prevent duplicate databases and hosts, search the enterprise catalog first before linking infrastructure providers.
               </p>
             </div>
 
             {/* Target App Selector */}
-            <div className="p-3 bg-obsidian-850/80 border border-obsidian-750 rounded-lg flex items-center gap-3">
-              <span className="text-xs font-mono uppercase text-obsidian-400">For Application:</span>
+            <div className="p-3 bg-surface border border-hairline rounded-md flex items-center gap-3">
+              <span className="text-xs font-mono uppercase text-muted">For Application:</span>
               <select
                 value={selectedAppForDep || cis[0]?.temp_id}
                 onChange={(e) => setSelectedAppForDep(e.target.value)}
-                className="h-8 rounded border border-obsidian-700 bg-obsidian-950 px-2.5 text-xs text-white"
+                className="h-8 rounded-md border border-control bg-surface px-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 {cis.map((ci) => (
                   <option key={ci.temp_id} value={ci.temp_id}>
@@ -438,10 +438,10 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
             </div>
 
             {/* Trigram Catalog Search */}
-            <div className="p-4 bg-obsidian-850/80 border border-obsidian-750 rounded-lg space-y-3">
-              <span className="text-xs font-semibold text-white block">Search Catalog for Infrastructure</span>
+            <div className="p-4 bg-surface border border-hairline rounded-md space-y-3">
+              <span className="text-xs font-semibold text-primary block">Search Catalog for Infrastructure</span>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-obsidian-400 absolute left-3 top-2.5" />
+                <Search className="w-3.5 h-3.5 text-muted absolute left-3 top-2.5 stroke-[1.5]" />
                 <Input
                   value={depSearchQuery}
                   onChange={(e) => setDepSearchQuery(e.target.value)}
@@ -452,15 +452,15 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
               {/* Search Results Picker */}
               {searchResults.length > 0 && (
-                <div className="max-h-52 overflow-y-auto divide-y divide-obsidian-750 bg-obsidian-950 rounded border border-obsidian-750">
+                <div className="max-h-52 overflow-y-auto divide-y divide-subtle bg-surface-sunken rounded-md border border-subtle">
                   {searchResults.map((res) => (
                     <div
                       key={res.ci.ci_id}
-                      className="p-2.5 flex items-center justify-between hover:bg-obsidian-900 transition-colors"
+                      className="p-2.5 flex items-center justify-between hover:bg-hover transition-colors"
                     >
                       <div>
-                        <div className="font-semibold text-xs text-white">{res.ci.name}</div>
-                        <div className="text-3xs font-mono text-obsidian-400">
+                        <div className="font-semibold text-xs text-primary">{res.ci.name}</div>
+                        <div className="text-3xs font-mono text-muted">
                           {res.ci.ci_class} • {res.ci.environment} • {res.ownership.owner_group_name}
                         </div>
                       </div>
@@ -496,12 +496,12 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
             {/* Staged Edges */}
             <div className="space-y-2">
-              <span className="text-2xs font-mono uppercase text-obsidian-400 font-semibold block">
+              <span className="text-2xs font-mono uppercase text-muted font-semibold block">
                 Declared Dependency Relationships ({edges.length}):
               </span>
 
               {edges.length === 0 ? (
-                <p className="text-xs text-obsidian-500 italic p-4 bg-obsidian-950/40 rounded border border-obsidian-800 text-center">
+                <p className="text-xs text-muted italic p-4 bg-surface border border-subtle rounded-md text-center">
                   No dependencies linked yet. Use the search box above to add databases or hosts.
                 </p>
               ) : (
@@ -509,23 +509,23 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                   {edges.map((edge, idx) => (
                     <div
                       key={edge.temp_id}
-                      className="p-3 bg-obsidian-850 border border-obsidian-750 rounded flex items-center justify-between text-xs"
+                      className="p-3 bg-surface border border-hairline rounded-md flex items-center justify-between text-xs"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-blue-400">
+                        <span className="font-semibold text-accent">
                           {cis.find((c) => c.temp_id === edge.source_temp_id)?.name || edge.source_temp_id}
                         </span>
-                        <span className="text-2xs font-mono uppercase bg-obsidian-950 px-1.5 py-0.5 rounded text-obsidian-300">
+                        <span className="text-2xs font-mono uppercase bg-surface-sunken px-1.5 py-0.5 rounded-sm text-secondary">
                           {edge.edge_type.replace('_', ' ')} &rarr;
                         </span>
-                        <span className="font-semibold text-emerald-400">{edge.target_name}</span>
+                        <span className="font-semibold text-inservice">{edge.target_name}</span>
                       </div>
 
                       <button
                         onClick={() => removeEdge(idx)}
-                        className="text-red-400 hover:text-red-300 text-xs"
+                        className="text-tier0 hover:text-red-800 text-xs cursor-pointer"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
                       </button>
                     </div>
                   ))}
@@ -533,9 +533,9 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-obsidian-750">
+            <div className="flex items-center justify-between pt-4 border-t border-subtle">
               <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
-                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
+                <ArrowLeft className="w-3.5 h-3.5 mr-1 stroke-[1.5]" /> Back
               </Button>
               <Button
                 variant="primary"
@@ -545,7 +545,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                   setStep(3);
                 }}
               >
-                Next: Review & Submit <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                Next: Review & Submit <ArrowRight className="w-3.5 h-3.5 ml-1 stroke-[1.5]" />
               </Button>
             </div>
           </div>
@@ -555,24 +555,24 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-bold text-white">Step 3: Review & Publish Baseline v1.0</h2>
-              <p className="text-xs text-obsidian-400">
+              <h2 className="text-lg font-semibold text-primary">Step 3: Review & Publish Baseline v1.0</h2>
+              <p className="text-xs text-secondary">
                 Confirm your service registration and dependencies. Once published, your CIs enter service and cross-team dependencies enter the handshake queue.
               </p>
             </div>
 
-            <div className="p-4 bg-obsidian-850/80 border border-obsidian-750 rounded-lg space-y-3">
-              <span className="text-xs font-semibold text-white block">Summary of Publication Payload:</span>
-              <ul className="text-xs text-obsidian-300 space-y-1">
-                <li>• Services to Register: <span className="font-bold text-white">{cis.length}</span></li>
-                <li>• Dependencies Declared: <span className="font-bold text-white">{edges.length}</span></li>
-                <li>• Target Department: <span className="font-bold text-white">{session?.department_name}</span></li>
+            <div className="p-4 bg-surface border border-hairline rounded-md space-y-3">
+              <span className="text-xs font-semibold text-primary block">Summary of Publication Payload:</span>
+              <ul className="text-xs text-secondary space-y-1">
+                <li>• Services to Register: <span className="font-semibold text-primary">{cis.length}</span></li>
+                <li>• Dependencies Declared: <span className="font-semibold text-primary">{edges.length}</span></li>
+                <li>• Target Department: <span className="font-semibold text-primary">{session?.department_name}</span></li>
               </ul>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-obsidian-750">
+            <div className="flex items-center justify-between pt-4 border-t border-subtle">
               <Button variant="ghost" size="sm" onClick={() => setStep(2)}>
-                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
+                <ArrowLeft className="w-3.5 h-3.5 mr-1 stroke-[1.5]" /> Back
               </Button>
               <Button
                 variant="primary"

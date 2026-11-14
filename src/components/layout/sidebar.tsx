@@ -48,14 +48,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       label: 'My Verification Queue',
       icon: CheckCircle,
       badge: digestItemsCount > 0 ? digestItemsCount : null,
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-600/40',
+      badgeColor: 'bg-tier1-bg text-tier1 border-tier1-border',
     },
     {
       id: 'handshakes',
       label: 'Handshake Inbox',
       icon: Inbox,
       badge: pendingCount > 0 ? pendingCount : null,
-      badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-600/40',
+      badgeColor: 'bg-tier2-bg text-accent border-tier2-border',
     },
     {
       id: 'campaigns',
@@ -72,9 +72,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-60 bg-obsidian-900 border-r border-obsidian-700/80 flex flex-col justify-between select-none">
+    <aside className="w-60 bg-surface border-r border-hairline flex flex-col justify-between select-none">
       <div className="p-3 space-y-1">
-        <div className="px-3 py-2 text-3xs font-mono font-semibold uppercase tracking-wider text-obsidian-400">
+        <div className="px-3 py-2 text-3xs font-mono font-semibold uppercase tracking-wider text-muted">
           Core Workflows
         </div>
         <nav className="space-y-0.5">
@@ -86,17 +86,17 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 key={item.id}
                 onClick={() => onSelectView(item.id)}
                 className={cn(
-                  'w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all duration-150',
+                  'w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-colors duration-150 cursor-pointer',
                   isActive
-                    ? 'bg-blue-600/20 text-white border border-blue-500/30 font-semibold'
-                    : 'text-obsidian-300 hover:text-obsidian-100 hover:bg-obsidian-800/60 border border-transparent'
+                    ? 'bg-accent-subtle text-accent border border-accent font-semibold'
+                    : 'text-secondary hover:text-primary hover:bg-hover border border-transparent'
                 )}
               >
                 <div className="flex items-center gap-2.5">
                   <Icon
                     className={cn(
-                      'w-4 h-4',
-                      isActive ? 'text-blue-400' : 'text-obsidian-400 group-hover:text-obsidian-200'
+                      'w-4 h-4 stroke-[1.5]',
+                      isActive ? 'text-accent' : 'text-muted'
                     )}
                   />
                   <span>{item.label}</span>
@@ -104,7 +104,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 {item.badge !== null && (
                   <span
                     className={cn(
-                      'text-3xs font-mono px-1.5 py-0.2 rounded border font-semibold',
+                      'text-3xs font-mono px-1.5 py-0.5 rounded-sm border font-semibold',
                       item.badgeColor
                     )}
                   >
@@ -118,19 +118,19 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       </div>
 
       {/* Footer Info */}
-      <div className="p-3 border-t border-obsidian-800/80 space-y-2">
+      <div className="p-3 border-t border-subtle space-y-2">
         <a
           href="/docs"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-2 px-3 py-1.5 rounded text-2xs text-obsidian-400 hover:text-obsidian-200 hover:bg-obsidian-800/40 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-2xs text-muted hover:text-primary hover:bg-hover transition-colors"
         >
-          <FileCode2 className="w-3.5 h-3.5 text-obsidian-400" />
+          <FileCode2 className="w-3.5 h-3.5 text-muted stroke-[1.5]" />
           <span>OpenAPI Specification</span>
         </a>
-        <div className="flex items-center justify-between px-3 py-1 text-3xs font-mono text-obsidian-500">
+        <div className="flex items-center justify-between px-3 py-1 text-3xs font-mono text-muted">
           <div className="flex items-center gap-1.5">
-            <HelpCircle className="w-3 h-3" />
+            <HelpCircle className="w-3 h-3 stroke-[1.5]" />
             <span>Press ⌘K for commands</span>
           </div>
           <span>v3.0</span>

@@ -13,11 +13,11 @@ export function AppShell({ currentView, onSelectView, children }: AppShellProps)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-obsidian-900 text-obsidian-100 antialiased selection:bg-blue-600/30 selection:text-blue-200">
+    <div className="min-h-screen flex flex-col bg-canvas text-primary antialiased selection:bg-accent-subtle selection:text-accent">
       <TopNav onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar currentView={currentView} onSelectView={onSelectView} />
-        <main className="flex-1 overflow-y-auto bg-obsidian-950/40 p-6 flex flex-col">
+        <main className="flex-1 overflow-y-auto bg-canvas p-6 flex flex-col">
           {children}
         </main>
       </div>

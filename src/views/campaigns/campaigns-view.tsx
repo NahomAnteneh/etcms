@@ -68,17 +68,17 @@ export function CampaignsView() {
   return (
     <div className="space-y-6 max-w-7xl w-full mx-auto animate-in fade-in-50 duration-150">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-obsidian-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-subtle">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Decentralized Intake Campaigns</h1>
-          <p className="text-xs text-obsidian-400 mt-1">
+          <h1 className="text-xl font-semibold tracking-tight text-primary">Decentralized Intake Campaigns</h1>
+          <p className="text-xs text-secondary mt-1">
             Distribute cryptographic magic links to Department Team Leads to register services without manual account provisioning.
           </p>
         </div>
 
         {activeRole === 'platform_admin' && (
           <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-3.5 h-3.5 mr-1" /> Launch New Campaign
+            <Plus className="w-3.5 h-3.5 mr-1 stroke-[1.5]" /> Launch New Campaign
           </Button>
         )}
       </div>
@@ -90,14 +90,14 @@ export function CampaignsView() {
       {/* Campaigns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          <div className="col-span-3 p-8 text-center text-xs text-obsidian-400 bg-obsidian-850/40 border border-obsidian-750 rounded-lg">
+          <div className="col-span-3 p-8 text-center text-xs text-muted bg-surface border border-subtle rounded-md">
             Loading campaigns...
           </div>
         ) : campaigns.length === 0 ? (
-          <div className="col-span-3 p-12 text-center bg-obsidian-850/40 border border-obsidian-750 rounded-lg space-y-2">
-            <Send className="w-10 h-10 text-obsidian-500 mx-auto" />
-            <h3 className="text-sm font-bold text-white">No Active Campaigns</h3>
-            <p className="text-xs text-obsidian-400 max-w-md mx-auto">
+          <div className="col-span-3 p-12 text-center bg-surface border border-subtle rounded-md space-y-2">
+            <Send className="w-10 h-10 text-muted mx-auto stroke-[1.5]" />
+            <h3 className="text-sm font-semibold text-primary">No Active Campaigns</h3>
+            <p className="text-xs text-secondary max-w-md mx-auto">
               Platform administrators can launch decentralized campaigns with firm deadlines to onboard applications and services.
             </p>
           </div>
@@ -105,28 +105,28 @@ export function CampaignsView() {
           campaigns.map((camp) => (
             <Card
               key={camp.id}
-              className={`cursor-pointer transition-all hover:border-blue-500/50 ${
-                selectedCampaign?.id === camp.id ? 'border-blue-500 bg-obsidian-800' : 'bg-obsidian-850/80'
+              className={`cursor-pointer transition-colors hover:border-control ${
+                selectedCampaign?.id === camp.id ? 'border-accent ring-2 ring-accent bg-selected' : ''
               }`}
               onClick={() => setSelectedCampaign(camp)}
             >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
-                  <span className="text-2xs font-mono uppercase bg-blue-950/80 text-blue-400 border border-blue-800 px-2 py-0.5 rounded font-semibold">
+                  <span className="text-2xs font-mono uppercase bg-tier2-bg text-accent border border-tier2-border px-2 py-0.5 rounded-sm font-semibold">
                     {camp.status}
                   </span>
-                  <div className="flex items-center gap-1 text-3xs font-mono text-obsidian-400">
-                    <Calendar className="w-3 h-3" />
+                  <div className="flex items-center gap-1 text-3xs font-mono text-muted">
+                    <Calendar className="w-3 h-3 stroke-[1.5]" />
                     <span>Due: {formatDateTime(camp.deadline)}</span>
                   </div>
                 </div>
 
-                <div className="font-semibold text-sm text-white">{camp.title}</div>
+                <div className="font-semibold text-sm text-primary">{camp.title}</div>
 
-                <div className="text-2xs text-obsidian-400 flex items-center justify-between pt-2 border-t border-obsidian-750">
+                <div className="text-2xs text-muted flex items-center justify-between pt-2 border-t border-subtle">
                   <span>Invitations: {camp.invitations?.length || 0}</span>
-                  <span className="text-blue-400 flex items-center gap-1 font-medium">
-                    View Progress <ArrowRight className="w-3 h-3" />
+                  <span className="text-accent flex items-center gap-1 font-medium">
+                    View Progress <ArrowRight className="w-3 h-3 stroke-[1.5]" />
                   </span>
                 </div>
               </CardContent>
@@ -137,18 +137,18 @@ export function CampaignsView() {
 
       {/* Campaign Progress & Magic Link Invitations Drawer */}
       {selectedCampaign && (
-        <div className="bg-obsidian-850/90 border border-obsidian-750 rounded-xl p-5 space-y-4 animate-in fade-in-50 duration-150">
-          <div className="flex items-center justify-between pb-3 border-b border-obsidian-750">
+        <div className="bg-surface border border-hairline rounded-md p-5 space-y-4 animate-in fade-in-50 duration-150">
+          <div className="flex items-center justify-between pb-3 border-b border-subtle">
             <div>
-              <h2 className="text-base font-bold text-white">
+              <h2 className="text-base font-semibold text-primary">
                 {selectedCampaign.title} — Progress & Magic Links
               </h2>
-              <p className="text-xs text-obsidian-400">
+              <p className="text-xs text-secondary">
                 Single-use tokens for Department Team Leads. Share via Slack, Email, or direct link.
               </p>
             </div>
             {progressData && (
-              <div className="text-xs font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800 px-2.5 py-1 rounded">
+              <div className="text-xs font-mono text-inservice bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
                 Submitted: {progressData.total_submitted} / {progressData.total_invitations} Teams
               </div>
             )}
@@ -158,26 +158,26 @@ export function CampaignsView() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-obsidian-900 border-b border-obsidian-750 text-obsidian-400 font-mono text-3xs uppercase tracking-wider">
-                  <th className="py-2 px-3">Department & Group</th>
-                  <th className="py-2 px-3">Team Lead Name</th>
-                  <th className="py-2 px-3">Team Lead Email</th>
-                  <th className="py-2 px-3">Expires At</th>
-                  <th className="py-2 px-3 text-right">Magic Link Action</th>
+                <tr className="bg-surface-sunken border-b border-subtle text-secondary font-mono text-2xs uppercase tracking-wider">
+                  <th className="py-2.5 px-3 font-medium">Department & Group</th>
+                  <th className="py-2.5 px-3 font-medium">Team Lead Name</th>
+                  <th className="py-2.5 px-3 font-medium">Team Lead Email</th>
+                  <th className="py-2.5 px-3 font-medium">Expires At</th>
+                  <th className="py-2.5 px-3 font-medium text-right">Magic Link Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-obsidian-800">
+              <tbody className="divide-y divide-subtle">
                 {selectedCampaign.invitations?.map((inv) => (
-                  <tr key={inv.invitation_id} className="hover:bg-obsidian-800/40">
-                    <td className="py-2 px-3 font-semibold text-white">
+                  <tr key={inv.invitation_id} className="hover:bg-hover transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-primary">
                       {inv.department_name} ({inv.owner_group_name})
                     </td>
-                    <td className="py-2 px-3 text-obsidian-300">{inv.team_lead_name}</td>
-                    <td className="py-2 px-3 text-obsidian-400 font-mono text-2xs">{inv.team_lead_email}</td>
-                    <td className="py-2 px-3 text-obsidian-400 font-mono text-3xs">
+                    <td className="py-2.5 px-3 text-secondary">{inv.team_lead_name}</td>
+                    <td className="py-2.5 px-3 text-secondary font-mono text-2xs">{inv.team_lead_email}</td>
+                    <td className="py-2.5 px-3 text-muted font-mono text-3xs">
                       {formatDateTime(inv.expires_at)}
                     </td>
-                    <td className="py-2 px-3 text-right">
+                    <td className="py-2.5 px-3 text-right">
                       <Button
                         variant="secondary"
                         size="sm"
@@ -185,11 +185,11 @@ export function CampaignsView() {
                       >
                         {copiedLink === inv.invitation_url ? (
                           <>
-                            <Check className="w-3 h-3 mr-1 text-emerald-400" /> Copied!
+                            <Check className="w-3 h-3 mr-1 text-inservice stroke-[1.5]" /> Copied!
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3 h-3 mr-1" /> Copy Magic Link
+                            <Copy className="w-3 h-3 mr-1 stroke-[1.5]" /> Copy Magic Link
                           </>
                         )}
                       </Button>
@@ -204,16 +204,16 @@ export function CampaignsView() {
 
       {/* Create Campaign Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
-          <div className="w-full max-w-md bg-obsidian-900 border border-obsidian-750 rounded-xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-2.5 text-blue-400">
-              <Send className="w-5 h-5 shrink-0" />
-              <h3 className="text-base font-bold text-white">Launch Decentralized Intake Campaign</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.40)] p-4 animate-in fade-in-0 duration-150">
+          <div className="w-full max-w-md bg-surface border border-hairline rounded-lg p-5 space-y-4 shadow-[0_4px_12px_rgba(16,24,40,0.10)]">
+            <div className="flex items-center gap-2.5 text-accent">
+              <Send className="w-5 h-5 shrink-0 stroke-[1.5]" />
+              <h3 className="text-base font-semibold text-primary">Launch Decentralized Intake Campaign</h3>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                <label className="block text-2xs font-mono uppercase text-muted mb-1">
                   Campaign Title
                 </label>
                 <Input
@@ -224,7 +224,7 @@ export function CampaignsView() {
               </div>
 
               <div>
-                <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+                <label className="block text-2xs font-mono uppercase text-muted mb-1">
                   Submission Deadline
                 </label>
                 <Input

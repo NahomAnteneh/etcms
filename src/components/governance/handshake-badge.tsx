@@ -11,22 +11,22 @@ export function HandshakeBadge({ status, className }: HandshakeBadgeProps) {
     confirmed: {
       label: 'Confirmed',
       icon: CheckCircle2,
-      classes: 'bg-emerald-950/40 text-emerald-400 border-emerald-800/50',
+      classes: 'bg-surface text-inservice border-subtle',
     },
     pending_confirmation: {
       label: 'Pending',
       icon: Clock,
-      classes: 'bg-amber-950/40 text-amber-400 border-amber-800/50 animate-pulse',
+      classes: 'bg-tier1-bg text-deprecated border-tier1-border',
     },
     flagged_mismatch: {
       label: 'Mismatch',
       icon: AlertOctagon,
-      classes: 'bg-red-950/40 text-red-400 border-red-800/50',
+      classes: 'bg-tier0-bg text-tier0 border-tier0-border',
     },
     rejected: {
       label: 'Rejected',
       icon: XCircle,
-      classes: 'bg-obsidian-850 text-obsidian-500 border-obsidian-700',
+      classes: 'bg-surface-sunken text-retired border-hairline',
     },
   };
 
@@ -36,12 +36,12 @@ export function HandshakeBadge({ status, className }: HandshakeBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-2xs font-mono font-medium border select-none',
+        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-2xs font-mono font-medium border select-none',
         config.classes,
         className
       )}
     >
-      <Icon className="w-3 h-3 stroke-[2]" aria-hidden="true" />
+      <Icon className="w-3 h-3 stroke-[1.5]" aria-hidden="true" />
       <span>{config.label}</span>
     </span>
   );

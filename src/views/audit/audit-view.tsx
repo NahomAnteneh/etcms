@@ -43,37 +43,37 @@ export function AuditView() {
   return (
     <div className="space-y-6 max-w-7xl w-full mx-auto animate-in fade-in-50 duration-150">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-obsidian-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-subtle">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight text-primary flex items-center gap-2">
             Immutable Audit Trail & Compliance Export
           </h1>
-          <p className="text-xs text-obsidian-400 mt-1">
+          <p className="text-xs text-secondary mt-1">
             Database trigger-enforced append-only audit log. Every configuration item mutation is indelibly recorded.
           </p>
         </div>
 
         <Button variant="primary" size="sm" onClick={handleExportCSV} isLoading={isExporting}>
-          <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+          <FileSpreadsheet className="w-3.5 h-3.5 mr-1 stroke-[1.5]" />
           Export Streaming CSV
         </Button>
       </div>
 
       {/* Compliance Information Card */}
-      <Card className="bg-obsidian-850/80 border-obsidian-750">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xs uppercase tracking-wider text-obsidian-300">
-            <Shield className="w-4 h-4 text-emerald-400" />
+          <CardTitle className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary">
+            <Shield className="w-4 h-4 text-inservice stroke-[1.5]" />
             Database-Enforced Immutability Guarantees
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-xs text-obsidian-300">
+        <CardContent className="space-y-3 text-xs text-secondary">
           <p>
-            The <code className="text-emerald-400 font-mono text-2xs">audit_logs</code> table is protected by PostgreSQL triggers <code className="text-emerald-400 font-mono text-2xs">audit_logs_no_update_delete</code> and <code className="text-emerald-400 font-mono text-2xs">audit_logs_no_truncate</code>. Any attempt to modify or truncate historical records is rejected by the database engine.
+            The <code className="text-inservice font-mono text-2xs">audit_logs</code> table is protected by PostgreSQL triggers <code className="text-inservice font-mono text-2xs">audit_logs_no_update_delete</code> and <code className="text-inservice font-mono text-2xs">audit_logs_no_truncate</code>. Any attempt to modify or truncate historical records is rejected by the database engine.
           </p>
-          <div className="p-3 bg-obsidian-950/80 rounded border border-obsidian-800 text-2xs text-obsidian-400">
-            <span className="font-semibold text-white block mb-0.5">Formula Injection Sanitization</span>
-            CSV exports strictly sanitize every text cell starting with <code className="text-blue-400">=</code>, <code className="text-blue-400">+</code>, <code className="text-blue-400">-</code>, <code className="text-blue-400">@</code>, <code className="text-blue-400">\t</code>, or <code className="text-blue-400">\r</code> by prefixing with a single quote to prevent spreadsheet code execution.
+          <div className="p-3 bg-surface-sunken rounded-md border border-subtle text-2xs text-secondary">
+            <span className="font-semibold text-primary block mb-0.5">Formula Injection Sanitization</span>
+            CSV exports strictly sanitize every text cell starting with <code className="text-accent font-mono">=</code>, <code className="text-accent font-mono">+</code>, <code className="text-accent font-mono">-</code>, <code className="text-accent font-mono">@</code>, <code className="text-accent font-mono">\t</code>, or <code className="text-accent font-mono">\r</code> by prefixing with a single quote to prevent spreadsheet code execution.
           </div>
         </CardContent>
       </Card>

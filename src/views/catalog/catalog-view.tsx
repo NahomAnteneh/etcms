@@ -127,51 +127,48 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl w-full mx-auto animate-in fade-in-50 duration-150">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-obsidian-800">
+    <div className="space-y-6 max-w-7xl w-full mx-auto animate-in fade-in-50 duration-150">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-subtle">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Configuration Item (CI) Catalog</h1>
-          <p className="text-xs text-obsidian-400 mt-0.5">
-            Decentralized inventory governed by modern ownership teams and immutable audit trails.
+          <h1 className="text-xl font-semibold tracking-tight text-primary">Configuration Item Catalog</h1>
+          <p className="text-xs text-secondary mt-1">
+            Search-first registry enforcing canonical ownership, 10-field envelope standards, and safe leaf-only retirement.
           </p>
-        </div>
-        <div className="text-xs font-mono text-obsidian-400 bg-obsidian-950/60 px-3 py-1.5 rounded border border-obsidian-800">
-          Total Filtered: <span className="font-semibold text-white">{filteredItems.length}</span> CIs
         </div>
       </div>
 
-      {/* RFC 9457 Problem Alert */}
+      {/* RFC 9457 Problem Details Alert Banner */}
       {activeProblem && (
         <RFC9457Alert
           problem={activeProblem}
           onDismiss={() => setActiveProblem(null)}
-          onNavigateToCI={(id) => {
-            const found = catalogData?.items.find((item) => item.ci_id === id);
+          onNavigateToCI={(ciId) => {
+            const found = catalogData?.items?.find((c) => c.ci_id === ciId);
             if (found) setInspectingCI(found);
           }}
         />
       )}
 
-      {/* Filter Bar */}
-      <div className="bg-obsidian-850/80 border border-obsidian-750 p-3 rounded-lg flex flex-wrap items-center gap-2.5">
-        <div className="relative flex-1 min-w-56">
-          <Search className="w-3.5 h-3.5 text-obsidian-400 absolute left-3 top-2.5" />
+      {/* Filter and Trigram Search Toolbar */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="relative flex-1 min-w-64">
+          <Search className="w-4 h-4 text-muted absolute left-2.5 top-2 stroke-[1.5]" />
           <Input
+            placeholder="Search by name, endpoint, contact, or owner..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, primary endpoint, contact, or team..."
             className="pl-8"
           />
         </div>
 
-        {/* CI Class Filter */}
+        {/* Class Filter */}
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="h-8 rounded border border-obsidian-700 bg-obsidian-950/60 px-2.5 text-xs text-obsidian-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-8 rounded-md border border-control bg-surface px-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
         >
-          <option value="">All CI Classes</option>
+          <option value="">All Classes</option>
           <option value="business_service">Business Service</option>
           <option value="application">Application</option>
           <option value="database">Database</option>
@@ -184,7 +181,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
         <select
           value={selectedEnv}
           onChange={(e) => setSelectedEnv(e.target.value)}
-          className="h-8 rounded border border-obsidian-700 bg-obsidian-950/60 px-2.5 text-xs text-obsidian-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-8 rounded-md border border-control bg-surface px-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">All Environments</option>
           <option value="prod">Production</option>
@@ -192,11 +189,11 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
           <option value="staging">Staging</option>
         </select>
 
-        {/* Criticality Filter */}
+        {/* Tier Filter */}
         <select
           value={selectedTier}
           onChange={(e) => setSelectedTier(e.target.value)}
-          className="h-8 rounded border border-obsidian-700 bg-obsidian-950/60 px-2.5 text-xs text-obsidian-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-8 rounded-md border border-control bg-surface px-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">All Criticalities</option>
           <option value="tier_0">Tier 0 (Critical)</option>
@@ -209,7 +206,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
         <select
           value={selectedState}
           onChange={(e) => setSelectedState(e.target.value)}
-          className="h-8 rounded border border-obsidian-700 bg-obsidian-950/60 px-2.5 text-xs text-obsidian-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-8 rounded-md border border-control bg-surface px-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">All Lifecycles</option>
           <option value="in_service">In Service</option>
@@ -236,32 +233,32 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
       </div>
 
       {/* High-Density Data Table */}
-      <div className="bg-obsidian-850/60 border border-obsidian-750 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-surface border border-hairline rounded-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-obsidian-900/90 border-b border-obsidian-750 text-obsidian-400 font-mono text-3xs uppercase tracking-wider">
-                <th className="py-2.5 px-4 font-semibold">CI Name & Class</th>
-                <th className="py-2.5 px-3 font-semibold">Tier</th>
-                <th className="py-2.5 px-3 font-semibold">Environment</th>
-                <th className="py-2.5 px-3 font-semibold">Status</th>
-                <th className="py-2.5 px-3 font-semibold">Owner Group & Contact</th>
-                <th className="py-2.5 px-3 font-semibold">Endpoint</th>
-                <th className="py-2.5 px-3 font-semibold">Last Verified</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
+              <tr className="bg-surface-sunken border-b border-subtle text-secondary font-mono text-2xs uppercase tracking-wider">
+                <th className="py-2.5 px-4 font-medium">CI Name & Class</th>
+                <th className="py-2.5 px-3 font-medium">Tier</th>
+                <th className="py-2.5 px-3 font-medium">Environment</th>
+                <th className="py-2.5 px-3 font-medium">Status</th>
+                <th className="py-2.5 px-3 font-medium">Owner Group & Contact</th>
+                <th className="py-2.5 px-3 font-medium">Endpoint</th>
+                <th className="py-2.5 px-3 font-medium">Last Verified</th>
+                <th className="py-2.5 px-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-obsidian-800">
+            <tbody className="divide-y divide-subtle">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-obsidian-400 text-xs">
+                  <td colSpan={8} className="py-8 text-center text-muted text-xs">
                     Loading configuration catalog...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-10 text-center">
-                    <p className="text-xs text-obsidian-400">No configuration items match your filter criteria.</p>
+                    <p className="text-xs text-muted">No configuration items match your filter criteria.</p>
                   </td>
                 </tr>
               ) : (
@@ -274,20 +271,20 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                   return (
                     <tr
                       key={ci.ci_id || ci.name}
-                      className="hover:bg-obsidian-800/50 transition-colors group cursor-pointer"
+                      className="hover:bg-hover transition-colors group cursor-pointer"
                       onClick={() => setInspectingCI(ci)}
                     >
                       {/* Name & Class */}
                       <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 rounded bg-obsidian-900 border border-obsidian-750 text-obsidian-300">
-                            <Icon className="w-3.5 h-3.5" />
+                          <div className="p-1.5 rounded-sm bg-surface-sunken border border-subtle text-secondary">
+                            <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
                           </div>
                           <div>
-                            <div className="font-semibold text-obsidian-100 group-hover:text-blue-400 transition-colors">
+                            <div className="font-semibold text-primary group-hover:text-accent transition-colors">
                               {ci.name}
                             </div>
-                            <div className="text-3xs font-mono text-obsidian-400 uppercase">
+                            <div className="text-3xs font-mono text-muted uppercase">
                               {ci.ci_class.replace('_', ' ')}
                             </div>
                           </div>
@@ -300,7 +297,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                       </td>
 
                       {/* Env */}
-                      <td className="py-2.5 px-3 font-mono text-2xs uppercase text-obsidian-300">
+                      <td className="py-2.5 px-3 font-mono text-2xs uppercase text-secondary">
                         {ci.environment}
                       </td>
 
@@ -311,26 +308,26 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
 
                       {/* Owner & Contact */}
                       <td className="py-2.5 px-3">
-                        <div className="text-obsidian-200 font-medium truncate max-w-44">
+                        <div className="text-primary font-medium truncate max-w-44">
                           {ci.ownership?.owner_group_name || 'Unassigned'}
                         </div>
-                        <div className="text-3xs text-obsidian-400 truncate max-w-44">
+                        <div className="text-3xs text-muted truncate max-w-44">
                           {ci.technical_contact}
                         </div>
                       </td>
 
                       {/* Endpoint */}
-                      <td className="py-2.5 px-3 font-mono text-2xs text-obsidian-300">
-                        {ci.primary_endpoint || <span className="text-obsidian-500">—</span>}
+                      <td className="py-2.5 px-3 font-mono text-2xs text-secondary">
+                        {ci.primary_endpoint || <span className="text-muted">—</span>}
                       </td>
 
                       {/* Verified At */}
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-1.5">
-                          {isVerifiedStale && <Clock className="w-3 h-3 text-amber-400" />}
+                          {isVerifiedStale && <Clock className="w-3 h-3 text-deprecated stroke-[1.5]" />}
                           <span
                             className={
-                              isVerifiedStale ? 'text-amber-400 font-medium' : 'text-obsidian-300'
+                              isVerifiedStale ? 'text-deprecated font-medium' : 'text-secondary'
                             }
                           >
                             {formatRelativeTime(ci.last_verified_at)}
@@ -349,7 +346,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                           title="Inspect Details"
                           onClick={() => setInspectingCI(ci)}
                         >
-                          <Eye className="w-3.5 h-3.5 text-obsidian-400 hover:text-white" />
+                          <Eye className="w-3.5 h-3.5 text-muted hover:text-primary stroke-[1.5]" />
                         </Button>
 
                         {activeRole !== 'viewer' && (
@@ -360,7 +357,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                             onClick={() => handleVerify(ci)}
                             isLoading={verifyMutation.isPending}
                           >
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-400 hover:text-emerald-300" />
+                            <CheckCircle className="w-3.5 h-3.5 text-inservice stroke-[1.5]" />
                           </Button>
                         )}
 
@@ -370,7 +367,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                           title="Report Dispute / Flag"
                           onClick={() => setFlaggingCI(ci)}
                         >
-                          <Flag className="w-3.5 h-3.5 text-amber-400 hover:text-amber-300" />
+                          <Flag className="w-3.5 h-3.5 text-deprecated stroke-[1.5]" />
                         </Button>
 
                         {activeRole !== 'viewer' && ci.lifecycle_state !== 'retired' && (
@@ -380,7 +377,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                             title="Retire CI (Checks for active dependents)"
                             onClick={() => setRetiringCI(ci)}
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                            <Trash2 className="w-3.5 h-3.5 text-tier0 stroke-[1.5]" />
                           </Button>
                         )}
                       </td>
@@ -395,53 +392,53 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
 
       {/* Slide-Over CI Detail Inspector Drawer */}
       {inspectingCI && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-2xs animate-in fade-in-0 duration-150">
+        <div className="fixed inset-0 z-50 flex justify-end bg-[rgba(17,24,39,0.40)] animate-in fade-in-0 duration-150">
           <div className="fixed inset-0" onClick={() => setInspectingCI(null)} />
-          <div className="relative w-full max-w-md bg-obsidian-900 border-l border-obsidian-700 h-full p-6 overflow-y-auto space-y-6 shadow-2xl z-10">
+          <div className="relative w-full max-w-md bg-surface border-l border-hairline h-full p-6 overflow-y-auto space-y-6 shadow-[-8px_0_24px_rgba(16,24,40,0.08)] z-10">
             {/* Drawer Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-obsidian-800">
+            <div className="flex items-start justify-between pb-4 border-b border-subtle">
               <div className="space-y-1">
-                <span className="text-3xs font-mono uppercase bg-obsidian-800 text-obsidian-400 px-1.5 py-0.5 rounded border border-obsidian-700">
+                <span className="text-3xs font-mono uppercase bg-surface-sunken text-secondary px-1.5 py-0.5 rounded-sm border border-subtle">
                   {inspectingCI.ci_class}
                 </span>
-                <h2 className="text-lg font-bold text-white">{inspectingCI.name}</h2>
-                <div className="text-2xs font-mono text-obsidian-400">{inspectingCI.ci_id}</div>
+                <h2 className="text-lg font-semibold text-primary">{inspectingCI.name}</h2>
+                <div className="text-2xs font-mono text-muted">{inspectingCI.ci_id}</div>
               </div>
               <button
                 onClick={() => setInspectingCI(null)}
-                className="text-obsidian-400 hover:text-white p-1 rounded hover:bg-obsidian-800"
+                className="text-muted hover:text-primary p-1 rounded-sm hover:bg-hover cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 stroke-[1.5]" />
               </button>
             </div>
 
             {/* Core 10-Field Governance Envelope */}
             <div className="space-y-3">
-              <span className="text-2xs font-mono font-semibold uppercase text-obsidian-400 tracking-wider">
+              <span className="text-2xs font-mono font-semibold uppercase text-muted tracking-wider">
                 10-Field Governance Envelope
               </span>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-2.5 bg-obsidian-950/60 border border-obsidian-800 rounded">
-                  <span className="text-3xs text-obsidian-400 block mb-1">Criticality Tier</span>
+                <div className="p-2.5 bg-surface-sunken border border-subtle rounded-md">
+                  <span className="text-3xs text-muted block mb-1">Criticality Tier</span>
                   <CriticalityChip tier={inspectingCI.criticality_tier} />
                 </div>
 
-                <div className="p-2.5 bg-obsidian-950/60 border border-obsidian-800 rounded">
-                  <span className="text-3xs text-obsidian-400 block mb-1">Lifecycle State</span>
+                <div className="p-2.5 bg-surface-sunken border border-subtle rounded-md">
+                  <span className="text-3xs text-muted block mb-1">Lifecycle State</span>
                   <LifecycleBadge state={inspectingCI.lifecycle_state} />
                 </div>
 
-                <div className="p-2.5 bg-obsidian-950/60 border border-obsidian-800 rounded">
-                  <span className="text-3xs text-obsidian-400 block mb-1">Environment</span>
-                  <span className="font-mono uppercase font-semibold text-obsidian-200">
+                <div className="p-2.5 bg-surface-sunken border border-subtle rounded-md">
+                  <span className="text-3xs text-muted block mb-1">Environment</span>
+                  <span className="font-mono uppercase font-semibold text-primary">
                     {inspectingCI.environment}
                   </span>
                 </div>
 
-                <div className="p-2.5 bg-obsidian-950/60 border border-obsidian-800 rounded">
-                  <span className="text-3xs text-obsidian-400 block mb-1">Primary Endpoint</span>
-                  <span className="font-mono text-2xs text-obsidian-200 truncate block">
+                <div className="p-2.5 bg-surface-sunken border border-subtle rounded-md">
+                  <span className="text-3xs text-muted block mb-1">Primary Endpoint</span>
+                  <span className="font-mono text-2xs text-secondary truncate block">
                     {inspectingCI.primary_endpoint || 'None'}
                   </span>
                 </div>
@@ -449,45 +446,45 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
 
               {/* Ownership Card */}
               {inspectingCI.ownership && (
-                <div className="p-3 bg-obsidian-950/60 border border-obsidian-800 rounded text-xs space-y-1.5">
-                  <span className="text-3xs font-mono uppercase text-obsidian-400 block">
+                <div className="p-3 bg-surface-sunken border border-subtle rounded-md text-xs space-y-1.5">
+                  <span className="text-3xs font-mono uppercase text-muted block">
                     Ownership & Technical Contact
                   </span>
-                  <div className="font-semibold text-white">{inspectingCI.ownership.owner_group_name}</div>
-                  <div className="text-obsidian-400 text-2xs">
-                    Department: <span className="text-obsidian-200">{inspectingCI.ownership.department_name}</span>
+                  <div className="font-semibold text-primary">{inspectingCI.ownership.owner_group_name}</div>
+                  <div className="text-secondary text-2xs">
+                    Department: <span className="text-primary">{inspectingCI.ownership.department_name}</span>
                   </div>
-                  <div className="text-obsidian-400 text-2xs">
-                    Technical Contact: <span className="text-obsidian-200">{inspectingCI.technical_contact}</span>
+                  <div className="text-secondary text-2xs">
+                    Technical Contact: <span className="text-primary">{inspectingCI.technical_contact}</span>
                   </div>
-                  <div className="text-obsidian-400 text-2xs">
-                    Team Lead: <span className="text-obsidian-200">{inspectingCI.ownership.team_lead_name}</span>
+                  <div className="text-secondary text-2xs">
+                    Team Lead: <span className="text-primary">{inspectingCI.ownership.team_lead_name}</span>
                   </div>
                 </div>
               )}
 
               {/* Class Metadata (Constraint: <= 2 keys) */}
-              <div className="p-3 bg-obsidian-950/60 border border-obsidian-800 rounded text-xs space-y-1.5">
-                <span className="text-3xs font-mono uppercase text-obsidian-400 block">
+              <div className="p-3 bg-surface-sunken border border-subtle rounded-md text-xs space-y-1.5">
+                <span className="text-3xs font-mono uppercase text-muted block">
                   Class Metadata (max 2 keys)
                 </span>
                 {inspectingCI.class_metadata && Object.keys(inspectingCI.class_metadata).length > 0 ? (
                   <div className="space-y-1 font-mono text-2xs">
                     {Object.entries(inspectingCI.class_metadata).map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-obsidian-300">
-                        <span className="text-obsidian-400">{k}:</span>
-                        <span>{String(v)}</span>
+                      <div key={k} className="flex justify-between text-secondary">
+                        <span className="text-muted">{k}:</span>
+                        <span className="text-primary">{String(v)}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-obsidian-500 text-2xs">No additional metadata registered.</div>
+                  <div className="text-muted text-2xs">No additional metadata registered.</div>
                 )}
               </div>
             </div>
 
             {/* Quick Traversal Jump Actions */}
-            <div className="pt-2 border-t border-obsidian-800 space-y-2">
+            <div className="pt-2 border-t border-subtle space-y-2">
               <Button
                 variant="primary"
                 className="w-full justify-center"
@@ -496,7 +493,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                   setInspectingCI(null);
                 }}
               >
-                <Network className="w-4 h-4 mr-2" />
+                <Network className="w-4 h-4 mr-2 stroke-[1.5]" />
                 Inspect Graph & Blast Radius
               </Button>
 
@@ -507,7 +504,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                   onClick={() => handleVerify(inspectingCI)}
                   isLoading={verifyMutation.isPending}
                 >
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-inservice stroke-[1.5]" />
                   Verify Operational Status Now
                 </Button>
               )}
@@ -518,30 +515,30 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
 
       {/* Safe Retirement Modal with Active Dependent Check */}
       {retiringCI && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
-          <div className="w-full max-w-md bg-obsidian-900 border border-red-800/80 rounded-xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-red-400">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.40)] p-4 animate-in fade-in-0 duration-150">
+          <div className="w-full max-w-md bg-surface border border-tier0-border rounded-lg p-5 space-y-4 shadow-[0_4px_12px_rgba(16,24,40,0.10)]">
+            <div className="flex items-center gap-3 text-tier0">
+              <AlertTriangle className="w-6 h-6 shrink-0 stroke-[1.5]" />
               <div>
-                <h3 className="text-base font-bold text-white">Retire Configuration Item</h3>
-                <p className="text-xs text-obsidian-400">
-                  Are you sure you want to retire <span className="font-semibold text-white">{retiringCI.name}</span>?
+                <h3 className="text-base font-semibold text-primary">Retire Configuration Item</h3>
+                <p className="text-xs text-secondary">
+                  Are you sure you want to retire <span className="font-semibold text-primary">{retiringCI.name}</span>?
                 </p>
               </div>
             </div>
 
-            <p className="text-xs text-obsidian-300 leading-relaxed bg-obsidian-950 p-3 rounded border border-obsidian-800">
-              Retiring an active service or infrastructure provider requires that no active upstream services depend on it. If dependent applications are found, standard retirement will be aborted with <code className="text-amber-400 font-mono text-2xs">HTTP 409 Conflict</code>.
+            <p className="text-xs text-secondary leading-relaxed bg-surface-sunken p-3 rounded-md border border-subtle">
+              Retiring an active service or infrastructure provider requires that no active upstream services depend on it. If dependent applications are found, standard retirement will be aborted with <code className="text-deprecated font-mono text-2xs">HTTP 409 Conflict</code>.
             </p>
 
             {/* Force checkbox for platform admin only */}
             {activeRole === 'platform_admin' && (
-              <label className="flex items-center gap-2 text-xs text-red-300 cursor-pointer pt-1">
+              <label className="flex items-center gap-2 text-xs text-tier0 cursor-pointer pt-1">
                 <input
                   type="checkbox"
                   checked={forceRetire}
                   onChange={(e) => setForceRetire(e.target.checked)}
-                  className="rounded border-obsidian-700 bg-obsidian-950 text-red-500 focus:ring-red-500"
+                  className="rounded-sm border-control text-tier0 focus:ring-accent"
                 />
                 <span>Force Retire (Bypasses active dependent lock — Admin Only)</span>
               </label>
@@ -566,18 +563,18 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
 
       {/* Report Dispute Flag Modal */}
       {flaggingCI && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
-          <div className="w-full max-w-md bg-obsidian-900 border border-obsidian-750 rounded-xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-2.5 text-amber-400">
-              <Flag className="w-5 h-5 shrink-0" />
-              <h3 className="text-base font-bold text-white">Report Data-Quality Dispute</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.40)] p-4 animate-in fade-in-0 duration-150">
+          <div className="w-full max-w-md bg-surface border border-hairline rounded-lg p-5 space-y-4 shadow-[0_4px_12px_rgba(16,24,40,0.10)]">
+            <div className="flex items-center gap-2.5 text-deprecated">
+              <Flag className="w-5 h-5 shrink-0 stroke-[1.5]" />
+              <h3 className="text-base font-semibold text-primary">Report Data-Quality Dispute</h3>
             </div>
-            <p className="text-xs text-obsidian-400">
-              Flagging <span className="font-semibold text-white">{flaggingCI.name}</span> notifies the owner group ({flaggingCI.ownership?.owner_group_name}) to verify or correct operational metadata.
+            <p className="text-xs text-secondary">
+              Flagging <span className="font-semibold text-primary">{flaggingCI.name}</span> notifies the owner group ({flaggingCI.ownership?.owner_group_name}) to verify or correct operational metadata.
             </p>
 
             <div>
-              <label className="block text-2xs font-mono uppercase text-obsidian-400 mb-1">
+              <label className="block text-2xs font-mono uppercase text-muted mb-1">
                 Reason for Dispute / Correction
               </label>
               <textarea
@@ -585,7 +582,7 @@ export function CatalogView({ onNavigateToGraph }: CatalogViewProps) {
                 onChange={(e) => setFlagReason(e.target.value)}
                 rows={3}
                 placeholder="e.g. Primary endpoint 10.0.1.5 has been decommissioned; cluster now runs in AWS eu-west-1..."
-                className="w-full rounded border border-obsidian-700 bg-obsidian-950 p-2.5 text-xs text-obsidian-100 placeholder:text-obsidian-500 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
+                className="w-full rounded-md border border-control bg-surface p-2.5 text-xs text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent font-sans"
               />
             </div>
 

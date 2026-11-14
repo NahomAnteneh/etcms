@@ -4,44 +4,44 @@
 
 @layer base {
   body {
-    @apply bg-obsidian-900 text-obsidian-100 font-sans antialiased;
-    color-scheme: dark;
+    @apply bg-canvas text-primary font-sans antialiased;
+    color-scheme: light;
   }
 }
 
-/* Custom Sleek Scrollbar for High-Density Tables */
+/* High-Density Tables & Canvas Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #f1f3f6;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f2937;
-  border-radius: 3px;
+  background: #d3d8e0;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #858e9e;
 }
 
-/* React Flow Dark Canvas overrides */
+/* React Flow Canvas overrides */
 .react-flow__attribution {
   display: none !important;
 }
 
 .react-flow__controls button {
-  background: #111827 !important;
-  border-bottom: 1px solid #1f2937 !important;
-  color: #9ca3af !important;
-  fill: #9ca3af !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e8ed !important;
+  color: #4b5563 !important;
+  fill: #4b5563 !important;
 }
 
 .react-flow__controls button:hover {
-  background: #1f2937 !important;
-  color: #ffffff !important;
-  fill: #ffffff !important;
+  background: #eef0f4 !important;
+  color: #111827 !important;
+  fill: #111827 !important;
 }

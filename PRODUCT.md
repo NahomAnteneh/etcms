@@ -42,7 +42,9 @@ Unlike bloated legacy ITAM/ITSM suites that demand synchronous workshops and man
 ## Brand Commitments
 
 - **Tone & Persona:** Precise, authoritative, high-density, developer-first engineering tool.
-- **Visual Mode:** Operate Mode (Impeccable). Obsidian & Slate Dark Theme, earned familiarity, no product slop, restrained slate/crimson/emerald/amber semantic palette, 150-200ms transitions.
+- **Visual Mode:** Operate Mode (Impeccable). Light enterprise theme: cool-neutral off-white canvas, white surfaces, hairline borders, one restrained cobalt accent, earned familiarity, no product slop, restrained slate/crimson/emerald/amber semantic palette, 150-200ms transitions.
+- **Theme:** Light only. No dark-mode variant is in scope; set `color-scheme: light`.
+- **Anti-references:** Purple/pink gradients, glassmorphism and backdrop blur, glow effects, hero sections or marketing copy inside the app, emoji icons, card-grid-for-everything layouts, nested cards, heavy drop shadows, decorative animation.
 
 ## Evidence on Hand
 
@@ -59,4 +61,4 @@ Unlike bloated legacy ITAM/ITSM suites that demand synchronous workshops and man
 
 ## Accessibility & Inclusion
 
-WCAG 2.1 AA compliant across all views. Full keyboard navigation for graph navigation, command palette, and table inspectors. High-contrast semantic tokens for all criticality tiers.
+WCAG 2.1 AA compliant across all views. Full keyboard navigation for graph navigation, command palette, and table inspectors. High-contrast semantic tokens for all criticality tiers, validated at AA or better on both the white surface and the off-white canvas. Criticality, lifecycle, and handshake status are never conveyed by color alone; each pairs color with an icon or text label.
