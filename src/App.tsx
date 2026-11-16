@@ -34,6 +34,12 @@ function getIntakeTokenFromLocation(): string | null {
   return match ? match[1] : null;
 }
 
+function getInitialCatalogCI(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('ci');
+}
+
 function getInitialDashboardTab(): 'overview' | 'digest' | 'handshakes' | 'campaigns' {
   if (typeof window === 'undefined') return 'overview';
   const params = new URLSearchParams(window.location.search);
@@ -105,13 +111,14 @@ export function App() {
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'digest' | 'handshakes' | 'campaigns'>(getInitialDashboardTab);
   const [intakeToken, setIntakeToken] = useState<string | null>(getIntakeTokenFromLocation);
   const [selectedCIForGraph, setSelectedCIForGraph] = useState<string | null>(null);
-  const [selectedCIForCatalog, setSelectedCIForCatalog] = useState<string | null>(null);
+  const [selectedCIForCatalog, setSelectedCIForCatalog] = useState<string | null>(getInitialCatalogCI);
 
   useEffect(() => {
     const handlePopState = () => {
       setCurrentView(getViewFromLocation());
       setDashboardTab(getInitialDashboardTab());
       setIntakeToken(getIntakeTokenFromLocation());
+      setSelectedCIForCatalog(getInitialCatalogCI());
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -158,7 +165,7 @@ export function App() {
 
   const handleNavigateToCatalogCI = (ciId: string) => {
     setSelectedCIForCatalog(ciId);
-    handleSelectView('catalog');
+    handleSelectView(`catalog?ci=${ciId}`);
   };
 
   return (
