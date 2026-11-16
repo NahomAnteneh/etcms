@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle,
   Clock,
@@ -7,52 +7,141 @@ import {
   Calendar,
   AlertTriangle,
   Layers,
+  ExternalLink,
+  Building2,
 } from 'lucide-react';
 import { useOwnerDigest, useVerifyCI, useRetireCI } from '../../api/endpoints';
 import { CriticalityChip } from '../../components/governance/criticality-chip';
 import { RFC9457Alert } from '../../components/governance/rfc9457-alert';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../../components/ui/dialog';
 import { formatDateTime } from '../../lib/utils';
 import { ApiProblemError } from '../../api/client';
 import { useAuth } from '../../store/auth-context';
+import { useToast } from '../../components/ui/toast';
 
 interface DigestViewProps {
-  onNavigateToCatalog?: () => void;
+  onNavigateToCatalog?: (ciId?: string) => void;
 }
 
-export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
-  const { activeRole, activeOwnerGroup } = useAuth();
-  const { data: digest, isLoading, refetch } = useOwnerDigest();
+export function DigestView({ onNavigateToCatalog }: DigestViewProps) {
+  const { activeRole, isAdmin, activeOwnerGroup, ownerGroups } = useAuth();
+  const toast = useToast();
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(activeOwnerGroup?.id || '');
+
+  // Keep in sync with activeOwnerGroup if it changes
+  useEffect(() => {
+    if (activeOwnerGroup?.id && !selectedGroupId) {
+      setSelectedGroupId(activeOwnerGroup.id);
+    }
+  }, [activeOwnerGroup?.id, selectedGroupId]);
+
+  const effectiveGroupId = selectedGroupId || activeOwnerGroup?.id;
+  const currentGroup = ownerGroups.find((g) => g.id === effectiveGroupId) || activeOwnerGroup;
+
+  const { data: digest, isLoading, isError, error, refetch } = useOwnerDigest(effectiveGroupId || undefined);
   const verifyMutation = useVerifyCI();
   const retireMutation = useRetireCI();
 
   const [activeProblem, setActiveProblem] = useState<ApiProblemError['problem'] | null>(null);
   const [retiringItem, setRetiringItem] = useState<{ id: string; name: string } | null>(null);
+  const [retireProblem, setRetireProblem] = useState<ApiProblemError['problem'] | null>(null);
+  const [isVerifyingAll, setIsVerifyingAll] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   const items = digest?.items || [];
   const openItems = items.filter((i) => i.status === 'open');
   const actionedItems = items.filter((i) => i.status === 'actioned');
 
-  const handleVerify = async (ciId: string) => {
+  const handleVerify = async (ciId: string, name?: string) => {
     setActiveProblem(null);
+    setVerifyingId(ciId);
     try {
       await verifyMutation.mutateAsync(ciId);
+      toast.success(`CI ${name || ciId} verified successfully`);
       refetch();
-    } catch (err) {
-      if (err instanceof ApiProblemError) setActiveProblem(err.problem);
+    } catch (err: any) {
+      if (err instanceof ApiProblemError) {
+        setActiveProblem(err.problem);
+        toast.error(err.problem.detail || 'Verification failed');
+      } else {
+        toast.error(err.message || 'Verification failed');
+      }
+    } finally {
+      setVerifyingId(null);
     }
   };
 
-  const handleRetire = async () => {
-    if (!retiringItem) return;
+  const handleVerifyAll = async () => {
+    if (openItems.length === 0) return;
+    setIsVerifyingAll(true);
     setActiveProblem(null);
     try {
-      await retireMutation.mutateAsync({ id: retiringItem.id, force: false });
-      setRetiringItem(null);
+      const results = await Promise.allSettled(
+        openItems.map((item) => verifyMutation.mutateAsync(item.ci_id))
+      );
+      let succeeded = 0;
+      let failed = 0;
+      let lastErrorProblem: ApiProblemError['problem'] | null = null;
+
+      results.forEach((r) => {
+        if (r.status === 'fulfilled') {
+          succeeded++;
+        } else {
+          failed++;
+          if (r.reason instanceof ApiProblemError) {
+            lastErrorProblem = r.reason.problem;
+          }
+        }
+      });
+
+      if (lastErrorProblem) {
+        setActiveProblem(lastErrorProblem);
+      }
+
+      if (failed === 0) {
+        toast.success(`Successfully verified all ${succeeded} items`);
+      } else if (succeeded > 0) {
+        toast.warning(`Verified ${succeeded} items; ${failed} failed`);
+      } else {
+        toast.error(`Bulk verification failed for all ${failed} items`);
+      }
       refetch();
-    } catch (err) {
-      if (err instanceof ApiProblemError) setActiveProblem(err.problem);
+    } catch (err: any) {
+      if (err instanceof ApiProblemError) {
+        setActiveProblem(err.problem);
+        toast.error(err.problem.detail || 'Bulk verification failed');
+      } else {
+        toast.error(err.message || 'Bulk verification failed');
+      }
+    } finally {
+      setIsVerifyingAll(false);
+    }
+  };
+
+  const handleRetire = async (force: boolean = false) => {
+    if (!retiringItem) return;
+    setRetireProblem(null);
+    try {
+      await retireMutation.mutateAsync({ id: retiringItem.id, force });
+      toast.info(`CI ${retiringItem.name} retired${force ? ' (forced override)' : ''}`);
+      setRetiringItem(null);
+      setRetireProblem(null);
+      refetch();
+    } catch (err: any) {
+      if (err instanceof ApiProblemError) {
+        setRetireProblem(err.problem);
+      } else {
+        toast.error(err.message || 'Retirement failed');
+      }
     }
   };
 
@@ -66,7 +155,7 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
         );
       case 'pending_edge':
         return (
-          <span className="inline-flex items-center gap-1 text-2xs font-mono uppercase bg-tier2-bg text-accent border border-tier2-border px-2 py-0.5 rounded-sm font-semibold">
+          <span className="inline-flex items-center gap-1 text-2xs font-mono uppercase bg-tier2-bg text-tier2 border border-tier2-border px-2 py-0.5 rounded-sm font-semibold">
             <Layers className="w-3 h-3 stroke-[1.5]" /> Priority 2: Pending Handshake
           </span>
         );
@@ -92,16 +181,34 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl w-full mx-auto animate-in fade-in-50 duration-150">
+    <div className="space-y-6 w-full animate-in fade-in-50 duration-150">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-subtle">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-primary flex items-center gap-2">
-            Owner Verification Queue
-            <span className="text-2xs font-mono uppercase bg-tier2-bg text-accent border border-tier2-border px-2 py-0.5 rounded-sm">
-              {activeOwnerGroup?.name || 'My Owner Group'}
-            </span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-primary">
+              Owner Verification Queue
+            </h1>
+            {isAdmin && ownerGroups.length > 0 ? (
+              <select
+                value={effectiveGroupId || ''}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                className="text-xs bg-surface border border-subtle rounded px-2 py-1 text-primary focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
+                title="Select owner group queue to view and attest"
+              >
+                <option value="">Select an Owner Group...</option>
+                {ownerGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-2xs font-mono uppercase bg-tier2-bg text-tier2 border border-tier2-border px-2 py-0.5 rounded-sm">
+                {currentGroup?.name || 'My Owner Group'}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-secondary mt-1">
             Bi-weekly calendar review (1st & 15th UTC). Verify operational integrity to prevent configuration decay.
           </p>
@@ -111,7 +218,8 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
           <div className="flex items-center gap-2 text-2xs font-mono text-secondary bg-surface-sunken px-3 py-1.5 rounded-sm border border-subtle">
             <Calendar className="w-3.5 h-3.5 text-accent stroke-[1.5]" />
             <span>
-              Window: {formatDateTime(digest.window_start)} &rarr; {formatDateTime(digest.window_end)}
+              Window: {digest.window_start ? formatDateTime(digest.window_start) : 'Current Cycle'} &rarr;{' '}
+              {digest.window_end ? formatDateTime(digest.window_end) : 'Bi-Weekly Review'}
             </span>
           </div>
         )}
@@ -119,7 +227,11 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
 
       {/* RFC 9457 Error Alert */}
       {activeProblem && (
-        <RFC9457Alert problem={activeProblem} onDismiss={() => setActiveProblem(null)} />
+        <RFC9457Alert
+          problem={activeProblem}
+          onDismiss={() => setActiveProblem(null)}
+          onNavigateToCI={onNavigateToCatalog}
+        />
       )}
 
       {/* Action Progress Bar */}
@@ -129,7 +241,9 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
             Review Items Completed: {actionedItems.length} of {items.length}
           </div>
           <p className="text-xs text-secondary mt-0.5">
-            {openItems.length === 0
+            {items.length === 0
+              ? 'Zero review items pending in this 14-day attestation cycle.'
+              : openItems.length === 0
               ? 'All review items in this 14-day cycle are verified and up to date!'
               : `${openItems.length} items require team lead verification or safe retirement.`}
           </p>
@@ -138,27 +252,59 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
         <div className="w-full sm:w-64 bg-surface-sunken rounded-full h-2.5 border border-subtle overflow-hidden">
           <div
             className="bg-accent h-full transition-all duration-300"
-            style={{ width: `${items.length > 0 ? (actionedItems.length / items.length) * 100 : 100}%` }}
+            style={{ width: `${items.length > 0 ? (actionedItems.length / items.length) * 100 : 0}%` }}
           />
         </div>
       </div>
 
       {/* Items List */}
       <div className="space-y-3">
-        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider font-mono">
-          Pending Review Items ({openItems.length})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider font-mono">
+            Pending Review Items ({openItems.length})
+          </h2>
+          {activeRole !== 'viewer' && openItems.length > 1 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleVerifyAll}
+              isLoading={isVerifyingAll}
+            >
+              <CheckCircle className="w-3.5 h-3.5 mr-1 text-inservice stroke-[1.5]" />
+              Verify All ({openItems.length})
+            </Button>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="p-8 text-center text-xs text-muted bg-surface border border-subtle rounded-md">
             Loading review queue...
           </div>
+        ) : isError ? (
+          <div className="p-8 text-center bg-surface border border-tier0-border rounded-md space-y-3">
+            <AlertTriangle className="w-8 h-8 text-tier0 mx-auto stroke-[1.5]" />
+            <h3 className="text-sm font-semibold text-primary">Failed to load verification queue</h3>
+            <p className="text-xs text-secondary max-w-md mx-auto">
+              {(error as any)?.message || 'An error occurred while communicating with the verification service.'}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => refetch()}>
+              Retry Queue
+            </Button>
+          </div>
+        ) : !effectiveGroupId ? (
+          <div className="p-10 text-center bg-surface border border-subtle rounded-md space-y-2">
+            <Building2 className="w-8 h-8 text-accent mx-auto stroke-[1.5]" />
+            <h3 className="text-sm font-semibold text-primary">No Owner Group Selected</h3>
+            <p className="text-xs text-secondary max-w-md mx-auto">
+              Signed in as Platform Administrator (Global Scope). Please select an owner group from the dropdown in the header above to inspect its review queue.
+            </p>
+          </div>
         ) : openItems.length === 0 ? (
           <div className="p-10 text-center bg-surface border border-subtle rounded-md space-y-2">
             <CheckCircle className="w-8 h-8 text-inservice mx-auto stroke-[1.5]" />
-            <h3 className="text-sm font-semibold text-primary">Queue is Clear!</h3>
+            <h3 className="text-sm font-semibold text-primary">Queue is Clear for {currentGroup?.name || 'this Group'}</h3>
             <p className="text-xs text-secondary max-w-md mx-auto">
-              Your owner group has zero open flags, zero pending handshakes, and all configuration items have been verified within the last 60 days.
+              {currentGroup?.name || 'This owner group'} has zero open flags, zero pending handshakes, and all configuration items have been verified within the last 60 days.
             </p>
           </div>
         ) : (
@@ -178,7 +324,15 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
                       <CriticalityChip tier={item.criticality_tier} />
                     </div>
 
-                    <div className="font-semibold text-sm text-primary">{item.name}</div>
+                    <button
+                      type="button"
+                      className="font-semibold text-sm text-primary hover:text-accent cursor-pointer transition-colors text-left inline-block focus:outline-none focus-visible:underline"
+                      onClick={() => onNavigateToCatalog?.(item.ci_id)}
+                      title="Inspect CI in Catalog"
+                      aria-label={`Inspect ${item.name} in Catalog`}
+                    >
+                      {item.name}
+                    </button>
 
                     <div className="text-xs text-secondary flex items-center gap-4">
                       <span>
@@ -192,13 +346,26 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0">
+                    {onNavigateToCatalog && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onNavigateToCatalog(item.ci_id)}
+                        className="text-xs text-secondary hover:text-primary"
+                        title="View details in CI Catalog"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 mr-1 stroke-[1.5]" />
+                        Inspect
+                      </Button>
+                    )}
+
                     {activeRole !== 'viewer' ? (
                       <>
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => handleVerify(item.ci_id)}
-                          isLoading={verifyMutation.isPending}
+                          onClick={() => handleVerify(item.ci_id, item.name)}
+                          isLoading={verifyingId === item.ci_id}
                         >
                           <CheckCircle className="w-3.5 h-3.5 mr-1 stroke-[1.5]" />
                           Verify Status
@@ -226,35 +393,81 @@ export function DigestView({ onNavigateToCatalog: _ }: DigestViewProps) {
       </div>
 
       {/* Safe Retire Modal */}
-      {retiringItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.40)] p-4 animate-in fade-in-0 duration-150">
-          <div className="w-full max-w-md bg-surface border border-tier0-border rounded-lg p-5 space-y-4 shadow-[0_4px_12px_rgba(16,24,40,0.10)]">
-            <div className="flex items-center gap-3 text-tier0">
-              <AlertTriangle className="w-6 h-6 shrink-0 stroke-[1.5]" />
-              <div>
-                <h3 className="text-base font-semibold text-primary">Retire {retiringItem.name}</h3>
-                <p className="text-xs text-secondary">Pre-flight active dependency check</p>
-              </div>
-            </div>
-            <p className="text-xs text-secondary leading-relaxed bg-surface-sunken p-3 rounded-md border border-subtle">
-              If other active applications depend on this CI, retirement will be prevented with an RFC 9457 Conflict response.
-            </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setRetiringItem(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleRetire}
-                isLoading={retireMutation.isPending}
-              >
-                Confirm Retirement
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={!!retiringItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRetiringItem(null);
+            setRetireProblem(null);
+          }
+        }}
+      >
+        <DialogContent variant="modal" className="border-tier0-border">
+          {retiringItem && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3 text-tier0">
+                  <AlertTriangle className="w-6 h-6 shrink-0 stroke-[1.5]" />
+                  <div>
+                    <DialogTitle className="text-base font-semibold text-primary">
+                      Retire {retiringItem.name}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-secondary mt-1">
+                      Pre-flight active dependency check
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              {/* In-Modal Error Alert with Dependent CIs */}
+              {retireProblem && (
+                <RFC9457Alert
+                  problem={retireProblem}
+                  onDismiss={() => setRetireProblem(null)}
+                  onNavigateToCI={onNavigateToCatalog}
+                />
+              )}
+
+              <p className="text-xs text-secondary leading-relaxed bg-surface-sunken p-3 rounded-md border border-subtle">
+                If other active applications depend on this CI, retirement will be prevented with an RFC 9457 Conflict response listing blocking dependencies.
+              </p>
+
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setRetiringItem(null);
+                    setRetireProblem(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleRetire(false)}
+                  isLoading={retireMutation.isPending}
+                >
+                  Confirm Retirement
+                </Button>
+                {retireProblem?.status === 409 && activeRole === 'platform_admin' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleRetire(true)}
+                    isLoading={retireMutation.isPending}
+                    className="border border-tier0-border bg-tier0 text-white hover:bg-tier0/90"
+                    title="Force retirement bypassing dependent check (restricted to platform_admin)"
+                  >
+                    Force Retire (Admin Override)
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
