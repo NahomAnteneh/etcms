@@ -369,7 +369,7 @@ export function DashboardView({
   const tabs: Array<{ id: DashboardTab; label: string; tooltip: string; icon: typeof Activity; badge?: number }> = [
     { id: 'overview', label: 'Health & Quality Overview', tooltip: 'Overall CMDB health measured across Completeness, Correctness, and Compliance', icon: Activity },
     { id: 'digest', label: 'Verification Digest', tooltip: 'Bi-weekly attestation and action items for owned services', icon: FileCheck2, badge: openDigestCount },
-    { id: 'handshakes', label: 'Pending Approvals', tooltip: 'Cross-boundary service relationships waiting for confirmation', icon: Inbox, badge: pendingEdges.length },
+    { id: 'handshakes', label: 'Pending approvals', tooltip: 'Cross-boundary service relationships waiting for confirmation', icon: Inbox, badge: pendingEdges.length },
     { id: 'campaigns', label: 'Data Collection Requests', tooltip: 'Automated data collection requests sent to team leads', icon: Send },
   ];
 
@@ -907,7 +907,7 @@ export function DashboardView({
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-1 border-b border-subtle">
-                    <span className="text-secondary">Cross-Boundary Handshakes</span>
+                    <span className="text-secondary">Pending approvals</span>
                     <span className={cn("font-mono font-medium", pendingEdges.length > 0 ? "text-tier1" : "text-primary")}>
                       {pendingEdges.length} Approvals
                     </span>
@@ -936,7 +936,7 @@ export function DashboardView({
                   >
                     <span className="flex items-center gap-1.5">
                       <Inbox className="w-3.5 h-3.5 text-accent" />
-                      Pending Approvals
+                      Pending approvals
                     </span>
                     <ArrowRight className="w-3.5 h-3.5 text-muted" />
                   </Button>
