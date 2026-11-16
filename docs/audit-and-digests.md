@@ -56,7 +56,7 @@ If `DIGEST_WEBHOOK_URL` is set in the environment, the worker posts a structured
 ## 2. One-Click Digest Actions (`US-4.1`)
 
 ### Explicit Verification (`POST /api/v1/cis/{id}/verify`)
-1. **Authorization:** Caller must belong to the CI's `owner_group_id` or be `platform_admin`.
+1. **Authorization & RBAC:** Users with `role = viewer` are strictly read-only and rejected with `HTTP 403 Forbidden`. Team leads must belong to the CI's owner group (`actor.BelongsToOwnerGroup(ci.OwnerGroupID)`). Users with `role = platform_admin` have global bypass privileges.
 2. **Atomic Side Effects (inside `WithAuditTx`):**
    - Sets `last_verified_at = now()`.
    - Resolves all open flags on that CI in `ci_flags` (`status = 'resolved'`, `resolved_by = actor.ID`, `resolved_at = now()`).
@@ -65,20 +65,34 @@ If `DIGEST_WEBHOOK_URL` is set in the environment, the worker posts a structured
 
 ### Safe CI Retirement (`POST /api/v1/cis/{id}/retire`)
 Retiring a database or shared API prematurely can trigger cascading outages for dependent services.
-1. **Authorization:** Caller must belong to the CI's `owner_group_id` or be `platform_admin`.
-2. **Upstream Active Dependent Check:**
+1. **Authorization & RBAC:** Users with `role = viewer` are strictly read-only and rejected with `HTTP 403 Forbidden`. Team leads must belong to the CI's owner group (`actor.BelongsToOwnerGroup(ci.OwnerGroupID)`). Users with `role = platform_admin` have global bypass privileges.
+2. **Upstream Active Dependent Check (`sql/queries/cis.sql` - `GetActiveUpstreamDependents`):**
    - Queries `ci_edges` for active dependents:
      ```sql
-     SELECT c.ci_id, c.name, c.ci_class, c.environment
+     SELECT
+         c.ci_id,
+         c.name,
+         c.ci_class,
+         c.environment,
+         c.lifecycle_state,
+         c.criticality_tier,
+         c.owner_group_id,
+         c.technical_contact,
+         c.primary_endpoint,
+         og.name AS owner_group_name
      FROM ci_edges e
      JOIN cis c ON c.ci_id = e.source_ci_id
-     WHERE e.target_ci_id = @id AND c.lifecycle_state = 'in_service';
+     JOIN owner_groups og ON og.id = c.owner_group_id
+     WHERE e.target_ci_id = @target_ci_id
+       AND c.lifecycle_state = 'in_service'
+     ORDER BY c.name ASC;
      ```
+   - **`handshake_status` Filtering Behavior:** Notice that `GetActiveUpstreamDependents` does **not** filter out edges by `handshake_status`. Any incoming edge from an active `in_service` CI (even if `pending_confirmation` or `flagged_mismatch`) blocks standard retirement to prevent accidental disruption.
    - If active dependents exist and `force != true`:
      - Aborts with **`HTTP 409 Conflict`**.
      - Returns RFC 9457 Problem Details containing the array of blocking `dependent_cis`.
 3. **Force Retirement Bypass (`force=true`):**
-   - Strictly restricted to `platform_admin` role (`HTTP 403 Forbidden` if called by regular team lead).
+   - Strictly restricted to `platform_admin` role (`HTTP 403 Forbidden` if called by regular team lead or non-admin user).
    - Records `"force": true` in the audit log diff.
 4. **Successful Retirement:**
    - Transitions `lifecycle_state = 'retired'`.
@@ -130,28 +144,54 @@ $$\text{Freshness Rate} = \frac{\text{Count}(\text{in\_service CIs with } \text{
 *(If total in-service CIs is 0, freshness rate defaults to 100.0%)*
 
 ### 2. Orphan CI Count
-Technical infrastructure items (`database`, `vm_cluster`, `physical_host`, `network_firewall`) that have zero confirmed upward dependency paths reaching a `business_service` or `application`. Identified via recursive CTE:
+Technical infrastructure items (`database`, `vm_cluster`, `physical_host`, `network_firewall`) that have zero confirmed upward dependency paths reaching a `business_service` or `application`. Identified via recursive CTE (`sql/queries/health_metrics.sql`):
 ```sql
 WITH RECURSIVE upstream AS (
-    SELECT e.target_ci_id AS technical_ci_id, e.source_ci_id AS ancestor_id, c.ci_class, 1 AS depth
+    SELECT
+        e.target_ci_id AS technical_ci_id,
+        e.source_ci_id AS ancestor_id,
+        c.ci_class AS ancestor_class,
+        1 AS depth
     FROM ci_edges e
+    JOIN cis tc ON tc.ci_id = e.target_ci_id
     JOIN cis c ON c.ci_id = e.source_ci_id
-    WHERE c.lifecycle_state = 'in_service' AND e.handshake_status = 'confirmed'
+    WHERE tc.lifecycle_state = 'in_service'
+      AND tc.ci_class IN ('database', 'vm_cluster', 'physical_host', 'network_firewall')
+      AND c.lifecycle_state = 'in_service'
+      AND e.handshake_status = 'confirmed'
     UNION
-    SELECT u.technical_ci_id, e.source_ci_id AS ancestor_id, c.ci_class, u.depth + 1
+    SELECT
+        u.technical_ci_id,
+        e.source_ci_id AS ancestor_id,
+        c.ci_class AS ancestor_class,
+        u.depth + 1 AS depth
     FROM ci_edges e
     JOIN upstream u ON e.target_ci_id = u.ancestor_id
     JOIN cis c ON c.ci_id = e.source_ci_id
-    WHERE u.depth < 15 AND c.lifecycle_state = 'in_service' AND e.handshake_status = 'confirmed'
+    WHERE u.depth < 15
+      AND c.lifecycle_state = 'in_service'
+      AND e.handshake_status = 'confirmed'
 )
-SELECT count(*)::integer FROM cis c
+SELECT count(*)::integer AS orphan_count
+FROM cis c
 WHERE c.lifecycle_state = 'in_service'
   AND c.ci_class IN ('database', 'vm_cluster', 'physical_host', 'network_firewall')
+  AND (
+      @owner_group_id::uuid IS NULL
+      OR @owner_group_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid
+      OR c.owner_group_id = @owner_group_id
+  )
   AND NOT EXISTS (
-      SELECT 1 FROM upstream u
-      WHERE u.technical_ci_id = c.ci_id AND u.ci_class IN ('business_service', 'application')
+      SELECT 1
+      FROM upstream u
+      WHERE u.technical_ci_id = c.ci_id
+        AND u.ancestor_class IN ('business_service', 'application')
   );
 ```
+
+#### Anchor Optimization & `handshake_status` Invariants:
+- **Anchor Filtering Optimization:** The recursive anchor explicitly filters `target_ci_id` on `tc.lifecycle_state = 'in_service'` and technical classes (`database`, `vm_cluster`, `physical_host`, `network_firewall`). This avoids initializing CTE recursion for irrelevant edges between application nodes or non-technical targets.
+- **Strict `handshake_status = 'confirmed'` Requirement:** Unlike impact and dependency traversals (which evaluate all edges regardless of handshake status for full visibility), the orphan calculation **strictly requires** `e.handshake_status = 'confirmed'`. Unconfirmed (`pending_confirmation`), flagged (`flagged_mismatch`), or rejected edges do not constitute a verified operational link. An infrastructure item linked only by pending or disputed edges is legitimately counted as an orphan until the dependency is confirmed.
 
 ### 3. Pending Edge Confirmations & Oldest Age
 - Count of `ci_edges` with `handshake_status = 'pending_confirmation'`.

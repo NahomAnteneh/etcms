@@ -23,7 +23,7 @@ WITH RECURSIVE downstream AS (
     WHERE e.source_ci_id = $1::uuid
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -35,7 +35,7 @@ WITH RECURSIVE downstream AS (
     WHERE d.depth < 15
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 all_nodes AS (
@@ -64,7 +64,7 @@ type GetDownwardDependencyEdgesRow struct {
 	ID              uuid.UUID           `json:"id"`
 	SourceCiID      uuid.UUID           `json:"source_ci_id"`
 	TargetCiID      uuid.UUID           `json:"target_ci_id"`
-	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	EdgeType        string              `json:"edge_type"`
 	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
 }
 
@@ -104,7 +104,7 @@ WITH RECURSIVE downstream AS (
     WHERE e.source_ci_id = $1::uuid
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -116,7 +116,7 @@ WITH RECURSIVE downstream AS (
     WHERE d.depth < 15
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 deduped_downstream AS (
@@ -160,7 +160,7 @@ type GetDownwardDependencyNodesParams struct {
 type GetDownwardDependencyNodesRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -229,7 +229,7 @@ WITH RECURSIVE upstream AS (
     WHERE e.target_ci_id = $1::uuid
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -241,7 +241,7 @@ WITH RECURSIVE upstream AS (
     WHERE u.depth < 15
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 app_nodes AS (
@@ -276,7 +276,7 @@ JOIN owner_groups og ON og.id = c.owner_group_id
 WHERE e.target_ci_id != $1::uuid
   AND (
       $2::boolean = true
-      OR c.lifecycle_state IN ('in_service', 'planned')
+      OR c.lifecycle_state != 'retired'
   )
 ORDER BY c.name ASC
 `
@@ -289,7 +289,7 @@ type GetSiblingDependenciesParams struct {
 type GetSiblingDependenciesRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -356,7 +356,7 @@ WITH RECURSIVE upstream AS (
     WHERE e.target_ci_id = $1::uuid
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -368,7 +368,7 @@ WITH RECURSIVE upstream AS (
     WHERE u.depth < 15
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 all_nodes AS (
@@ -397,7 +397,7 @@ type GetUpwardImpactEdgesRow struct {
 	ID              uuid.UUID           `json:"id"`
 	SourceCiID      uuid.UUID           `json:"source_ci_id"`
 	TargetCiID      uuid.UUID           `json:"target_ci_id"`
-	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	EdgeType        string              `json:"edge_type"`
 	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
 }
 
@@ -437,7 +437,7 @@ WITH RECURSIVE upstream AS (
     WHERE e.target_ci_id = $1::uuid
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -449,7 +449,7 @@ WITH RECURSIVE upstream AS (
     WHERE u.depth < 15
       AND (
           $2::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 deduped_upstream AS (
@@ -493,7 +493,7 @@ type GetUpwardImpactNodesParams struct {
 type GetUpwardImpactNodesRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`

@@ -202,18 +202,16 @@ func TestPostBaselineSingleCIAndEdgeLifecycle(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 	})
 
-	t.Run("POST /api/v1/cis - 422 Unprocessable Entity when class_metadata exceeds 2 keys", func(t *testing.T) {
+	t.Run("POST /api/v1/cis - 422 Unprocessable Entity when class_metadata contains anti-ITAM keys", func(t *testing.T) {
 		body := map[string]interface{}{
-			"name":             "fraud-detector-svc-meta",
-			"ci_class":         "application",
-			"environment":      "prod",
-			"criticality_tier": "tier_1",
-			"owner_group_id":   f.groupAID.String(),
+			"name":              "fraud-detector-svc-meta",
+			"ci_class":          "application",
+			"environment":       "prod",
+			"criticality_tier":  "tier_1",
+			"owner_group_id":    f.groupAID.String(),
 			"technical_contact": "Alice Lead",
 			"class_metadata": map[string]string{
-				"k1": "v1",
-				"k2": "v2",
-				"k3": "v3",
+				"cost": "$5000",
 			},
 		}
 		bodyBytes, _ := json.Marshal(body)

@@ -332,14 +332,14 @@ func (s *EdgeService) RejectEdge(ctx context.Context, actor domain.Actor, edgeID
 
 func mapPendingEdge(
 	id uuid.UUID,
-	edgeType sqlcgen.EdgeTypeEnum,
+	edgeType string,
 	handshakeStatus sqlcgen.HandshakeStatusEnum,
 	createdAt time.Time,
 	updatedAt time.Time,
 	createdBy uuid.UUID,
 	sourceCiID uuid.UUID,
 	sourceCiName string,
-	sourceCiClass sqlcgen.CiClassEnum,
+	sourceCiClass string,
 	sourceCiEnv sqlcgen.EnvironmentEnum,
 	sourceOwnerGroupID uuid.UUID,
 	sourceOwnerGroupName string,
@@ -347,7 +347,7 @@ func mapPendingEdge(
 	sourceTechContact string,
 	targetCiID uuid.UUID,
 	targetCiName string,
-	targetCiClass sqlcgen.CiClassEnum,
+	targetCiClass string,
 	targetCiEnv sqlcgen.EnvironmentEnum,
 	targetOwnerGroupID uuid.UUID,
 	targetOwnerGroupName string,
@@ -356,7 +356,7 @@ func mapPendingEdge(
 ) gen.PendingEdge {
 	return gen.PendingEdge{
 		Id:              id,
-		EdgeType:        gen.PendingEdgeEdgeType(edgeType),
+		EdgeType:        string(edgeType),
 		HandshakeStatus: gen.PendingEdgeHandshakeStatus(handshakeStatus),
 		CreatedAt:       createdAt,
 		UpdatedAt:       &updatedAt,
@@ -364,7 +364,7 @@ func mapPendingEdge(
 		SourceCi: gen.EdgeCIPeer{
 			CiId:             sourceCiID,
 			Name:             sourceCiName,
-			CiClass:          gen.EdgeCIPeerCiClass(sourceCiClass),
+			CiClass:          sourceCiClass,
 			Environment:      gen.EdgeCIPeerEnvironment(sourceCiEnv),
 			OwnerGroupId:     sourceOwnerGroupID,
 			OwnerGroupName:   sourceOwnerGroupName,
@@ -374,7 +374,7 @@ func mapPendingEdge(
 		TargetCi: gen.EdgeCIPeer{
 			CiId:             targetCiID,
 			Name:             targetCiName,
-			CiClass:          gen.EdgeCIPeerCiClass(targetCiClass),
+			CiClass:          targetCiClass,
 			Environment:      gen.EdgeCIPeerEnvironment(targetCiEnv),
 			OwnerGroupId:     targetOwnerGroupID,
 			OwnerGroupName:   targetOwnerGroupName,
@@ -400,7 +400,7 @@ func mapEdgeToResponse(edge sqlcgen.CiEdge) *gen.EdgeResponse {
 		Id:              edge.ID,
 		SourceCiId:      edge.SourceCiID,
 		TargetCiId:      edge.TargetCiID,
-		EdgeType:        gen.EdgeResponseEdgeType(edge.EdgeType),
+		EdgeType:        string(edge.EdgeType),
 		HandshakeStatus: gen.EdgeResponseHandshakeStatus(edge.HandshakeStatus),
 		CreatedBy:       edge.CreatedBy,
 		ConfirmedBy:     confirmedBy,
@@ -447,7 +447,7 @@ func (s *EdgeService) CreateEdge(ctx context.Context, actor domain.Actor, req ge
 	}
 
 	// 5. Caller must belong to source OR target CI's owner group (or platform admin)
-	if !actor.BelongsToOwnerGroup(sourceCI.OwnerGroupID) && !actor.BelongsToOwnerGroup(targetCI.OwnerGroupID) {
+	if actor.Role != domain.RolePlatformAdmin && !actor.BelongsToOwnerGroup(sourceCI.OwnerGroupID) && !actor.BelongsToOwnerGroup(targetCI.OwnerGroupID) {
 		return nil, domain.ErrForbidden
 	}
 
@@ -474,7 +474,7 @@ func (s *EdgeService) CreateEdge(ctx context.Context, actor domain.Actor, req ge
 			ID:              edgeID,
 			SourceCiID:      req.SourceCiId,
 			TargetCiID:      req.TargetCiId,
-			EdgeType:        sqlcgen.EdgeTypeEnum(req.EdgeType),
+			EdgeType:        string(req.EdgeType),
 			HandshakeStatus: handshakeStatus,
 			CreatedBy:       actor.ID,
 			ConfirmedBy:     confirmedBy,
@@ -536,7 +536,7 @@ func (s *EdgeService) DeleteEdge(ctx context.Context, actor domain.Actor, edgeID
 	if actor.Role == domain.RoleViewer {
 		return domain.ErrForbidden
 	}
-	if !actor.BelongsToOwnerGroup(edge.SourceOwnerGroupID) && !actor.BelongsToOwnerGroup(edge.TargetOwnerGroupID) {
+	if actor.Role != domain.RolePlatformAdmin && !actor.BelongsToOwnerGroup(edge.SourceOwnerGroupID) && !actor.BelongsToOwnerGroup(edge.TargetOwnerGroupID) {
 		return domain.ErrForbidden
 	}
 

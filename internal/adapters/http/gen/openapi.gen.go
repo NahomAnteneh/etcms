@@ -23,16 +23,6 @@ const (
 	IntakeTokenAuthScopes = "IntakeTokenAuth.Scopes"
 )
 
-// Defines values for CIEnvelopeCiClass.
-const (
-	CIEnvelopeCiClassApplication     CIEnvelopeCiClass = "application"
-	CIEnvelopeCiClassBusinessService CIEnvelopeCiClass = "business_service"
-	CIEnvelopeCiClassDatabase        CIEnvelopeCiClass = "database"
-	CIEnvelopeCiClassNetworkFirewall CIEnvelopeCiClass = "network_firewall"
-	CIEnvelopeCiClassPhysicalHost    CIEnvelopeCiClass = "physical_host"
-	CIEnvelopeCiClassVmCluster       CIEnvelopeCiClass = "vm_cluster"
-)
-
 // Defines values for CIEnvelopeCriticalityTier.
 const (
 	CIEnvelopeCriticalityTierTier0 CIEnvelopeCriticalityTier = "tier_0"
@@ -52,8 +42,10 @@ const (
 const (
 	CIEnvelopeLifecycleStateDeprecated CIEnvelopeLifecycleState = "deprecated"
 	CIEnvelopeLifecycleStateInService  CIEnvelopeLifecycleState = "in_service"
+	CIEnvelopeLifecycleStateOutOfSync  CIEnvelopeLifecycleState = "out_of_sync"
 	CIEnvelopeLifecycleStatePlanned    CIEnvelopeLifecycleState = "planned"
 	CIEnvelopeLifecycleStateRetired    CIEnvelopeLifecycleState = "retired"
+	CIEnvelopeLifecycleStateSynced     CIEnvelopeLifecycleState = "synced"
 )
 
 // Defines values for CIFlagResponseStatus.
@@ -61,6 +53,14 @@ const (
 	CIFlagResponseStatusDismissed CIFlagResponseStatus = "dismissed"
 	CIFlagResponseStatusOpen      CIFlagResponseStatus = "open"
 	CIFlagResponseStatusResolved  CIFlagResponseStatus = "resolved"
+)
+
+// Defines values for CIFormFieldType.
+const (
+	Boolean CIFormFieldType = "boolean"
+	Number  CIFormFieldType = "number"
+	Select  CIFormFieldType = "select"
+	Text    CIFormFieldType = "text"
 )
 
 // Defines values for CIUpwardSummaryHighestCriticalityTier.
@@ -85,16 +85,6 @@ const (
 	CampaignResponseStatusClosed   CampaignResponseStatus = "closed"
 )
 
-// Defines values for CreateCIRequestCiClass.
-const (
-	CreateCIRequestCiClassApplication     CreateCIRequestCiClass = "application"
-	CreateCIRequestCiClassBusinessService CreateCIRequestCiClass = "business_service"
-	CreateCIRequestCiClassDatabase        CreateCIRequestCiClass = "database"
-	CreateCIRequestCiClassNetworkFirewall CreateCIRequestCiClass = "network_firewall"
-	CreateCIRequestCiClassPhysicalHost    CreateCIRequestCiClass = "physical_host"
-	CreateCIRequestCiClassVmCluster       CreateCIRequestCiClass = "vm_cluster"
-)
-
 // Defines values for CreateCIRequestCriticalityTier.
 const (
 	CreateCIRequestCriticalityTierTier0 CreateCIRequestCriticalityTier = "tier_0"
@@ -108,24 +98,6 @@ const (
 	CreateCIRequestEnvironmentDr      CreateCIRequestEnvironment = "dr"
 	CreateCIRequestEnvironmentProd    CreateCIRequestEnvironment = "prod"
 	CreateCIRequestEnvironmentStaging CreateCIRequestEnvironment = "staging"
-)
-
-// Defines values for CreateEdgeRequestEdgeType.
-const (
-	CreateEdgeRequestEdgeTypeConnectsTo CreateEdgeRequestEdgeType = "connects_to"
-	CreateEdgeRequestEdgeTypeDependsOn  CreateEdgeRequestEdgeType = "depends_on"
-	CreateEdgeRequestEdgeTypeHostedOn   CreateEdgeRequestEdgeType = "hosted_on"
-	CreateEdgeRequestEdgeTypeReadsFrom  CreateEdgeRequestEdgeType = "reads_from"
-)
-
-// Defines values for DigestItemCiClass.
-const (
-	DigestItemCiClassApplication     DigestItemCiClass = "application"
-	DigestItemCiClassBusinessService DigestItemCiClass = "business_service"
-	DigestItemCiClassDatabase        DigestItemCiClass = "database"
-	DigestItemCiClassNetworkFirewall DigestItemCiClass = "network_firewall"
-	DigestItemCiClassPhysicalHost    DigestItemCiClass = "physical_host"
-	DigestItemCiClassVmCluster       DigestItemCiClass = "vm_cluster"
 )
 
 // Defines values for DigestItemCriticalityTier.
@@ -150,29 +122,11 @@ const (
 	DigestItemStatusOpen     DigestItemStatus = "open"
 )
 
-// Defines values for EdgeCIPeerCiClass.
-const (
-	EdgeCIPeerCiClassApplication     EdgeCIPeerCiClass = "application"
-	EdgeCIPeerCiClassBusinessService EdgeCIPeerCiClass = "business_service"
-	EdgeCIPeerCiClassDatabase        EdgeCIPeerCiClass = "database"
-	EdgeCIPeerCiClassNetworkFirewall EdgeCIPeerCiClass = "network_firewall"
-	EdgeCIPeerCiClassPhysicalHost    EdgeCIPeerCiClass = "physical_host"
-	EdgeCIPeerCiClassVmCluster       EdgeCIPeerCiClass = "vm_cluster"
-)
-
 // Defines values for EdgeCIPeerEnvironment.
 const (
 	EdgeCIPeerEnvironmentDr      EdgeCIPeerEnvironment = "dr"
 	EdgeCIPeerEnvironmentProd    EdgeCIPeerEnvironment = "prod"
 	EdgeCIPeerEnvironmentStaging EdgeCIPeerEnvironment = "staging"
-)
-
-// Defines values for EdgeResponseEdgeType.
-const (
-	EdgeResponseEdgeTypeConnectsTo EdgeResponseEdgeType = "connects_to"
-	EdgeResponseEdgeTypeDependsOn  EdgeResponseEdgeType = "depends_on"
-	EdgeResponseEdgeTypeHostedOn   EdgeResponseEdgeType = "hosted_on"
-	EdgeResponseEdgeTypeReadsFrom  EdgeResponseEdgeType = "reads_from"
 )
 
 // Defines values for EdgeResponseHandshakeStatus.
@@ -181,14 +135,6 @@ const (
 	EdgeResponseHandshakeStatusFlaggedMismatch     EdgeResponseHandshakeStatus = "flagged_mismatch"
 	EdgeResponseHandshakeStatusPendingConfirmation EdgeResponseHandshakeStatus = "pending_confirmation"
 	EdgeResponseHandshakeStatusRejected            EdgeResponseHandshakeStatus = "rejected"
-)
-
-// Defines values for GraphEdgeEdgeType.
-const (
-	GraphEdgeEdgeTypeConnectsTo GraphEdgeEdgeType = "connects_to"
-	GraphEdgeEdgeTypeDependsOn  GraphEdgeEdgeType = "depends_on"
-	GraphEdgeEdgeTypeHostedOn   GraphEdgeEdgeType = "hosted_on"
-	GraphEdgeEdgeTypeReadsFrom  GraphEdgeEdgeType = "reads_from"
 )
 
 // Defines values for GraphEdgeHandshakeStatus.
@@ -214,30 +160,12 @@ const (
 	Submitted IntakeContextResponseStatus = "submitted"
 )
 
-// Defines values for PendingEdgeEdgeType.
-const (
-	PendingEdgeEdgeTypeConnectsTo PendingEdgeEdgeType = "connects_to"
-	PendingEdgeEdgeTypeDependsOn  PendingEdgeEdgeType = "depends_on"
-	PendingEdgeEdgeTypeHostedOn   PendingEdgeEdgeType = "hosted_on"
-	PendingEdgeEdgeTypeReadsFrom  PendingEdgeEdgeType = "reads_from"
-)
-
 // Defines values for PendingEdgeHandshakeStatus.
 const (
 	Confirmed           PendingEdgeHandshakeStatus = "confirmed"
 	FlaggedMismatch     PendingEdgeHandshakeStatus = "flagged_mismatch"
 	PendingConfirmation PendingEdgeHandshakeStatus = "pending_confirmation"
 	Rejected            PendingEdgeHandshakeStatus = "rejected"
-)
-
-// Defines values for ProblemDetailsDependentCisCiClass.
-const (
-	ProblemDetailsDependentCisCiClassApplication     ProblemDetailsDependentCisCiClass = "application"
-	ProblemDetailsDependentCisCiClassBusinessService ProblemDetailsDependentCisCiClass = "business_service"
-	ProblemDetailsDependentCisCiClassDatabase        ProblemDetailsDependentCisCiClass = "database"
-	ProblemDetailsDependentCisCiClassNetworkFirewall ProblemDetailsDependentCisCiClass = "network_firewall"
-	ProblemDetailsDependentCisCiClassPhysicalHost    ProblemDetailsDependentCisCiClass = "physical_host"
-	ProblemDetailsDependentCisCiClassVmCluster       ProblemDetailsDependentCisCiClass = "vm_cluster"
 )
 
 // Defines values for ProblemDetailsDependentCisEnvironment.
@@ -259,16 +187,6 @@ const (
 	Ready    ReadyResponseStatus = "ready"
 )
 
-// Defines values for UpdateCIRequestCiClass.
-const (
-	UpdateCIRequestCiClassApplication     UpdateCIRequestCiClass = "application"
-	UpdateCIRequestCiClassBusinessService UpdateCIRequestCiClass = "business_service"
-	UpdateCIRequestCiClassDatabase        UpdateCIRequestCiClass = "database"
-	UpdateCIRequestCiClassNetworkFirewall UpdateCIRequestCiClass = "network_firewall"
-	UpdateCIRequestCiClassPhysicalHost    UpdateCIRequestCiClass = "physical_host"
-	UpdateCIRequestCiClassVmCluster       UpdateCIRequestCiClass = "vm_cluster"
-)
-
 // Defines values for UpdateCIRequestCriticalityTier.
 const (
 	UpdateCIRequestCriticalityTierTier0 UpdateCIRequestCriticalityTier = "tier_0"
@@ -286,9 +204,19 @@ const (
 
 // Defines values for UpdateCIRequestLifecycleState.
 const (
-	UpdateCIRequestLifecycleStateInService UpdateCIRequestLifecycleState = "in_service"
-	UpdateCIRequestLifecycleStatePlanned   UpdateCIRequestLifecycleState = "planned"
-	UpdateCIRequestLifecycleStateRetired   UpdateCIRequestLifecycleState = "retired"
+	UpdateCIRequestLifecycleStateDeprecated UpdateCIRequestLifecycleState = "deprecated"
+	UpdateCIRequestLifecycleStateInService  UpdateCIRequestLifecycleState = "in_service"
+	UpdateCIRequestLifecycleStateOutOfSync  UpdateCIRequestLifecycleState = "out_of_sync"
+	UpdateCIRequestLifecycleStatePlanned    UpdateCIRequestLifecycleState = "planned"
+	UpdateCIRequestLifecycleStateRetired    UpdateCIRequestLifecycleState = "retired"
+	UpdateCIRequestLifecycleStateSynced     UpdateCIRequestLifecycleState = "synced"
+)
+
+// Defines values for UpdateCampaignRequestStatus.
+const (
+	Active   UpdateCampaignRequestStatus = "active"
+	Archived UpdateCampaignRequestStatus = "archived"
+	Closed   UpdateCampaignRequestStatus = "closed"
 )
 
 // Defines values for UpwardImpactResponseHighestCriticalityTier.
@@ -329,6 +257,16 @@ const (
 	Staging SearchCIsParamsEnvironment = "staging"
 )
 
+// Defines values for SearchCIsParamsLifecycleState.
+const (
+	Deprecated SearchCIsParamsLifecycleState = "deprecated"
+	InService  SearchCIsParamsLifecycleState = "in_service"
+	OutOfSync  SearchCIsParamsLifecycleState = "out_of_sync"
+	Planned    SearchCIsParamsLifecycleState = "planned"
+	Retired    SearchCIsParamsLifecycleState = "retired"
+	Synced     SearchCIsParamsLifecycleState = "synced"
+)
+
 // ActiveDigestResponse defines model for ActiveDigestResponse.
 type ActiveDigestResponse struct {
 	CycleId        *openapi_types.UUID `json:"cycle_id"`
@@ -338,6 +276,22 @@ type ActiveDigestResponse struct {
 	Status         *string             `json:"status"`
 	WindowEnd      *time.Time          `json:"window_end"`
 	WindowStart    *time.Time          `json:"window_start"`
+}
+
+// AdminUserResponse defines model for AdminUserResponse.
+type AdminUserResponse struct {
+	CreatedAt             time.Time           `json:"created_at"`
+	CustomRoleId          *openapi_types.UUID `json:"custom_role_id,omitempty"`
+	CustomRoleName        *string             `json:"custom_role_name,omitempty"`
+	CustomRolePermissions *[]string           `json:"custom_role_permissions,omitempty"`
+	Email                 openapi_types.Email `json:"email"`
+	Id                    openapi_types.UUID  `json:"id"`
+	Name                  string              `json:"name"`
+	OwnerGroupName        *string             `json:"owner_group_name,omitempty"`
+	PrimaryOwnerGroupId   *openapi_types.UUID `json:"primary_owner_group_id,omitempty"`
+	Role                  string              `json:"role"`
+	Status                *string             `json:"status,omitempty"`
+	UpdatedAt             *time.Time          `json:"updated_at,omitempty"`
 }
 
 // AuditLogEntry defines model for AuditLogEntry.
@@ -375,6 +329,20 @@ type CIAuditLogsResponse struct {
 	Total      int             `json:"total"`
 }
 
+// CIClassDefinition defines model for CIClassDefinition.
+type CIClassDefinition struct {
+	Attributes  []string       `json:"attributes"`
+	Category    string         `json:"category"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Description string         `json:"description"`
+	FormFields  *[]CIFormField `json:"form_fields,omitempty"`
+	Icon        string         `json:"icon"`
+	Id          string         `json:"id"`
+	IsSystem    bool           `json:"is_system"`
+	Label       string         `json:"label"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+}
+
 // CIDetailResponse defines model for CIDetailResponse.
 type CIDetailResponse struct {
 	Ci                 CIEnvelope           `json:"ci"`
@@ -392,7 +360,7 @@ type CIDownwardSummary struct {
 
 // CIEnvelope defines model for CIEnvelope.
 type CIEnvelope struct {
-	CiClass          CIEnvelopeCiClass         `json:"ci_class"`
+	CiClass          string                    `json:"ci_class"`
 	CiId             *openapi_types.UUID       `json:"ci_id,omitempty"`
 	ClassMetadata    map[string]string         `json:"class_metadata"`
 	CreatedAt        *time.Time                `json:"created_at,omitempty"`
@@ -408,9 +376,6 @@ type CIEnvelope struct {
 	TechnicalContact string                    `json:"technical_contact"`
 	UpdatedAt        *time.Time                `json:"updated_at,omitempty"`
 }
-
-// CIEnvelopeCiClass defines model for CIEnvelope.CiClass.
-type CIEnvelopeCiClass string
 
 // CIEnvelopeCriticalityTier defines model for CIEnvelope.CriticalityTier.
 type CIEnvelopeCriticalityTier string
@@ -435,6 +400,20 @@ type CIFlagResponse struct {
 
 // CIFlagResponseStatus defines model for CIFlagResponse.Status.
 type CIFlagResponseStatus string
+
+// CIFormField defines model for CIFormField.
+type CIFormField struct {
+	DefaultValue *string         `json:"default_value,omitempty"`
+	Label        string          `json:"label"`
+	Name         string          `json:"name"`
+	Options      *[]string       `json:"options,omitempty"`
+	Placeholder  *string         `json:"placeholder,omitempty"`
+	Required     *bool           `json:"required,omitempty"`
+	Type         CIFormFieldType `json:"type"`
+}
+
+// CIFormFieldType defines model for CIFormField.Type.
+type CIFormFieldType string
 
 // CISearchResponse defines model for CISearchResponse.
 type CISearchResponse struct {
@@ -510,6 +489,41 @@ type CampaignResponse struct {
 // CampaignResponseStatus defines model for CampaignResponse.Status.
 type CampaignResponseStatus string
 
+// CategoryDefinition defines model for CategoryDefinition.
+type CategoryDefinition struct {
+	CiCount     int       `json:"ci_count"`
+	ClassCount  int       `json:"class_count"`
+	Color       string    `json:"color"`
+	CreatedAt   time.Time `json:"created_at"`
+	Description string    `json:"description"`
+	Icon        string    `json:"icon"`
+	Id          string    `json:"id"`
+	Name        string    `json:"name"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// CreateAdminUserRequest defines model for CreateAdminUserRequest.
+type CreateAdminUserRequest struct {
+	CustomRoleId        *openapi_types.UUID `json:"custom_role_id,omitempty"`
+	Email               openapi_types.Email `json:"email"`
+	Name                string              `json:"name"`
+	Password            *string             `json:"password,omitempty"`
+	PrimaryOwnerGroupId *openapi_types.UUID `json:"primary_owner_group_id,omitempty"`
+	Role                string              `json:"role"`
+	Status              *string             `json:"status,omitempty"`
+}
+
+// CreateCIClassRequest defines model for CreateCIClassRequest.
+type CreateCIClassRequest struct {
+	Attributes  *[]string      `json:"attributes,omitempty"`
+	Category    *string        `json:"category,omitempty"`
+	Description *string        `json:"description,omitempty"`
+	FormFields  *[]CIFormField `json:"form_fields,omitempty"`
+	Icon        *string        `json:"icon,omitempty"`
+	Id          string         `json:"id"`
+	Label       string         `json:"label"`
+}
+
 // CreateCIFlagRequest defines model for CreateCIFlagRequest.
 type CreateCIFlagRequest struct {
 	FlagType *string `json:"flag_type,omitempty"`
@@ -518,19 +532,16 @@ type CreateCIFlagRequest struct {
 
 // CreateCIRequest defines model for CreateCIRequest.
 type CreateCIRequest struct {
-	CiClass          CreateCIRequestCiClass         `json:"ci_class"`
+	CiClass          string                         `json:"ci_class"`
 	ClassMetadata    *map[string]string             `json:"class_metadata,omitempty"`
 	CriticalityTier  CreateCIRequestCriticalityTier `json:"criticality_tier"`
 	Environment      CreateCIRequestEnvironment     `json:"environment"`
 	ItamExternalRef  *string                        `json:"itam_external_ref"`
 	Name             string                         `json:"name"`
-	OwnerGroupId     openapi_types.UUID             `json:"owner_group_id"`
+	OwnerGroupId     *openapi_types.UUID            `json:"owner_group_id,omitempty"`
 	PrimaryEndpoint  *string                        `json:"primary_endpoint"`
-	TechnicalContact string                         `json:"technical_contact"`
+	TechnicalContact *string                        `json:"technical_contact,omitempty"`
 }
-
-// CreateCIRequestCiClass defines model for CreateCIRequest.CiClass.
-type CreateCIRequestCiClass string
 
 // CreateCIRequestCriticalityTier defines model for CreateCIRequest.CriticalityTier.
 type CreateCIRequestCriticalityTier string
@@ -545,15 +556,57 @@ type CreateCampaignRequest struct {
 	Title         string               `json:"title"`
 }
 
-// CreateEdgeRequest defines model for CreateEdgeRequest.
-type CreateEdgeRequest struct {
-	EdgeType   CreateEdgeRequestEdgeType `json:"edge_type"`
-	SourceCiId openapi_types.UUID        `json:"source_ci_id"`
-	TargetCiId openapi_types.UUID        `json:"target_ci_id"`
+// CreateCategoryRequest defines model for CreateCategoryRequest.
+type CreateCategoryRequest struct {
+	Color       *string `json:"color,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Icon        *string `json:"icon,omitempty"`
+	Id          string  `json:"id"`
+	Name        string  `json:"name"`
 }
 
-// CreateEdgeRequestEdgeType defines model for CreateEdgeRequest.EdgeType.
-type CreateEdgeRequestEdgeType string
+// CreateCustomRoleRequest defines model for CreateCustomRoleRequest.
+type CreateCustomRoleRequest struct {
+	Description *string  `json:"description,omitempty"`
+	Name        string   `json:"name"`
+	Permissions []string `json:"permissions"`
+}
+
+// CreateEdgeRequest defines model for CreateEdgeRequest.
+type CreateEdgeRequest struct {
+	EdgeType   string             `json:"edge_type"`
+	SourceCiId openapi_types.UUID `json:"source_ci_id"`
+	TargetCiId openapi_types.UUID `json:"target_ci_id"`
+}
+
+// CreateOwnerGroupRequest defines model for CreateOwnerGroupRequest.
+type CreateOwnerGroupRequest struct {
+	DepartmentName string              `json:"department_name"`
+	Name           string              `json:"name"`
+	Slug           *string             `json:"slug,omitempty"`
+	TeamLeadEmail  openapi_types.Email `json:"team_lead_email"`
+	TeamLeadName   string              `json:"team_lead_name"`
+}
+
+// CreateRelationshipTypeRequest defines model for CreateRelationshipTypeRequest.
+type CreateRelationshipTypeRequest struct {
+	Color        *string `json:"color,omitempty"`
+	Description  *string `json:"description,omitempty"`
+	Id           string  `json:"id"`
+	Label        string  `json:"label"`
+	ReverseLabel *string `json:"reverse_label,omitempty"`
+}
+
+// CustomRole defines model for CustomRole.
+type CustomRole struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	Description string             `json:"description"`
+	Id          openapi_types.UUID `json:"id"`
+	IsSystem    bool               `json:"is_system"`
+	Name        string             `json:"name"`
+	Permissions []string           `json:"permissions"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+}
 
 // DepartmentProgress defines model for DepartmentProgress.
 type DepartmentProgress struct {
@@ -569,7 +622,7 @@ type DepartmentProgress struct {
 type DigestItem struct {
 	ActionType      *string                   `json:"action_type"`
 	ActionedAt      *time.Time                `json:"actioned_at"`
-	CiClass         DigestItemCiClass         `json:"ci_class"`
+	CiClass         string                    `json:"ci_class"`
 	CiId            openapi_types.UUID        `json:"ci_id"`
 	CreatedAt       time.Time                 `json:"created_at"`
 	CriticalityTier DigestItemCriticalityTier `json:"criticality_tier"`
@@ -579,9 +632,6 @@ type DigestItem struct {
 	Status          DigestItemStatus          `json:"status"`
 	TriggerReason   string                    `json:"trigger_reason"`
 }
-
-// DigestItemCiClass defines model for DigestItem.CiClass.
-type DigestItemCiClass string
 
 // DigestItemCriticalityTier defines model for DigestItem.CriticalityTier.
 type DigestItemCriticalityTier string
@@ -618,7 +668,7 @@ type DownwardDependencyNode struct {
 
 // EdgeCIPeer defines model for EdgeCIPeer.
 type EdgeCIPeer struct {
-	CiClass          EdgeCIPeerCiClass     `json:"ci_class"`
+	CiClass          string                `json:"ci_class"`
 	CiId             openapi_types.UUID    `json:"ci_id"`
 	DepartmentName   string                `json:"department_name"`
 	Environment      EdgeCIPeerEnvironment `json:"environment"`
@@ -627,9 +677,6 @@ type EdgeCIPeer struct {
 	OwnerGroupName   string                `json:"owner_group_name"`
 	TechnicalContact string                `json:"technical_contact"`
 }
-
-// EdgeCIPeerCiClass defines model for EdgeCIPeer.CiClass.
-type EdgeCIPeerCiClass string
 
 // EdgeCIPeerEnvironment defines model for EdgeCIPeer.Environment.
 type EdgeCIPeerEnvironment string
@@ -640,16 +687,13 @@ type EdgeResponse struct {
 	ConfirmedBy     *openapi_types.UUID         `json:"confirmed_by"`
 	CreatedAt       time.Time                   `json:"created_at"`
 	CreatedBy       openapi_types.UUID          `json:"created_by"`
-	EdgeType        EdgeResponseEdgeType        `json:"edge_type"`
+	EdgeType        string                      `json:"edge_type"`
 	HandshakeStatus EdgeResponseHandshakeStatus `json:"handshake_status"`
 	Id              openapi_types.UUID          `json:"id"`
 	SourceCiId      openapi_types.UUID          `json:"source_ci_id"`
 	TargetCiId      openapi_types.UUID          `json:"target_ci_id"`
 	UpdatedAt       time.Time                   `json:"updated_at"`
 }
-
-// EdgeResponseEdgeType defines model for EdgeResponse.EdgeType.
-type EdgeResponseEdgeType string
 
 // EdgeResponseHandshakeStatus defines model for EdgeResponse.HandshakeStatus.
 type EdgeResponseHandshakeStatus string
@@ -661,15 +705,12 @@ type FlagMismatchRequest struct {
 
 // GraphEdge defines model for GraphEdge.
 type GraphEdge struct {
-	EdgeType        GraphEdgeEdgeType        `json:"edge_type"`
+	EdgeType        string                   `json:"edge_type"`
 	HandshakeStatus GraphEdgeHandshakeStatus `json:"handshake_status"`
 	Id              openapi_types.UUID       `json:"id"`
 	SourceCiId      openapi_types.UUID       `json:"source_ci_id"`
 	TargetCiId      openapi_types.UUID       `json:"target_ci_id"`
 }
-
-// GraphEdgeEdgeType defines model for GraphEdge.EdgeType.
-type GraphEdgeEdgeType string
 
 // GraphEdgeHandshakeStatus defines model for GraphEdge.HandshakeStatus.
 type GraphEdgeHandshakeStatus string
@@ -720,6 +761,19 @@ type IntakeContextResponse struct {
 // IntakeContextResponseStatus defines model for IntakeContextResponse.Status.
 type IntakeContextResponseStatus string
 
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Email    openapi_types.Email `json:"email"`
+	Password string              `json:"password"`
+}
+
+// LoginResponse defines model for LoginResponse.
+type LoginResponse struct {
+	ExpiresAt time.Time `json:"expires_at"`
+	Token     string    `json:"token"`
+	User      User      `json:"user"`
+}
+
 // OwnerGroup defines model for OwnerGroup.
 type OwnerGroup struct {
 	CreatedAt      time.Time           `json:"created_at"`
@@ -761,16 +815,13 @@ type OwnershipHeader struct {
 type PendingEdge struct {
 	CreatedAt       time.Time                  `json:"created_at"`
 	CreatedBy       *openapi_types.UUID        `json:"created_by,omitempty"`
-	EdgeType        PendingEdgeEdgeType        `json:"edge_type"`
+	EdgeType        string                     `json:"edge_type"`
 	HandshakeStatus PendingEdgeHandshakeStatus `json:"handshake_status"`
 	Id              openapi_types.UUID         `json:"id"`
 	SourceCi        EdgeCIPeer                 `json:"source_ci"`
 	TargetCi        EdgeCIPeer                 `json:"target_ci"`
 	UpdatedAt       *time.Time                 `json:"updated_at,omitempty"`
 }
-
-// PendingEdgeEdgeType defines model for PendingEdge.EdgeType.
-type PendingEdgeEdgeType string
 
 // PendingEdgeHandshakeStatus defines model for PendingEdge.HandshakeStatus.
 type PendingEdgeHandshakeStatus string
@@ -784,7 +835,7 @@ type PendingEdgesResponse struct {
 // ProblemDetails defines model for ProblemDetails.
 type ProblemDetails struct {
 	DependentCis *[]struct {
-		CiClass     ProblemDetailsDependentCisCiClass     `json:"ci_class"`
+		CiClass     string                                `json:"ci_class"`
 		CiId        openapi_types.UUID                    `json:"ci_id"`
 		Environment ProblemDetailsDependentCisEnvironment `json:"environment"`
 		Name        string                                `json:"name"`
@@ -800,9 +851,6 @@ type ProblemDetails struct {
 	Title      string               `json:"title"`
 	Type       *string              `json:"type"`
 }
-
-// ProblemDetailsDependentCisCiClass defines model for ProblemDetails.DependentCis.CiClass.
-type ProblemDetailsDependentCisCiClass string
 
 // ProblemDetailsDependentCisEnvironment defines model for ProblemDetails.DependentCis.Environment.
 type ProblemDetailsDependentCisEnvironment string
@@ -825,6 +873,31 @@ type RejectEdgeRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// RelationshipTypeDefinition defines model for RelationshipTypeDefinition.
+type RelationshipTypeDefinition struct {
+	Color        string    `json:"color"`
+	CreatedAt    time.Time `json:"created_at"`
+	Description  string    `json:"description"`
+	EdgeCount    int       `json:"edge_count"`
+	Id           string    `json:"id"`
+	Label        string    `json:"label"`
+	ReverseLabel string    `json:"reverse_label"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// ResetPasswordRequest defines model for ResetPasswordRequest.
+type ResetPasswordRequest struct {
+	NewPassword string `json:"new_password"`
+}
+
+// RevertAuditLogResponse defines model for RevertAuditLogResponse.
+type RevertAuditLogResponse struct {
+	Message            string             `json:"message"`
+	RevertedEntityId   openapi_types.UUID `json:"reverted_entity_id"`
+	RevertedEntityType string             `json:"reverted_entity_type"`
+	Status             string             `json:"status"`
+}
+
 // SaveDraftRequest defines model for SaveDraftRequest.
 type SaveDraftRequest struct {
 	Payload map[string]interface{} `json:"payload"`
@@ -843,9 +916,28 @@ type SubmitIntakeRequest struct {
 	Payload *map[string]interface{} `json:"payload,omitempty"`
 }
 
+// UpdateAdminUserRequest defines model for UpdateAdminUserRequest.
+type UpdateAdminUserRequest struct {
+	CustomRoleId        *openapi_types.UUID `json:"custom_role_id"`
+	Name                string              `json:"name"`
+	PrimaryOwnerGroupId *openapi_types.UUID `json:"primary_owner_group_id"`
+	Role                string              `json:"role"`
+	Status              *string             `json:"status,omitempty"`
+}
+
+// UpdateCIClassRequest defines model for UpdateCIClassRequest.
+type UpdateCIClassRequest struct {
+	Attributes  *[]string      `json:"attributes,omitempty"`
+	Category    *string        `json:"category,omitempty"`
+	Description *string        `json:"description,omitempty"`
+	FormFields  *[]CIFormField `json:"form_fields,omitempty"`
+	Icon        *string        `json:"icon,omitempty"`
+	Label       string         `json:"label"`
+}
+
 // UpdateCIRequest defines model for UpdateCIRequest.
 type UpdateCIRequest struct {
-	CiClass          *UpdateCIRequestCiClass         `json:"ci_class,omitempty"`
+	CiClass          *string                         `json:"ci_class,omitempty"`
 	ClassMetadata    *map[string]string              `json:"class_metadata,omitempty"`
 	CriticalityTier  *UpdateCIRequestCriticalityTier `json:"criticality_tier,omitempty"`
 	Environment      *UpdateCIRequestEnvironment     `json:"environment,omitempty"`
@@ -857,9 +949,6 @@ type UpdateCIRequest struct {
 	TechnicalContact *string                         `json:"technical_contact,omitempty"`
 }
 
-// UpdateCIRequestCiClass defines model for UpdateCIRequest.CiClass.
-type UpdateCIRequestCiClass string
-
 // UpdateCIRequestCriticalityTier defines model for UpdateCIRequest.CriticalityTier.
 type UpdateCIRequestCriticalityTier string
 
@@ -868,6 +957,41 @@ type UpdateCIRequestEnvironment string
 
 // UpdateCIRequestLifecycleState defines model for UpdateCIRequest.LifecycleState.
 type UpdateCIRequestLifecycleState string
+
+// UpdateCampaignRequest defines model for UpdateCampaignRequest.
+type UpdateCampaignRequest struct {
+	Deadline *time.Time                   `json:"deadline,omitempty"`
+	Status   *UpdateCampaignRequestStatus `json:"status,omitempty"`
+	Title    *string                      `json:"title,omitempty"`
+}
+
+// UpdateCampaignRequestStatus defines model for UpdateCampaignRequest.Status.
+type UpdateCampaignRequestStatus string
+
+// UpdateCategoryRequest defines model for UpdateCategoryRequest.
+type UpdateCategoryRequest struct {
+	Color       *string `json:"color,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Icon        *string `json:"icon,omitempty"`
+	Name        string  `json:"name"`
+}
+
+// UpdateOwnerGroupRequest defines model for UpdateOwnerGroupRequest.
+type UpdateOwnerGroupRequest struct {
+	DepartmentName string              `json:"department_name"`
+	Name           string              `json:"name"`
+	Slug           *string             `json:"slug,omitempty"`
+	TeamLeadEmail  openapi_types.Email `json:"team_lead_email"`
+	TeamLeadName   string              `json:"team_lead_name"`
+}
+
+// UpdateRelationshipTypeRequest defines model for UpdateRelationshipTypeRequest.
+type UpdateRelationshipTypeRequest struct {
+	Color        *string `json:"color,omitempty"`
+	Description  *string `json:"description,omitempty"`
+	Label        string  `json:"label"`
+	ReverseLabel *string `json:"reverse_label,omitempty"`
+}
 
 // UpwardImpactResponse defines model for UpwardImpactResponse.
 type UpwardImpactResponse struct {
@@ -885,17 +1009,36 @@ type UpwardImpactResponseHighestCriticalityTier string
 
 // User defines model for User.
 type User struct {
-	CreatedAt           time.Time            `json:"created_at"`
-	Email               openapi_types.Email  `json:"email"`
-	Id                  openapi_types.UUID   `json:"id"`
-	Name                string               `json:"name"`
-	OwnerGroupIds       []openapi_types.UUID `json:"owner_group_ids"`
-	PrimaryOwnerGroupId *openapi_types.UUID  `json:"primary_owner_group_id"`
-	Role                UserRole             `json:"role"`
+	CreatedAt             time.Time            `json:"created_at"`
+	CustomRoleId          *openapi_types.UUID  `json:"custom_role_id"`
+	CustomRoleName        *string              `json:"custom_role_name"`
+	CustomRolePermissions *[]string            `json:"custom_role_permissions"`
+	Email                 openapi_types.Email  `json:"email"`
+	Id                    openapi_types.UUID   `json:"id"`
+	Name                  string               `json:"name"`
+	OwnerGroupIds         []openapi_types.UUID `json:"owner_group_ids"`
+	PrimaryOwnerGroupId   *openapi_types.UUID  `json:"primary_owner_group_id"`
+	Role                  UserRole             `json:"role"`
+	Status                *string              `json:"status,omitempty"`
+	UpdatedAt             *time.Time           `json:"updated_at,omitempty"`
 }
 
 // UserRole defines model for User.Role.
 type UserRole string
+
+// UserSessionResponse defines model for UserSessionResponse.
+type UserSessionResponse struct {
+	CreatedAt      time.Time           `json:"created_at"`
+	ExpiresAt      time.Time           `json:"expires_at"`
+	Id             openapi_types.UUID  `json:"id"`
+	IpAddress      *string             `json:"ip_address"`
+	LastActivityAt time.Time           `json:"last_activity_at"`
+	Token          string              `json:"token"`
+	UserAgent      *string             `json:"user_agent"`
+	UserEmail      openapi_types.Email `json:"user_email"`
+	UserId         openapi_types.UUID  `json:"user_id"`
+	UserName       string              `json:"user_name"`
+}
 
 // ExportAuditLogsParams defines parameters for ExportAuditLogs.
 type ExportAuditLogsParams struct {
@@ -922,8 +1065,11 @@ type SearchCIsParams struct {
 	CiClass      *SearchCIsParamsCiClass     `form:"ci_class,omitempty" json:"ci_class,omitempty"`
 	Environment  *SearchCIsParamsEnvironment `form:"environment,omitempty" json:"environment,omitempty"`
 	OwnerGroupId *openapi_types.UUID         `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
-	Limit        *int                        `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor       *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// LifecycleState Filter by CI lifecycle or sync status
+	LifecycleState *SearchCIsParamsLifecycleState `form:"lifecycle_state,omitempty" json:"lifecycle_state,omitempty"`
+	Limit          *int                           `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor         *string                        `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // SearchCIsParamsCiClass defines parameters for SearchCIs.
@@ -931,6 +1077,9 @@ type SearchCIsParamsCiClass string
 
 // SearchCIsParamsEnvironment defines parameters for SearchCIs.
 type SearchCIsParamsEnvironment string
+
+// SearchCIsParamsLifecycleState defines parameters for SearchCIs.
+type SearchCIsParamsLifecycleState string
 
 // GetCIAuditLogsParams defines parameters for GetCIAuditLogs.
 type GetCIAuditLogsParams struct {
@@ -986,8 +1135,44 @@ type ListPendingEdgesParams struct {
 	OwnerGroupId *openapi_types.UUID `form:"owner_group_id,omitempty" json:"owner_group_id,omitempty"`
 }
 
+// CreateCategoryJSONRequestBody defines body for CreateCategory for application/json ContentType.
+type CreateCategoryJSONRequestBody = CreateCategoryRequest
+
+// UpdateCategoryJSONRequestBody defines body for UpdateCategory for application/json ContentType.
+type UpdateCategoryJSONRequestBody = UpdateCategoryRequest
+
+// CreateCIClassJSONRequestBody defines body for CreateCIClass for application/json ContentType.
+type CreateCIClassJSONRequestBody = CreateCIClassRequest
+
+// UpdateCIClassJSONRequestBody defines body for UpdateCIClass for application/json ContentType.
+type UpdateCIClassJSONRequestBody = UpdateCIClassRequest
+
 // CreateIntakeCampaignJSONRequestBody defines body for CreateIntakeCampaign for application/json ContentType.
 type CreateIntakeCampaignJSONRequestBody = CreateCampaignRequest
+
+// UpdateIntakeCampaignJSONRequestBody defines body for UpdateIntakeCampaign for application/json ContentType.
+type UpdateIntakeCampaignJSONRequestBody = UpdateCampaignRequest
+
+// CreateRelationshipTypeJSONRequestBody defines body for CreateRelationshipType for application/json ContentType.
+type CreateRelationshipTypeJSONRequestBody = CreateRelationshipTypeRequest
+
+// UpdateRelationshipTypeJSONRequestBody defines body for UpdateRelationshipType for application/json ContentType.
+type UpdateRelationshipTypeJSONRequestBody = UpdateRelationshipTypeRequest
+
+// CreateCustomRoleJSONRequestBody defines body for CreateCustomRole for application/json ContentType.
+type CreateCustomRoleJSONRequestBody = CreateCustomRoleRequest
+
+// CreateAdminUserJSONRequestBody defines body for CreateAdminUser for application/json ContentType.
+type CreateAdminUserJSONRequestBody = CreateAdminUserRequest
+
+// UpdateAdminUserJSONRequestBody defines body for UpdateAdminUser for application/json ContentType.
+type UpdateAdminUserJSONRequestBody = UpdateAdminUserRequest
+
+// ResetUserPasswordJSONRequestBody defines body for ResetUserPassword for application/json ContentType.
+type ResetUserPasswordJSONRequestBody = ResetPasswordRequest
+
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
 
 // CreateCIJSONRequestBody defines body for CreateCI for application/json ContentType.
 type CreateCIJSONRequestBody = CreateCIRequest
@@ -1013,20 +1198,113 @@ type SaveIntakeDraftJSONRequestBody = SaveDraftRequest
 // SubmitIntakeJSONRequestBody defines body for SubmitIntake for application/json ContentType.
 type SubmitIntakeJSONRequestBody = SubmitIntakeRequest
 
+// CreateOwnerGroupJSONRequestBody defines body for CreateOwnerGroup for application/json ContentType.
+type CreateOwnerGroupJSONRequestBody = CreateOwnerGroupRequest
+
+// UpdateOwnerGroupJSONRequestBody defines body for UpdateOwnerGroup for application/json ContentType.
+type UpdateOwnerGroupJSONRequestBody = UpdateOwnerGroupRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List all CI categories with usage metrics
+	// (GET /api/v1/admin/categories)
+	ListCategories(w http.ResponseWriter, r *http.Request)
+	// Create a new custom category
+	// (POST /api/v1/admin/categories)
+	CreateCategory(w http.ResponseWriter, r *http.Request)
+	// Delete a custom category
+	// (DELETE /api/v1/admin/categories/{id})
+	DeleteCategory(w http.ResponseWriter, r *http.Request, id string)
+	// Update a custom category
+	// (PUT /api/v1/admin/categories/{id})
+	UpdateCategory(w http.ResponseWriter, r *http.Request, id string)
+	// List all CI class definitions
+	// (GET /api/v1/admin/ci-classes)
+	ListCIClasses(w http.ResponseWriter, r *http.Request)
+	// Create a custom CI class definition
+	// (POST /api/v1/admin/ci-classes)
+	CreateCIClass(w http.ResponseWriter, r *http.Request)
+	// Delete a custom CI class definition
+	// (DELETE /api/v1/admin/ci-classes/{id})
+	DeleteCIClass(w http.ResponseWriter, r *http.Request, id string)
+	// Update a custom CI class definition
+	// (PUT /api/v1/admin/ci-classes/{id})
+	UpdateCIClass(w http.ResponseWriter, r *http.Request, id string)
 	// Manually trigger digest scheduler run (ops / testing)
 	// (POST /api/v1/admin/digests/trigger)
 	TriggerDigestRun(w http.ResponseWriter, r *http.Request)
+	// List all decentralized intake campaigns
+	// (GET /api/v1/admin/intake/campaigns)
+	ListIntakeCampaigns(w http.ResponseWriter, r *http.Request)
 	// Create a decentralized intake campaign
 	// (POST /api/v1/admin/intake/campaigns)
 	CreateIntakeCampaign(w http.ResponseWriter, r *http.Request)
+	// Delete an intake campaign and all associated invitations and submissions
+	// (DELETE /api/v1/admin/intake/campaigns/{id})
+	DeleteIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get intake campaign details
+	// (GET /api/v1/admin/intake/campaigns/{id})
+	GetIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Update intake campaign status or properties
+	// (PATCH /api/v1/admin/intake/campaigns/{id})
+	UpdateIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List all relationship types with usage metrics
+	// (GET /api/v1/admin/relationship-types)
+	ListRelationshipTypes(w http.ResponseWriter, r *http.Request)
+	// Create a new custom relationship type
+	// (POST /api/v1/admin/relationship-types)
+	CreateRelationshipType(w http.ResponseWriter, r *http.Request)
+	// Delete a custom relationship type
+	// (DELETE /api/v1/admin/relationship-types/{id})
+	DeleteRelationshipType(w http.ResponseWriter, r *http.Request, id string)
+	// Update a custom relationship type
+	// (PUT /api/v1/admin/relationship-types/{id})
+	UpdateRelationshipType(w http.ResponseWriter, r *http.Request, id string)
+	// List all custom roles and permissions
+	// (GET /api/v1/admin/roles)
+	ListCustomRoles(w http.ResponseWriter, r *http.Request)
+	// Create a new custom named role
+	// (POST /api/v1/admin/roles)
+	CreateCustomRole(w http.ResponseWriter, r *http.Request)
+	// Delete a custom role
+	// (DELETE /api/v1/admin/roles/{id})
+	DeleteCustomRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List all users with role details
+	// (GET /api/v1/admin/users)
+	ListAdminUsers(w http.ResponseWriter, r *http.Request)
+	// Create a user account
+	// (POST /api/v1/admin/users)
+	CreateAdminUser(w http.ResponseWriter, r *http.Request)
+	// Delete a user account
+	// (DELETE /api/v1/admin/users/{id})
+	DeleteAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Update a user account
+	// (PUT /api/v1/admin/users/{id})
+	UpdateAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Reset a user's password
+	// (POST /api/v1/admin/users/{id}/reset-password)
+	ResetUserPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Stream immutable audit logs exported in CSV or NDJSON format
 	// (GET /api/v1/audit-logs/export)
 	ExportAuditLogs(w http.ResponseWriter, r *http.Request, params ExportAuditLogsParams)
+	// Revert or undo an audit mutation
+	// (POST /api/v1/audit-logs/{id}/revert)
+	RevertAuditLog(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Authenticate user credentials and create a session
+	// (POST /api/v1/auth/login)
+	Login(w http.ResponseWriter, r *http.Request)
+	// Terminate the active authenticated session
+	// (POST /api/v1/auth/logout)
+	Logout(w http.ResponseWriter, r *http.Request)
+	// List all active sessions
+	// (GET /api/v1/auth/sessions)
+	ListSessions(w http.ResponseWriter, r *http.Request)
+	// Revoke an active session by session ID
+	// (DELETE /api/v1/auth/sessions/{id})
+	DeleteSession(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Create a single configuration item post-baseline
 	// (POST /api/v1/cis)
 	CreateCI(w http.ResponseWriter, r *http.Request)
@@ -1090,12 +1368,21 @@ type ServerInterface interface {
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(w http.ResponseWriter, r *http.Request)
+	// Create an owner group
+	// (POST /api/v1/owner-groups)
+	CreateOwnerGroup(w http.ResponseWriter, r *http.Request)
 	// Get active digest cycle and queued items for caller's owner group
 	// (GET /api/v1/owner-groups/me/digest)
 	GetActiveDigest(w http.ResponseWriter, r *http.Request, params GetActiveDigestParams)
 	// List pending cross-boundary edges awaiting confirmation
 	// (GET /api/v1/owner-groups/pending-edges)
 	ListPendingEdges(w http.ResponseWriter, r *http.Request, params ListPendingEdgesParams)
+	// Delete an owner group
+	// (DELETE /api/v1/owner-groups/{id})
+	DeleteOwnerGroup(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Update an owner group
+	// (PUT /api/v1/owner-groups/{id})
+	UpdateOwnerGroup(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Readiness probe
 	// (GET /api/v1/readyz)
 	GetReadyz(w http.ResponseWriter, r *http.Request)
@@ -1108,9 +1395,63 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// List all CI categories with usage metrics
+// (GET /api/v1/admin/categories)
+func (_ Unimplemented) ListCategories(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a new custom category
+// (POST /api/v1/admin/categories)
+func (_ Unimplemented) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a custom category
+// (DELETE /api/v1/admin/categories/{id})
+func (_ Unimplemented) DeleteCategory(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a custom category
+// (PUT /api/v1/admin/categories/{id})
+func (_ Unimplemented) UpdateCategory(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List all CI class definitions
+// (GET /api/v1/admin/ci-classes)
+func (_ Unimplemented) ListCIClasses(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a custom CI class definition
+// (POST /api/v1/admin/ci-classes)
+func (_ Unimplemented) CreateCIClass(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a custom CI class definition
+// (DELETE /api/v1/admin/ci-classes/{id})
+func (_ Unimplemented) DeleteCIClass(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a custom CI class definition
+// (PUT /api/v1/admin/ci-classes/{id})
+func (_ Unimplemented) UpdateCIClass(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Manually trigger digest scheduler run (ops / testing)
 // (POST /api/v1/admin/digests/trigger)
 func (_ Unimplemented) TriggerDigestRun(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List all decentralized intake campaigns
+// (GET /api/v1/admin/intake/campaigns)
+func (_ Unimplemented) ListIntakeCampaigns(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1120,15 +1461,135 @@ func (_ Unimplemented) CreateIntakeCampaign(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Delete an intake campaign and all associated invitations and submissions
+// (DELETE /api/v1/admin/intake/campaigns/{id})
+func (_ Unimplemented) DeleteIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get intake campaign details
+// (GET /api/v1/admin/intake/campaigns/{id})
+func (_ Unimplemented) GetIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update intake campaign status or properties
+// (PATCH /api/v1/admin/intake/campaigns/{id})
+func (_ Unimplemented) UpdateIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get intake campaign progress by department
 // (GET /api/v1/admin/intake/campaigns/{id}/progress)
 func (_ Unimplemented) GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List all relationship types with usage metrics
+// (GET /api/v1/admin/relationship-types)
+func (_ Unimplemented) ListRelationshipTypes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a new custom relationship type
+// (POST /api/v1/admin/relationship-types)
+func (_ Unimplemented) CreateRelationshipType(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a custom relationship type
+// (DELETE /api/v1/admin/relationship-types/{id})
+func (_ Unimplemented) DeleteRelationshipType(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a custom relationship type
+// (PUT /api/v1/admin/relationship-types/{id})
+func (_ Unimplemented) UpdateRelationshipType(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List all custom roles and permissions
+// (GET /api/v1/admin/roles)
+func (_ Unimplemented) ListCustomRoles(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a new custom named role
+// (POST /api/v1/admin/roles)
+func (_ Unimplemented) CreateCustomRole(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a custom role
+// (DELETE /api/v1/admin/roles/{id})
+func (_ Unimplemented) DeleteCustomRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List all users with role details
+// (GET /api/v1/admin/users)
+func (_ Unimplemented) ListAdminUsers(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a user account
+// (POST /api/v1/admin/users)
+func (_ Unimplemented) CreateAdminUser(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a user account
+// (DELETE /api/v1/admin/users/{id})
+func (_ Unimplemented) DeleteAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a user account
+// (PUT /api/v1/admin/users/{id})
+func (_ Unimplemented) UpdateAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reset a user's password
+// (POST /api/v1/admin/users/{id}/reset-password)
+func (_ Unimplemented) ResetUserPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Stream immutable audit logs exported in CSV or NDJSON format
 // (GET /api/v1/audit-logs/export)
 func (_ Unimplemented) ExportAuditLogs(w http.ResponseWriter, r *http.Request, params ExportAuditLogsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revert or undo an audit mutation
+// (POST /api/v1/audit-logs/{id}/revert)
+func (_ Unimplemented) RevertAuditLog(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Authenticate user credentials and create a session
+// (POST /api/v1/auth/login)
+func (_ Unimplemented) Login(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Terminate the active authenticated session
+// (POST /api/v1/auth/logout)
+func (_ Unimplemented) Logout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List all active sessions
+// (GET /api/v1/auth/sessions)
+func (_ Unimplemented) ListSessions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke an active session by session ID
+// (DELETE /api/v1/auth/sessions/{id})
+func (_ Unimplemented) DeleteSession(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1258,6 +1719,12 @@ func (_ Unimplemented) ListOwnerGroups(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Create an owner group
+// (POST /api/v1/owner-groups)
+func (_ Unimplemented) CreateOwnerGroup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get active digest cycle and queued items for caller's owner group
 // (GET /api/v1/owner-groups/me/digest)
 func (_ Unimplemented) GetActiveDigest(w http.ResponseWriter, r *http.Request, params GetActiveDigestParams) {
@@ -1267,6 +1734,18 @@ func (_ Unimplemented) GetActiveDigest(w http.ResponseWriter, r *http.Request, p
 // List pending cross-boundary edges awaiting confirmation
 // (GET /api/v1/owner-groups/pending-edges)
 func (_ Unimplemented) ListPendingEdges(w http.ResponseWriter, r *http.Request, params ListPendingEdgesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete an owner group
+// (DELETE /api/v1/owner-groups/{id})
+func (_ Unimplemented) DeleteOwnerGroup(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update an owner group
+// (PUT /api/v1/owner-groups/{id})
+func (_ Unimplemented) UpdateOwnerGroup(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1291,6 +1770,226 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// ListCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListCategories(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCategories(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCategory operation middleware
+func (siw *ServerInterfaceWrapper) CreateCategory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCategory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCategory operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCategory(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCategory operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCategory(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCIClasses operation middleware
+func (siw *ServerInterfaceWrapper) ListCIClasses(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCIClasses(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCIClass operation middleware
+func (siw *ServerInterfaceWrapper) CreateCIClass(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCIClass(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCIClass operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCIClass(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCIClass(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCIClass operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCIClass(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCIClass(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TriggerDigestRun operation middleware
 func (siw *ServerInterfaceWrapper) TriggerDigestRun(w http.ResponseWriter, r *http.Request) {
 
@@ -1313,6 +2012,28 @@ func (siw *ServerInterfaceWrapper) TriggerDigestRun(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListIntakeCampaigns operation middleware
+func (siw *ServerInterfaceWrapper) ListIntakeCampaigns(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntakeCampaigns(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateIntakeCampaign operation middleware
 func (siw *ServerInterfaceWrapper) CreateIntakeCampaign(w http.ResponseWriter, r *http.Request) {
 
@@ -1326,6 +2047,105 @@ func (siw *ServerInterfaceWrapper) CreateIntakeCampaign(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIntakeCampaign(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteIntakeCampaign operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIntakeCampaign(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIntakeCampaign(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIntakeCampaign operation middleware
+func (siw *ServerInterfaceWrapper) GetIntakeCampaign(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIntakeCampaign(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateIntakeCampaign operation middleware
+func (siw *ServerInterfaceWrapper) UpdateIntakeCampaign(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateIntakeCampaign(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1359,6 +2179,336 @@ func (siw *ServerInterfaceWrapper) GetCampaignProgress(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCampaignProgress(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRelationshipTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListRelationshipTypes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRelationshipTypes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRelationshipType operation middleware
+func (siw *ServerInterfaceWrapper) CreateRelationshipType(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRelationshipType(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteRelationshipType operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRelationshipType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteRelationshipType(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRelationshipType operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRelationshipType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRelationshipType(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomRoles(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomRoles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCustomRole operation middleware
+func (siw *ServerInterfaceWrapper) CreateCustomRole(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCustomRole(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomRole operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomRole(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAdminUsers operation middleware
+func (siw *ServerInterfaceWrapper) ListAdminUsers(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAdminUsers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAdminUser operation middleware
+func (siw *ServerInterfaceWrapper) CreateAdminUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAdminUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminUser operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminUser(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAdminUser operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAdminUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAdminUser(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResetUserPassword operation middleware
+func (siw *ServerInterfaceWrapper) ResetUserPassword(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResetUserPassword(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1418,6 +2568,130 @@ func (siw *ServerInterfaceWrapper) ExportAuditLogs(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExportAuditLogs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevertAuditLog operation middleware
+func (siw *ServerInterfaceWrapper) RevertAuditLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevertAuditLog(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Login operation middleware
+func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Login(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Logout operation middleware
+func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Logout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSessions operation middleware
+func (siw *ServerInterfaceWrapper) ListSessions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSessions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSession operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSession(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1496,6 +2770,14 @@ func (siw *ServerInterfaceWrapper) SearchCIs(w http.ResponseWriter, r *http.Requ
 	err = runtime.BindQueryParameter("form", true, false, "owner_group_id", r.URL.Query(), &params.OwnerGroupId)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_group_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "lifecycle_state" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "lifecycle_state", r.URL.Query(), &params.LifecycleState)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lifecycle_state", Err: err})
 		return
 	}
 
@@ -2194,6 +3476,28 @@ func (siw *ServerInterfaceWrapper) ListOwnerGroups(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// CreateOwnerGroup operation middleware
+func (siw *ServerInterfaceWrapper) CreateOwnerGroup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateOwnerGroup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetActiveDigest operation middleware
 func (siw *ServerInterfaceWrapper) GetActiveDigest(w http.ResponseWriter, r *http.Request) {
 
@@ -2255,6 +3559,72 @@ func (siw *ServerInterfaceWrapper) ListPendingEdges(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListPendingEdges(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteOwnerGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeleteOwnerGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteOwnerGroup(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateOwnerGroup operation middleware
+func (siw *ServerInterfaceWrapper) UpdateOwnerGroup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, DevAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateOwnerGroup(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2414,16 +3784,103 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/categories", wrapper.ListCategories)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/categories", wrapper.CreateCategory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/admin/categories/{id}", wrapper.DeleteCategory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/admin/categories/{id}", wrapper.UpdateCategory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/ci-classes", wrapper.ListCIClasses)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/ci-classes", wrapper.CreateCIClass)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/admin/ci-classes/{id}", wrapper.DeleteCIClass)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/admin/ci-classes/{id}", wrapper.UpdateCIClass)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/admin/digests/trigger", wrapper.TriggerDigestRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/intake/campaigns", wrapper.ListIntakeCampaigns)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/admin/intake/campaigns", wrapper.CreateIntakeCampaign)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}", wrapper.DeleteIntakeCampaign)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}", wrapper.GetIntakeCampaign)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}", wrapper.UpdateIntakeCampaign)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/admin/intake/campaigns/{id}/progress", wrapper.GetCampaignProgress)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/relationship-types", wrapper.ListRelationshipTypes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/relationship-types", wrapper.CreateRelationshipType)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/admin/relationship-types/{id}", wrapper.DeleteRelationshipType)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/admin/relationship-types/{id}", wrapper.UpdateRelationshipType)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/roles", wrapper.ListCustomRoles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/roles", wrapper.CreateCustomRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/admin/roles/{id}", wrapper.DeleteCustomRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/admin/users", wrapper.ListAdminUsers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/users", wrapper.CreateAdminUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/admin/users/{id}", wrapper.DeleteAdminUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/admin/users/{id}", wrapper.UpdateAdminUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/admin/users/{id}/reset-password", wrapper.ResetUserPassword)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/audit-logs/export", wrapper.ExportAuditLogs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/audit-logs/{id}/revert", wrapper.RevertAuditLog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/login", wrapper.Login)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/auth/sessions", wrapper.ListSessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/auth/sessions/{id}", wrapper.DeleteSession)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/cis", wrapper.CreateCI)
@@ -2489,10 +3946,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/owner-groups", wrapper.ListOwnerGroups)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/owner-groups", wrapper.CreateOwnerGroup)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups/me/digest", wrapper.GetActiveDigest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/owner-groups/pending-edges", wrapper.ListPendingEdges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/owner-groups/{id}", wrapper.DeleteOwnerGroup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/owner-groups/{id}", wrapper.UpdateOwnerGroup)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/readyz", wrapper.GetReadyz)
@@ -2502,6 +3968,383 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
+}
+
+type ListCategoriesRequestObject struct {
+}
+
+type ListCategoriesResponseObject interface {
+	VisitListCategoriesResponse(w http.ResponseWriter) error
+}
+
+type ListCategories200JSONResponse []CategoryDefinition
+
+func (response ListCategories200JSONResponse) VisitListCategoriesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCategories401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListCategories401ApplicationProblemPlusJSONResponse) VisitListCategoriesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCategoryRequestObject struct {
+	Body *CreateCategoryJSONRequestBody
+}
+
+type CreateCategoryResponseObject interface {
+	VisitCreateCategoryResponse(w http.ResponseWriter) error
+}
+
+type CreateCategory201JSONResponse CategoryDefinition
+
+func (response CreateCategory201JSONResponse) VisitCreateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCategory400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCategory400ApplicationProblemPlusJSONResponse) VisitCreateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCategory401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCategory401ApplicationProblemPlusJSONResponse) VisitCreateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCategory403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCategory403ApplicationProblemPlusJSONResponse) VisitCreateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCategory409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCategory409ApplicationProblemPlusJSONResponse) VisitCreateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCategoryRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteCategoryResponseObject interface {
+	VisitDeleteCategoryResponse(w http.ResponseWriter) error
+}
+
+type DeleteCategory204Response struct {
+}
+
+func (response DeleteCategory204Response) VisitDeleteCategoryResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCategory400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCategory400ApplicationProblemPlusJSONResponse) VisitDeleteCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCategory401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCategory401ApplicationProblemPlusJSONResponse) VisitDeleteCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCategory403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCategory403ApplicationProblemPlusJSONResponse) VisitDeleteCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCategory404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCategory404ApplicationProblemPlusJSONResponse) VisitDeleteCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCategory409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCategory409ApplicationProblemPlusJSONResponse) VisitDeleteCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCategoryRequestObject struct {
+	Id   string `json:"id"`
+	Body *UpdateCategoryJSONRequestBody
+}
+
+type UpdateCategoryResponseObject interface {
+	VisitUpdateCategoryResponse(w http.ResponseWriter) error
+}
+
+type UpdateCategory200JSONResponse CategoryDefinition
+
+func (response UpdateCategory200JSONResponse) VisitUpdateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCategory400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCategory400ApplicationProblemPlusJSONResponse) VisitUpdateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCategory401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCategory401ApplicationProblemPlusJSONResponse) VisitUpdateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCategory403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCategory403ApplicationProblemPlusJSONResponse) VisitUpdateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCategory404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCategory404ApplicationProblemPlusJSONResponse) VisitUpdateCategoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCIClassesRequestObject struct {
+}
+
+type ListCIClassesResponseObject interface {
+	VisitListCIClassesResponse(w http.ResponseWriter) error
+}
+
+type ListCIClasses200JSONResponse []CIClassDefinition
+
+func (response ListCIClasses200JSONResponse) VisitListCIClassesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCIClasses401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListCIClasses401ApplicationProblemPlusJSONResponse) VisitListCIClassesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIClassRequestObject struct {
+	Body *CreateCIClassJSONRequestBody
+}
+
+type CreateCIClassResponseObject interface {
+	VisitCreateCIClassResponse(w http.ResponseWriter) error
+}
+
+type CreateCIClass201JSONResponse CIClassDefinition
+
+func (response CreateCIClass201JSONResponse) VisitCreateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIClass400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIClass400ApplicationProblemPlusJSONResponse) VisitCreateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIClass401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIClass401ApplicationProblemPlusJSONResponse) VisitCreateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCIClass403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCIClass403ApplicationProblemPlusJSONResponse) VisitCreateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCIClassRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteCIClassResponseObject interface {
+	VisitDeleteCIClassResponse(w http.ResponseWriter) error
+}
+
+type DeleteCIClass204Response struct {
+}
+
+func (response DeleteCIClass204Response) VisitDeleteCIClassResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCIClass400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCIClass400ApplicationProblemPlusJSONResponse) VisitDeleteCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCIClass401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCIClass401ApplicationProblemPlusJSONResponse) VisitDeleteCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCIClass403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCIClass403ApplicationProblemPlusJSONResponse) VisitDeleteCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCIClass404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCIClass404ApplicationProblemPlusJSONResponse) VisitDeleteCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCIClass409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCIClass409ApplicationProblemPlusJSONResponse) VisitDeleteCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCIClassRequestObject struct {
+	Id   string `json:"id"`
+	Body *UpdateCIClassJSONRequestBody
+}
+
+type UpdateCIClassResponseObject interface {
+	VisitUpdateCIClassResponse(w http.ResponseWriter) error
+}
+
+type UpdateCIClass200JSONResponse CIClassDefinition
+
+func (response UpdateCIClass200JSONResponse) VisitUpdateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCIClass400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCIClass400ApplicationProblemPlusJSONResponse) VisitUpdateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCIClass401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCIClass401ApplicationProblemPlusJSONResponse) VisitUpdateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCIClass403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCIClass403ApplicationProblemPlusJSONResponse) VisitUpdateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateCIClass404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateCIClass404ApplicationProblemPlusJSONResponse) VisitUpdateCIClassResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type TriggerDigestRunRequestObject struct {
@@ -2532,6 +4375,40 @@ func (response TriggerDigestRun401ApplicationProblemPlusJSONResponse) VisitTrigg
 type TriggerDigestRun403ApplicationProblemPlusJSONResponse ProblemDetails
 
 func (response TriggerDigestRun403ApplicationProblemPlusJSONResponse) VisitTriggerDigestRunResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListIntakeCampaignsRequestObject struct {
+}
+
+type ListIntakeCampaignsResponseObject interface {
+	VisitListIntakeCampaignsResponse(w http.ResponseWriter) error
+}
+
+type ListIntakeCampaigns200JSONResponse []CampaignResponse
+
+func (response ListIntakeCampaigns200JSONResponse) VisitListIntakeCampaignsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListIntakeCampaigns401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListIntakeCampaigns401ApplicationProblemPlusJSONResponse) VisitListIntakeCampaignsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListIntakeCampaigns403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListIntakeCampaigns403ApplicationProblemPlusJSONResponse) VisitListIntakeCampaignsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(403)
 
@@ -2591,6 +4468,147 @@ func (response CreateIntakeCampaign422ApplicationProblemPlusJSONResponse) VisitC
 	return json.NewEncoder(w).Encode(response)
 }
 
+type DeleteIntakeCampaignRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteIntakeCampaignResponseObject interface {
+	VisitDeleteIntakeCampaignResponse(w http.ResponseWriter) error
+}
+
+type DeleteIntakeCampaign204Response struct {
+}
+
+func (response DeleteIntakeCampaign204Response) VisitDeleteIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIntakeCampaign401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteIntakeCampaign401ApplicationProblemPlusJSONResponse) VisitDeleteIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteIntakeCampaign403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteIntakeCampaign403ApplicationProblemPlusJSONResponse) VisitDeleteIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteIntakeCampaign404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteIntakeCampaign404ApplicationProblemPlusJSONResponse) VisitDeleteIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetIntakeCampaignRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetIntakeCampaignResponseObject interface {
+	VisitGetIntakeCampaignResponse(w http.ResponseWriter) error
+}
+
+type GetIntakeCampaign200JSONResponse CampaignResponse
+
+func (response GetIntakeCampaign200JSONResponse) VisitGetIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetIntakeCampaign401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetIntakeCampaign401ApplicationProblemPlusJSONResponse) VisitGetIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetIntakeCampaign403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetIntakeCampaign403ApplicationProblemPlusJSONResponse) VisitGetIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetIntakeCampaign404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response GetIntakeCampaign404ApplicationProblemPlusJSONResponse) VisitGetIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateIntakeCampaignRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *UpdateIntakeCampaignJSONRequestBody
+}
+
+type UpdateIntakeCampaignResponseObject interface {
+	VisitUpdateIntakeCampaignResponse(w http.ResponseWriter) error
+}
+
+type UpdateIntakeCampaign200JSONResponse CampaignResponse
+
+func (response UpdateIntakeCampaign200JSONResponse) VisitUpdateIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateIntakeCampaign400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateIntakeCampaign400ApplicationProblemPlusJSONResponse) VisitUpdateIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateIntakeCampaign401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateIntakeCampaign401ApplicationProblemPlusJSONResponse) VisitUpdateIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateIntakeCampaign403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateIntakeCampaign403ApplicationProblemPlusJSONResponse) VisitUpdateIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateIntakeCampaign404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateIntakeCampaign404ApplicationProblemPlusJSONResponse) VisitUpdateIntakeCampaignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetCampaignProgressRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -2631,6 +4649,533 @@ type GetCampaignProgress404ApplicationProblemPlusJSONResponse ProblemDetails
 func (response GetCampaignProgress404ApplicationProblemPlusJSONResponse) VisitGetCampaignProgressResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRelationshipTypesRequestObject struct {
+}
+
+type ListRelationshipTypesResponseObject interface {
+	VisitListRelationshipTypesResponse(w http.ResponseWriter) error
+}
+
+type ListRelationshipTypes200JSONResponse []RelationshipTypeDefinition
+
+func (response ListRelationshipTypes200JSONResponse) VisitListRelationshipTypesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRelationshipTypes401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListRelationshipTypes401ApplicationProblemPlusJSONResponse) VisitListRelationshipTypesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRelationshipTypeRequestObject struct {
+	Body *CreateRelationshipTypeJSONRequestBody
+}
+
+type CreateRelationshipTypeResponseObject interface {
+	VisitCreateRelationshipTypeResponse(w http.ResponseWriter) error
+}
+
+type CreateRelationshipType201JSONResponse RelationshipTypeDefinition
+
+func (response CreateRelationshipType201JSONResponse) VisitCreateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRelationshipType400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateRelationshipType400ApplicationProblemPlusJSONResponse) VisitCreateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRelationshipType401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateRelationshipType401ApplicationProblemPlusJSONResponse) VisitCreateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRelationshipType403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateRelationshipType403ApplicationProblemPlusJSONResponse) VisitCreateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateRelationshipType409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateRelationshipType409ApplicationProblemPlusJSONResponse) VisitCreateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRelationshipTypeRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteRelationshipTypeResponseObject interface {
+	VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error
+}
+
+type DeleteRelationshipType204Response struct {
+}
+
+func (response DeleteRelationshipType204Response) VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteRelationshipType400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteRelationshipType400ApplicationProblemPlusJSONResponse) VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRelationshipType401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteRelationshipType401ApplicationProblemPlusJSONResponse) VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRelationshipType403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteRelationshipType403ApplicationProblemPlusJSONResponse) VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRelationshipType404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteRelationshipType404ApplicationProblemPlusJSONResponse) VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteRelationshipType409ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteRelationshipType409ApplicationProblemPlusJSONResponse) VisitDeleteRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRelationshipTypeRequestObject struct {
+	Id   string `json:"id"`
+	Body *UpdateRelationshipTypeJSONRequestBody
+}
+
+type UpdateRelationshipTypeResponseObject interface {
+	VisitUpdateRelationshipTypeResponse(w http.ResponseWriter) error
+}
+
+type UpdateRelationshipType200JSONResponse RelationshipTypeDefinition
+
+func (response UpdateRelationshipType200JSONResponse) VisitUpdateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRelationshipType400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateRelationshipType400ApplicationProblemPlusJSONResponse) VisitUpdateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRelationshipType401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateRelationshipType401ApplicationProblemPlusJSONResponse) VisitUpdateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRelationshipType403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateRelationshipType403ApplicationProblemPlusJSONResponse) VisitUpdateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateRelationshipType404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateRelationshipType404ApplicationProblemPlusJSONResponse) VisitUpdateRelationshipTypeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCustomRolesRequestObject struct {
+}
+
+type ListCustomRolesResponseObject interface {
+	VisitListCustomRolesResponse(w http.ResponseWriter) error
+}
+
+type ListCustomRoles200JSONResponse []CustomRole
+
+func (response ListCustomRoles200JSONResponse) VisitListCustomRolesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCustomRoles401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListCustomRoles401ApplicationProblemPlusJSONResponse) VisitListCustomRolesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCustomRoleRequestObject struct {
+	Body *CreateCustomRoleJSONRequestBody
+}
+
+type CreateCustomRoleResponseObject interface {
+	VisitCreateCustomRoleResponse(w http.ResponseWriter) error
+}
+
+type CreateCustomRole201JSONResponse CustomRole
+
+func (response CreateCustomRole201JSONResponse) VisitCreateCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCustomRole400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCustomRole400ApplicationProblemPlusJSONResponse) VisitCreateCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCustomRole401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCustomRole401ApplicationProblemPlusJSONResponse) VisitCreateCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateCustomRole403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateCustomRole403ApplicationProblemPlusJSONResponse) VisitCreateCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCustomRoleRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteCustomRoleResponseObject interface {
+	VisitDeleteCustomRoleResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomRole204Response struct {
+}
+
+func (response DeleteCustomRole204Response) VisitDeleteCustomRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCustomRole400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCustomRole400ApplicationProblemPlusJSONResponse) VisitDeleteCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCustomRole401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCustomRole401ApplicationProblemPlusJSONResponse) VisitDeleteCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteCustomRole403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteCustomRole403ApplicationProblemPlusJSONResponse) VisitDeleteCustomRoleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListAdminUsersRequestObject struct {
+}
+
+type ListAdminUsersResponseObject interface {
+	VisitListAdminUsersResponse(w http.ResponseWriter) error
+}
+
+type ListAdminUsers200JSONResponse []AdminUserResponse
+
+func (response ListAdminUsers200JSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListAdminUsers401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListAdminUsers401ApplicationProblemPlusJSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateAdminUserRequestObject struct {
+	Body *CreateAdminUserJSONRequestBody
+}
+
+type CreateAdminUserResponseObject interface {
+	VisitCreateAdminUserResponse(w http.ResponseWriter) error
+}
+
+type CreateAdminUser201JSONResponse AdminUserResponse
+
+func (response CreateAdminUser201JSONResponse) VisitCreateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateAdminUser400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateAdminUser400ApplicationProblemPlusJSONResponse) VisitCreateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateAdminUser401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateAdminUser401ApplicationProblemPlusJSONResponse) VisitCreateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateAdminUser403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateAdminUser403ApplicationProblemPlusJSONResponse) VisitCreateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteAdminUserRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteAdminUserResponseObject interface {
+	VisitDeleteAdminUserResponse(w http.ResponseWriter) error
+}
+
+type DeleteAdminUser204Response struct {
+}
+
+func (response DeleteAdminUser204Response) VisitDeleteAdminUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAdminUser400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteAdminUser400ApplicationProblemPlusJSONResponse) VisitDeleteAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteAdminUser401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteAdminUser401ApplicationProblemPlusJSONResponse) VisitDeleteAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteAdminUser403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteAdminUser403ApplicationProblemPlusJSONResponse) VisitDeleteAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteAdminUser404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteAdminUser404ApplicationProblemPlusJSONResponse) VisitDeleteAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateAdminUserRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *UpdateAdminUserJSONRequestBody
+}
+
+type UpdateAdminUserResponseObject interface {
+	VisitUpdateAdminUserResponse(w http.ResponseWriter) error
+}
+
+type UpdateAdminUser200JSONResponse AdminUserResponse
+
+func (response UpdateAdminUser200JSONResponse) VisitUpdateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateAdminUser400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateAdminUser400ApplicationProblemPlusJSONResponse) VisitUpdateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateAdminUser401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateAdminUser401ApplicationProblemPlusJSONResponse) VisitUpdateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateAdminUser403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateAdminUser403ApplicationProblemPlusJSONResponse) VisitUpdateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateAdminUser404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateAdminUser404ApplicationProblemPlusJSONResponse) VisitUpdateAdminUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResetUserPasswordRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *ResetUserPasswordJSONRequestBody
+}
+
+type ResetUserPasswordResponseObject interface {
+	VisitResetUserPasswordResponse(w http.ResponseWriter) error
+}
+
+type ResetUserPassword200JSONResponse struct {
+	Message *string `json:"message,omitempty"`
+}
+
+func (response ResetUserPassword200JSONResponse) VisitResetUserPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResetUserPassword400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ResetUserPassword400ApplicationProblemPlusJSONResponse) VisitResetUserPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResetUserPassword401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ResetUserPassword401ApplicationProblemPlusJSONResponse) VisitResetUserPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResetUserPassword403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ResetUserPassword403ApplicationProblemPlusJSONResponse) VisitResetUserPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -2712,6 +5257,162 @@ type ExportAuditLogs403ApplicationProblemPlusJSONResponse ProblemDetails
 func (response ExportAuditLogs403ApplicationProblemPlusJSONResponse) VisitExportAuditLogsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevertAuditLogRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type RevertAuditLogResponseObject interface {
+	VisitRevertAuditLogResponse(w http.ResponseWriter) error
+}
+
+type RevertAuditLog200JSONResponse RevertAuditLogResponse
+
+func (response RevertAuditLog200JSONResponse) VisitRevertAuditLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevertAuditLog400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RevertAuditLog400ApplicationProblemPlusJSONResponse) VisitRevertAuditLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevertAuditLog401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RevertAuditLog401ApplicationProblemPlusJSONResponse) VisitRevertAuditLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevertAuditLog404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response RevertAuditLog404ApplicationProblemPlusJSONResponse) VisitRevertAuditLogResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LoginRequestObject struct {
+	Body *LoginJSONRequestBody
+}
+
+type LoginResponseObject interface {
+	VisitLoginResponse(w http.ResponseWriter) error
+}
+
+type Login200JSONResponse LoginResponse
+
+func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Login400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response Login400ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Login401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response Login401ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LogoutRequestObject struct {
+}
+
+type LogoutResponseObject interface {
+	VisitLogoutResponse(w http.ResponseWriter) error
+}
+
+type Logout200JSONResponse struct {
+	Message *string `json:"message,omitempty"`
+}
+
+func (response Logout200JSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Logout401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response Logout401ApplicationProblemPlusJSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSessionsRequestObject struct {
+}
+
+type ListSessionsResponseObject interface {
+	VisitListSessionsResponse(w http.ResponseWriter) error
+}
+
+type ListSessions200JSONResponse []UserSessionResponse
+
+func (response ListSessions200JSONResponse) VisitListSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSessions401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response ListSessions401ApplicationProblemPlusJSONResponse) VisitListSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteSessionRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteSessionResponseObject interface {
+	VisitDeleteSessionResponse(w http.ResponseWriter) error
+}
+
+type DeleteSession204Response struct {
+}
+
+func (response DeleteSession204Response) VisitDeleteSessionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSession401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteSession401ApplicationProblemPlusJSONResponse) VisitDeleteSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -3791,6 +6492,50 @@ func (response ListOwnerGroups401ApplicationProblemPlusJSONResponse) VisitListOw
 	return json.NewEncoder(w).Encode(response)
 }
 
+type CreateOwnerGroupRequestObject struct {
+	Body *CreateOwnerGroupJSONRequestBody
+}
+
+type CreateOwnerGroupResponseObject interface {
+	VisitCreateOwnerGroupResponse(w http.ResponseWriter) error
+}
+
+type CreateOwnerGroup201JSONResponse OwnerGroup
+
+func (response CreateOwnerGroup201JSONResponse) VisitCreateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateOwnerGroup400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateOwnerGroup400ApplicationProblemPlusJSONResponse) VisitCreateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateOwnerGroup401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateOwnerGroup401ApplicationProblemPlusJSONResponse) VisitCreateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateOwnerGroup403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response CreateOwnerGroup403ApplicationProblemPlusJSONResponse) VisitCreateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetActiveDigestRequestObject struct {
 	Params GetActiveDigestParams
 }
@@ -3870,6 +6615,112 @@ func (response ListPendingEdges403ApplicationProblemPlusJSONResponse) VisitListP
 	return json.NewEncoder(w).Encode(response)
 }
 
+type DeleteOwnerGroupRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteOwnerGroupResponseObject interface {
+	VisitDeleteOwnerGroupResponse(w http.ResponseWriter) error
+}
+
+type DeleteOwnerGroup204Response struct {
+}
+
+func (response DeleteOwnerGroup204Response) VisitDeleteOwnerGroupResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteOwnerGroup400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteOwnerGroup400ApplicationProblemPlusJSONResponse) VisitDeleteOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteOwnerGroup401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteOwnerGroup401ApplicationProblemPlusJSONResponse) VisitDeleteOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteOwnerGroup403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteOwnerGroup403ApplicationProblemPlusJSONResponse) VisitDeleteOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteOwnerGroup404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response DeleteOwnerGroup404ApplicationProblemPlusJSONResponse) VisitDeleteOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateOwnerGroupRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *UpdateOwnerGroupJSONRequestBody
+}
+
+type UpdateOwnerGroupResponseObject interface {
+	VisitUpdateOwnerGroupResponse(w http.ResponseWriter) error
+}
+
+type UpdateOwnerGroup200JSONResponse OwnerGroup
+
+func (response UpdateOwnerGroup200JSONResponse) VisitUpdateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateOwnerGroup400ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateOwnerGroup400ApplicationProblemPlusJSONResponse) VisitUpdateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateOwnerGroup401ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateOwnerGroup401ApplicationProblemPlusJSONResponse) VisitUpdateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateOwnerGroup403ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateOwnerGroup403ApplicationProblemPlusJSONResponse) VisitUpdateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateOwnerGroup404ApplicationProblemPlusJSONResponse ProblemDetails
+
+func (response UpdateOwnerGroup404ApplicationProblemPlusJSONResponse) VisitUpdateOwnerGroupResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetReadyzRequestObject struct {
 }
 
@@ -3922,18 +6773,105 @@ func (response GetCurrentUser401ApplicationProblemPlusJSONResponse) VisitGetCurr
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// List all CI categories with usage metrics
+	// (GET /api/v1/admin/categories)
+	ListCategories(ctx context.Context, request ListCategoriesRequestObject) (ListCategoriesResponseObject, error)
+	// Create a new custom category
+	// (POST /api/v1/admin/categories)
+	CreateCategory(ctx context.Context, request CreateCategoryRequestObject) (CreateCategoryResponseObject, error)
+	// Delete a custom category
+	// (DELETE /api/v1/admin/categories/{id})
+	DeleteCategory(ctx context.Context, request DeleteCategoryRequestObject) (DeleteCategoryResponseObject, error)
+	// Update a custom category
+	// (PUT /api/v1/admin/categories/{id})
+	UpdateCategory(ctx context.Context, request UpdateCategoryRequestObject) (UpdateCategoryResponseObject, error)
+	// List all CI class definitions
+	// (GET /api/v1/admin/ci-classes)
+	ListCIClasses(ctx context.Context, request ListCIClassesRequestObject) (ListCIClassesResponseObject, error)
+	// Create a custom CI class definition
+	// (POST /api/v1/admin/ci-classes)
+	CreateCIClass(ctx context.Context, request CreateCIClassRequestObject) (CreateCIClassResponseObject, error)
+	// Delete a custom CI class definition
+	// (DELETE /api/v1/admin/ci-classes/{id})
+	DeleteCIClass(ctx context.Context, request DeleteCIClassRequestObject) (DeleteCIClassResponseObject, error)
+	// Update a custom CI class definition
+	// (PUT /api/v1/admin/ci-classes/{id})
+	UpdateCIClass(ctx context.Context, request UpdateCIClassRequestObject) (UpdateCIClassResponseObject, error)
 	// Manually trigger digest scheduler run (ops / testing)
 	// (POST /api/v1/admin/digests/trigger)
 	TriggerDigestRun(ctx context.Context, request TriggerDigestRunRequestObject) (TriggerDigestRunResponseObject, error)
+	// List all decentralized intake campaigns
+	// (GET /api/v1/admin/intake/campaigns)
+	ListIntakeCampaigns(ctx context.Context, request ListIntakeCampaignsRequestObject) (ListIntakeCampaignsResponseObject, error)
 	// Create a decentralized intake campaign
 	// (POST /api/v1/admin/intake/campaigns)
 	CreateIntakeCampaign(ctx context.Context, request CreateIntakeCampaignRequestObject) (CreateIntakeCampaignResponseObject, error)
+	// Delete an intake campaign and all associated invitations and submissions
+	// (DELETE /api/v1/admin/intake/campaigns/{id})
+	DeleteIntakeCampaign(ctx context.Context, request DeleteIntakeCampaignRequestObject) (DeleteIntakeCampaignResponseObject, error)
+	// Get intake campaign details
+	// (GET /api/v1/admin/intake/campaigns/{id})
+	GetIntakeCampaign(ctx context.Context, request GetIntakeCampaignRequestObject) (GetIntakeCampaignResponseObject, error)
+	// Update intake campaign status or properties
+	// (PATCH /api/v1/admin/intake/campaigns/{id})
+	UpdateIntakeCampaign(ctx context.Context, request UpdateIntakeCampaignRequestObject) (UpdateIntakeCampaignResponseObject, error)
 	// Get intake campaign progress by department
 	// (GET /api/v1/admin/intake/campaigns/{id}/progress)
 	GetCampaignProgress(ctx context.Context, request GetCampaignProgressRequestObject) (GetCampaignProgressResponseObject, error)
+	// List all relationship types with usage metrics
+	// (GET /api/v1/admin/relationship-types)
+	ListRelationshipTypes(ctx context.Context, request ListRelationshipTypesRequestObject) (ListRelationshipTypesResponseObject, error)
+	// Create a new custom relationship type
+	// (POST /api/v1/admin/relationship-types)
+	CreateRelationshipType(ctx context.Context, request CreateRelationshipTypeRequestObject) (CreateRelationshipTypeResponseObject, error)
+	// Delete a custom relationship type
+	// (DELETE /api/v1/admin/relationship-types/{id})
+	DeleteRelationshipType(ctx context.Context, request DeleteRelationshipTypeRequestObject) (DeleteRelationshipTypeResponseObject, error)
+	// Update a custom relationship type
+	// (PUT /api/v1/admin/relationship-types/{id})
+	UpdateRelationshipType(ctx context.Context, request UpdateRelationshipTypeRequestObject) (UpdateRelationshipTypeResponseObject, error)
+	// List all custom roles and permissions
+	// (GET /api/v1/admin/roles)
+	ListCustomRoles(ctx context.Context, request ListCustomRolesRequestObject) (ListCustomRolesResponseObject, error)
+	// Create a new custom named role
+	// (POST /api/v1/admin/roles)
+	CreateCustomRole(ctx context.Context, request CreateCustomRoleRequestObject) (CreateCustomRoleResponseObject, error)
+	// Delete a custom role
+	// (DELETE /api/v1/admin/roles/{id})
+	DeleteCustomRole(ctx context.Context, request DeleteCustomRoleRequestObject) (DeleteCustomRoleResponseObject, error)
+	// List all users with role details
+	// (GET /api/v1/admin/users)
+	ListAdminUsers(ctx context.Context, request ListAdminUsersRequestObject) (ListAdminUsersResponseObject, error)
+	// Create a user account
+	// (POST /api/v1/admin/users)
+	CreateAdminUser(ctx context.Context, request CreateAdminUserRequestObject) (CreateAdminUserResponseObject, error)
+	// Delete a user account
+	// (DELETE /api/v1/admin/users/{id})
+	DeleteAdminUser(ctx context.Context, request DeleteAdminUserRequestObject) (DeleteAdminUserResponseObject, error)
+	// Update a user account
+	// (PUT /api/v1/admin/users/{id})
+	UpdateAdminUser(ctx context.Context, request UpdateAdminUserRequestObject) (UpdateAdminUserResponseObject, error)
+	// Reset a user's password
+	// (POST /api/v1/admin/users/{id}/reset-password)
+	ResetUserPassword(ctx context.Context, request ResetUserPasswordRequestObject) (ResetUserPasswordResponseObject, error)
 	// Stream immutable audit logs exported in CSV or NDJSON format
 	// (GET /api/v1/audit-logs/export)
 	ExportAuditLogs(ctx context.Context, request ExportAuditLogsRequestObject) (ExportAuditLogsResponseObject, error)
+	// Revert or undo an audit mutation
+	// (POST /api/v1/audit-logs/{id}/revert)
+	RevertAuditLog(ctx context.Context, request RevertAuditLogRequestObject) (RevertAuditLogResponseObject, error)
+	// Authenticate user credentials and create a session
+	// (POST /api/v1/auth/login)
+	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
+	// Terminate the active authenticated session
+	// (POST /api/v1/auth/logout)
+	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
+	// List all active sessions
+	// (GET /api/v1/auth/sessions)
+	ListSessions(ctx context.Context, request ListSessionsRequestObject) (ListSessionsResponseObject, error)
+	// Revoke an active session by session ID
+	// (DELETE /api/v1/auth/sessions/{id})
+	DeleteSession(ctx context.Context, request DeleteSessionRequestObject) (DeleteSessionResponseObject, error)
 	// Create a single configuration item post-baseline
 	// (POST /api/v1/cis)
 	CreateCI(ctx context.Context, request CreateCIRequestObject) (CreateCIResponseObject, error)
@@ -3997,12 +6935,21 @@ type StrictServerInterface interface {
 	// List all owner groups
 	// (GET /api/v1/owner-groups)
 	ListOwnerGroups(ctx context.Context, request ListOwnerGroupsRequestObject) (ListOwnerGroupsResponseObject, error)
+	// Create an owner group
+	// (POST /api/v1/owner-groups)
+	CreateOwnerGroup(ctx context.Context, request CreateOwnerGroupRequestObject) (CreateOwnerGroupResponseObject, error)
 	// Get active digest cycle and queued items for caller's owner group
 	// (GET /api/v1/owner-groups/me/digest)
 	GetActiveDigest(ctx context.Context, request GetActiveDigestRequestObject) (GetActiveDigestResponseObject, error)
 	// List pending cross-boundary edges awaiting confirmation
 	// (GET /api/v1/owner-groups/pending-edges)
 	ListPendingEdges(ctx context.Context, request ListPendingEdgesRequestObject) (ListPendingEdgesResponseObject, error)
+	// Delete an owner group
+	// (DELETE /api/v1/owner-groups/{id})
+	DeleteOwnerGroup(ctx context.Context, request DeleteOwnerGroupRequestObject) (DeleteOwnerGroupResponseObject, error)
+	// Update an owner group
+	// (PUT /api/v1/owner-groups/{id})
+	UpdateOwnerGroup(ctx context.Context, request UpdateOwnerGroupRequestObject) (UpdateOwnerGroupResponseObject, error)
 	// Readiness probe
 	// (GET /api/v1/readyz)
 	GetReadyz(ctx context.Context, request GetReadyzRequestObject) (GetReadyzResponseObject, error)
@@ -4040,6 +6987,234 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// ListCategories operation middleware
+func (sh *strictHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	var request ListCategoriesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCategories(ctx, request.(ListCategoriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCategories")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCategoriesResponseObject); ok {
+		if err := validResponse.VisitListCategoriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCategory operation middleware
+func (sh *strictHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	var request CreateCategoryRequestObject
+
+	var body CreateCategoryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCategory(ctx, request.(CreateCategoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCategory")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCategoryResponseObject); ok {
+		if err := validResponse.VisitCreateCategoryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCategory operation middleware
+func (sh *strictHandler) DeleteCategory(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteCategoryRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCategory(ctx, request.(DeleteCategoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCategory")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCategoryResponseObject); ok {
+		if err := validResponse.VisitDeleteCategoryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCategory operation middleware
+func (sh *strictHandler) UpdateCategory(w http.ResponseWriter, r *http.Request, id string) {
+	var request UpdateCategoryRequestObject
+
+	request.Id = id
+
+	var body UpdateCategoryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCategory(ctx, request.(UpdateCategoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCategory")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCategoryResponseObject); ok {
+		if err := validResponse.VisitUpdateCategoryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCIClasses operation middleware
+func (sh *strictHandler) ListCIClasses(w http.ResponseWriter, r *http.Request) {
+	var request ListCIClassesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCIClasses(ctx, request.(ListCIClassesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCIClasses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCIClassesResponseObject); ok {
+		if err := validResponse.VisitListCIClassesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCIClass operation middleware
+func (sh *strictHandler) CreateCIClass(w http.ResponseWriter, r *http.Request) {
+	var request CreateCIClassRequestObject
+
+	var body CreateCIClassJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCIClass(ctx, request.(CreateCIClassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCIClass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCIClassResponseObject); ok {
+		if err := validResponse.VisitCreateCIClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCIClass operation middleware
+func (sh *strictHandler) DeleteCIClass(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteCIClassRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCIClass(ctx, request.(DeleteCIClassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCIClass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCIClassResponseObject); ok {
+		if err := validResponse.VisitDeleteCIClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCIClass operation middleware
+func (sh *strictHandler) UpdateCIClass(w http.ResponseWriter, r *http.Request, id string) {
+	var request UpdateCIClassRequestObject
+
+	request.Id = id
+
+	var body UpdateCIClassJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCIClass(ctx, request.(UpdateCIClassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCIClass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCIClassResponseObject); ok {
+		if err := validResponse.VisitUpdateCIClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // TriggerDigestRun operation middleware
 func (sh *strictHandler) TriggerDigestRun(w http.ResponseWriter, r *http.Request) {
 	var request TriggerDigestRunRequestObject
@@ -4057,6 +7232,30 @@ func (sh *strictHandler) TriggerDigestRun(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(TriggerDigestRunResponseObject); ok {
 		if err := validResponse.VisitTriggerDigestRunResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIntakeCampaigns operation middleware
+func (sh *strictHandler) ListIntakeCampaigns(w http.ResponseWriter, r *http.Request) {
+	var request ListIntakeCampaignsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIntakeCampaigns(ctx, request.(ListIntakeCampaignsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIntakeCampaigns")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIntakeCampaignsResponseObject); ok {
+		if err := validResponse.VisitListIntakeCampaignsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -4095,6 +7294,91 @@ func (sh *strictHandler) CreateIntakeCampaign(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// DeleteIntakeCampaign operation middleware
+func (sh *strictHandler) DeleteIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteIntakeCampaignRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIntakeCampaign(ctx, request.(DeleteIntakeCampaignRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIntakeCampaign")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIntakeCampaignResponseObject); ok {
+		if err := validResponse.VisitDeleteIntakeCampaignResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIntakeCampaign operation middleware
+func (sh *strictHandler) GetIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetIntakeCampaignRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIntakeCampaign(ctx, request.(GetIntakeCampaignRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIntakeCampaign")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIntakeCampaignResponseObject); ok {
+		if err := validResponse.VisitGetIntakeCampaignResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateIntakeCampaign operation middleware
+func (sh *strictHandler) UpdateIntakeCampaign(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request UpdateIntakeCampaignRequestObject
+
+	request.Id = id
+
+	var body UpdateIntakeCampaignJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateIntakeCampaign(ctx, request.(UpdateIntakeCampaignRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateIntakeCampaign")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateIntakeCampaignResponseObject); ok {
+		if err := validResponse.VisitUpdateIntakeCampaignResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetCampaignProgress operation middleware
 func (sh *strictHandler) GetCampaignProgress(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	var request GetCampaignProgressRequestObject
@@ -4121,6 +7405,348 @@ func (sh *strictHandler) GetCampaignProgress(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// ListRelationshipTypes operation middleware
+func (sh *strictHandler) ListRelationshipTypes(w http.ResponseWriter, r *http.Request) {
+	var request ListRelationshipTypesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRelationshipTypes(ctx, request.(ListRelationshipTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRelationshipTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListRelationshipTypesResponseObject); ok {
+		if err := validResponse.VisitListRelationshipTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateRelationshipType operation middleware
+func (sh *strictHandler) CreateRelationshipType(w http.ResponseWriter, r *http.Request) {
+	var request CreateRelationshipTypeRequestObject
+
+	var body CreateRelationshipTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateRelationshipType(ctx, request.(CreateRelationshipTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateRelationshipType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateRelationshipTypeResponseObject); ok {
+		if err := validResponse.VisitCreateRelationshipTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteRelationshipType operation middleware
+func (sh *strictHandler) DeleteRelationshipType(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteRelationshipTypeRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteRelationshipType(ctx, request.(DeleteRelationshipTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteRelationshipType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteRelationshipTypeResponseObject); ok {
+		if err := validResponse.VisitDeleteRelationshipTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateRelationshipType operation middleware
+func (sh *strictHandler) UpdateRelationshipType(w http.ResponseWriter, r *http.Request, id string) {
+	var request UpdateRelationshipTypeRequestObject
+
+	request.Id = id
+
+	var body UpdateRelationshipTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateRelationshipType(ctx, request.(UpdateRelationshipTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateRelationshipType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateRelationshipTypeResponseObject); ok {
+		if err := validResponse.VisitUpdateRelationshipTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomRoles operation middleware
+func (sh *strictHandler) ListCustomRoles(w http.ResponseWriter, r *http.Request) {
+	var request ListCustomRolesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomRoles(ctx, request.(ListCustomRolesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomRoles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomRolesResponseObject); ok {
+		if err := validResponse.VisitListCustomRolesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCustomRole operation middleware
+func (sh *strictHandler) CreateCustomRole(w http.ResponseWriter, r *http.Request) {
+	var request CreateCustomRoleRequestObject
+
+	var body CreateCustomRoleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCustomRole(ctx, request.(CreateCustomRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCustomRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCustomRoleResponseObject); ok {
+		if err := validResponse.VisitCreateCustomRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomRole operation middleware
+func (sh *strictHandler) DeleteCustomRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteCustomRoleRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomRole(ctx, request.(DeleteCustomRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomRoleResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAdminUsers operation middleware
+func (sh *strictHandler) ListAdminUsers(w http.ResponseWriter, r *http.Request) {
+	var request ListAdminUsersRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAdminUsers(ctx, request.(ListAdminUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAdminUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAdminUsersResponseObject); ok {
+		if err := validResponse.VisitListAdminUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAdminUser operation middleware
+func (sh *strictHandler) CreateAdminUser(w http.ResponseWriter, r *http.Request) {
+	var request CreateAdminUserRequestObject
+
+	var body CreateAdminUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAdminUser(ctx, request.(CreateAdminUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAdminUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAdminUserResponseObject); ok {
+		if err := validResponse.VisitCreateAdminUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAdminUser operation middleware
+func (sh *strictHandler) DeleteAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteAdminUserRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAdminUser(ctx, request.(DeleteAdminUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAdminUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAdminUserResponseObject); ok {
+		if err := validResponse.VisitDeleteAdminUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateAdminUser operation middleware
+func (sh *strictHandler) UpdateAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request UpdateAdminUserRequestObject
+
+	request.Id = id
+
+	var body UpdateAdminUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAdminUser(ctx, request.(UpdateAdminUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAdminUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAdminUserResponseObject); ok {
+		if err := validResponse.VisitUpdateAdminUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResetUserPassword operation middleware
+func (sh *strictHandler) ResetUserPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request ResetUserPasswordRequestObject
+
+	request.Id = id
+
+	var body ResetUserPasswordJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResetUserPassword(ctx, request.(ResetUserPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResetUserPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResetUserPasswordResponseObject); ok {
+		if err := validResponse.VisitResetUserPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ExportAuditLogs operation middleware
 func (sh *strictHandler) ExportAuditLogs(w http.ResponseWriter, r *http.Request, params ExportAuditLogsParams) {
 	var request ExportAuditLogsRequestObject
@@ -4140,6 +7766,137 @@ func (sh *strictHandler) ExportAuditLogs(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ExportAuditLogsResponseObject); ok {
 		if err := validResponse.VisitExportAuditLogsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevertAuditLog operation middleware
+func (sh *strictHandler) RevertAuditLog(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request RevertAuditLogRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevertAuditLog(ctx, request.(RevertAuditLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevertAuditLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevertAuditLogResponseObject); ok {
+		if err := validResponse.VisitRevertAuditLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Login operation middleware
+func (sh *strictHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var request LoginRequestObject
+
+	var body LoginJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Login(ctx, request.(LoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Login")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LoginResponseObject); ok {
+		if err := validResponse.VisitLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Logout operation middleware
+func (sh *strictHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var request LogoutRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Logout(ctx, request.(LogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Logout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LogoutResponseObject); ok {
+		if err := validResponse.VisitLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSessions operation middleware
+func (sh *strictHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	var request ListSessionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSessions(ctx, request.(ListSessionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSessions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSessionsResponseObject); ok {
+		if err := validResponse.VisitListSessionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteSession operation middleware
+func (sh *strictHandler) DeleteSession(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteSessionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSession(ctx, request.(DeleteSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSessionResponseObject); ok {
+		if err := validResponse.VisitDeleteSessionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -4747,6 +8504,37 @@ func (sh *strictHandler) ListOwnerGroups(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// CreateOwnerGroup operation middleware
+func (sh *strictHandler) CreateOwnerGroup(w http.ResponseWriter, r *http.Request) {
+	var request CreateOwnerGroupRequestObject
+
+	var body CreateOwnerGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateOwnerGroup(ctx, request.(CreateOwnerGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateOwnerGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateOwnerGroupResponseObject); ok {
+		if err := validResponse.VisitCreateOwnerGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetActiveDigest operation middleware
 func (sh *strictHandler) GetActiveDigest(w http.ResponseWriter, r *http.Request, params GetActiveDigestParams) {
 	var request GetActiveDigestRequestObject
@@ -4792,6 +8580,65 @@ func (sh *strictHandler) ListPendingEdges(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListPendingEdgesResponseObject); ok {
 		if err := validResponse.VisitListPendingEdgesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteOwnerGroup operation middleware
+func (sh *strictHandler) DeleteOwnerGroup(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteOwnerGroupRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteOwnerGroup(ctx, request.(DeleteOwnerGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteOwnerGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteOwnerGroupResponseObject); ok {
+		if err := validResponse.VisitDeleteOwnerGroupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateOwnerGroup operation middleware
+func (sh *strictHandler) UpdateOwnerGroup(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request UpdateOwnerGroupRequestObject
+
+	request.Id = id
+
+	var body UpdateOwnerGroupJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateOwnerGroup(ctx, request.(UpdateOwnerGroupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateOwnerGroup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateOwnerGroupResponseObject); ok {
+		if err := validResponse.VisitUpdateOwnerGroupResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -169,9 +169,29 @@ func TestHybridSearchAndCIDetailAggregation(t *testing.T) {
 		require.NoError(t, err)
 
 		for _, item := range resp.Items {
-			assert.Equal(t, gen.CIEnvelopeCiClass("database"), item.Ci.CiClass)
+			assert.Equal(t, "database", item.Ci.CiClass)
 			assert.Equal(t, gen.CIEnvelopeEnvironment("prod"), item.Ci.Environment)
 		}
+	})
+
+	t.Run("GET /api/v1/cis/search - Filters by lifecycle_state (out_of_sync)", func(t *testing.T) {
+		_, err := testPool.Exec(ctx, "UPDATE cis SET lifecycle_state = 'out_of_sync' WHERE ci_id = $1", staleCIID)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/cis/search?lifecycle_state=out_of_sync", nil)
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp gen.CISearchResponse
+		err = json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, len(resp.Items))
+		require.NotNil(t, resp.Items[0].Ci.CiId)
+		assert.Equal(t, staleCIID, *resp.Items[0].Ci.CiId)
+		assert.Equal(t, gen.CIEnvelopeLifecycleState("out_of_sync"), resp.Items[0].Ci.LifecycleState)
 	})
 
 	t.Run("GET /api/v1/cis/search - 400 Bad Request on invalid cursor", func(t *testing.T) {

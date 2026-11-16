@@ -23,11 +23,14 @@ import (
 )
 
 var (
-	ErrCampaignNotFound  = errors.New("campaign not found")
-	ErrTokenNotFound     = errors.New("invitation token not found")
-	ErrTokenExpired      = errors.New("invitation token has expired")
-	ErrInvalidDeadline   = errors.New("campaign deadline must be in the future")
-	ErrNoOwnerGroups     = errors.New("at least one owner group must be specified")
+	ErrCampaignNotFound   = errors.New("campaign not found")
+	ErrCampaignClosed     = errors.New("campaign is closed")
+	ErrTokenNotFound      = errors.New("invitation token not found")
+	ErrTokenExpired       = errors.New("invitation token has expired")
+	ErrInvalidDeadline    = errors.New("campaign deadline must be in the future")
+	ErrNoOwnerGroups      = errors.New("at least one owner group must be specified")
+	ErrEmptyTitle         = errors.New("campaign title cannot be empty")
+	ErrTitleTooLong       = errors.New("campaign title cannot exceed 255 characters")
 	ErrOwnerGroupNotFound = errors.New("owner group not found")
 )
 
@@ -76,8 +79,12 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 		return nil, domain.ErrForbidden
 	}
 
-	if input.Title == "" {
-		return nil, fmt.Errorf("title cannot be empty")
+	trimmedTitle := strings.TrimSpace(input.Title)
+	if trimmedTitle == "" {
+		return nil, ErrEmptyTitle
+	}
+	if len([]rune(trimmedTitle)) > 255 {
+		return nil, ErrTitleTooLong
 	}
 
 	now := time.Now().UTC()
@@ -85,7 +92,19 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 		return nil, ErrInvalidDeadline
 	}
 
-	if len(input.OwnerGroupIDs) == 0 {
+	// Deduplicate owner group IDs to prevent unique constraint violation on (campaign_id, owner_group_id)
+	seenGroups := make(map[uuid.UUID]struct{}, len(input.OwnerGroupIDs))
+	uniqueGroupIDs := make([]uuid.UUID, 0, len(input.OwnerGroupIDs))
+	for _, gid := range input.OwnerGroupIDs {
+		if gid != uuid.Nil {
+			if _, seen := seenGroups[gid]; !seen {
+				seenGroups[gid] = struct{}{}
+				uniqueGroupIDs = append(uniqueGroupIDs, gid)
+			}
+		}
+	}
+
+	if len(uniqueGroupIDs) == 0 {
 		return nil, ErrNoOwnerGroups
 	}
 
@@ -96,7 +115,7 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 		// 1. Create intake_campaigns row
 		campaignRow, err := q.CreateIntakeCampaign(ctx, sqlcgen.CreateIntakeCampaignParams{
 			ID:        campaignID,
-			Title:     input.Title,
+			Title:     strings.TrimSpace(input.Title),
 			Status:    sqlcgen.CampaignStatusEnumActive,
 			Deadline:  input.Deadline,
 			CreatedBy: actor.ID,
@@ -107,7 +126,7 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 		}
 
 		// 2. Generate invitations and initial draft submissions for each owner group
-		for _, groupID := range input.OwnerGroupIDs {
+		for _, groupID := range uniqueGroupIDs {
 			og, err := q.GetOwnerGroupByID(ctx, groupID)
 			if err != nil {
 				return fmt.Errorf("%w: %s", ErrOwnerGroupNotFound, groupID)
@@ -124,6 +143,7 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 				CampaignID:     campaignRow.ID,
 				OwnerGroupID:   og.ID,
 				TokenHash:      tokenHash,
+				RawToken:       rawToken,
 				TeamLeadEmail:  og.TeamLeadEmail,
 				Status:         sqlcgen.InvitationStatusEnumSent,
 				ExpiresAt:      input.Deadline,
@@ -171,7 +191,7 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 			ID:                    uuid.New(),
 			EntityType:            "intake_campaign",
 			EntityID:              campaignRow.ID,
-			AffectedOwnerGroupIds: input.OwnerGroupIDs,
+			AffectedOwnerGroupIds: uniqueGroupIDs,
 			ActorID:               actor.ID,
 			Action:                sqlcgen.AuditActionEnumCreate,
 			Diff:                  auditDiff,
@@ -192,6 +212,200 @@ func (s *IntakeService) CreateCampaign(ctx context.Context, actor domain.Actor, 
 		CreatedAt:   now,
 		Invitations: invitations,
 	}, nil
+}
+
+// ListCampaigns returns all intake campaigns for platform_admin.
+func (s *IntakeService) ListCampaigns(ctx context.Context, actor *domain.Actor) ([]gen.CampaignResponse, error) {
+	if !actor.HasRole(domain.RolePlatformAdmin) {
+		return nil, domain.ErrForbidden
+	}
+	rows, err := s.store.Queries().ListIntakeCampaigns(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list campaigns: %w", err)
+	}
+	result := make([]gen.CampaignResponse, len(rows))
+	for i, r := range rows {
+		invRows, err := s.store.Queries().GetCampaignInvitationsWithGroup(ctx, r.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list invitations for campaign %s: %w", r.ID, err)
+		}
+		invitations := make([]gen.CampaignInvitation, len(invRows))
+		for j, inv := range invRows {
+			token := inv.RawToken
+			if token == "" {
+				token = inv.TokenHash
+			}
+			invitations[j] = gen.CampaignInvitation{
+				InvitationId:   inv.InvitationID,
+				OwnerGroupId:   inv.OwnerGroupID,
+				OwnerGroupName: inv.OwnerGroupName,
+				DepartmentName: inv.DepartmentName,
+				TeamLeadName:   inv.TeamLeadName,
+				TeamLeadEmail:  openapi_types.Email(inv.TeamLeadEmail),
+				InvitationUrl:  fmt.Sprintf("/intake/%s", token),
+				ExpiresAt:      inv.ExpiresAt,
+			}
+		}
+		result[i] = gen.CampaignResponse{
+			Id:          r.ID,
+			Title:       r.Title,
+			Status:      gen.CampaignResponseStatus(r.Status),
+			Deadline:    r.Deadline,
+			CreatedAt:   r.CreatedAt,
+			Invitations: invitations,
+		}
+	}
+	return result, nil
+}
+
+// GetCampaign returns the details and invitations of a single intake campaign by ID.
+func (s *IntakeService) GetCampaign(ctx context.Context, actor *domain.Actor, campaignID uuid.UUID) (*gen.CampaignResponse, error) {
+	if !actor.HasRole(domain.RolePlatformAdmin) {
+		return nil, domain.ErrForbidden
+	}
+	r, err := s.store.Queries().GetCampaignByID(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrCampaignNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch campaign: %w", err)
+	}
+
+	invRows, err := s.store.Queries().GetCampaignInvitationsWithGroup(ctx, r.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list invitations for campaign %s: %w", r.ID, err)
+	}
+	invitations := make([]gen.CampaignInvitation, len(invRows))
+	for j, inv := range invRows {
+		token := inv.RawToken
+		if token == "" {
+			token = inv.TokenHash
+		}
+		invitations[j] = gen.CampaignInvitation{
+			InvitationId:   inv.InvitationID,
+			OwnerGroupId:   inv.OwnerGroupID,
+			OwnerGroupName: inv.OwnerGroupName,
+			DepartmentName: inv.DepartmentName,
+			TeamLeadName:   inv.TeamLeadName,
+			TeamLeadEmail:  openapi_types.Email(inv.TeamLeadEmail),
+			InvitationUrl:  fmt.Sprintf("/intake/%s", token),
+			ExpiresAt:      inv.ExpiresAt,
+		}
+	}
+
+	return &gen.CampaignResponse{
+		Id:          r.ID,
+		Title:       r.Title,
+		Status:      gen.CampaignResponseStatus(r.Status),
+		Deadline:    r.Deadline,
+		CreatedAt:   r.CreatedAt,
+		Invitations: invitations,
+	}, nil
+}
+
+// UpdateCampaign updates an intake campaign's status, title, or deadline.
+func (s *IntakeService) UpdateCampaign(ctx context.Context, actor *domain.Actor, campaignID uuid.UUID, req gen.UpdateCampaignRequest) (*gen.CampaignResponse, error) {
+	if !actor.HasRole(domain.RolePlatformAdmin) {
+		return nil, domain.ErrForbidden
+	}
+	existing, err := s.store.Queries().GetCampaignByID(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrCampaignNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch campaign: %w", err)
+	}
+
+	newStatus := existing.Status
+	if req.Status != nil {
+		switch *req.Status {
+		case gen.Active:
+			newStatus = sqlcgen.CampaignStatusEnumActive
+		case gen.Closed:
+			newStatus = sqlcgen.CampaignStatusEnumClosed
+		case gen.Archived:
+			newStatus = sqlcgen.CampaignStatusEnumArchived
+		default:
+			return nil, fmt.Errorf("invalid status: %s", *req.Status)
+		}
+	}
+
+	newTitle := existing.Title
+	if req.Title != nil {
+		trimmed := strings.TrimSpace(*req.Title)
+		if trimmed == "" {
+			return nil, ErrEmptyTitle
+		}
+		if len(trimmed) > 255 {
+			return nil, ErrTitleTooLong
+		}
+		newTitle = trimmed
+	}
+
+	newDeadline := existing.Deadline
+	if req.Deadline != nil {
+		newDeadline = *req.Deadline
+	}
+
+	updated, err := s.store.Queries().UpdateIntakeCampaign(ctx, sqlcgen.UpdateIntakeCampaignParams{
+		ID:       campaignID,
+		Status:   newStatus,
+		Title:    newTitle,
+		Deadline: newDeadline,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update campaign: %w", err)
+	}
+
+	invRows, err := s.store.Queries().GetCampaignInvitationsWithGroup(ctx, updated.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list invitations for campaign %s: %w", updated.ID, err)
+	}
+	invitations := make([]gen.CampaignInvitation, len(invRows))
+	for j, inv := range invRows {
+		token := inv.RawToken
+		if token == "" {
+			token = inv.TokenHash
+		}
+		invitations[j] = gen.CampaignInvitation{
+			InvitationId:   inv.InvitationID,
+			OwnerGroupId:   inv.OwnerGroupID,
+			OwnerGroupName: inv.OwnerGroupName,
+			DepartmentName: inv.DepartmentName,
+			TeamLeadName:   inv.TeamLeadName,
+			TeamLeadEmail:  openapi_types.Email(inv.TeamLeadEmail),
+			InvitationUrl:  fmt.Sprintf("/intake/%s", token),
+			ExpiresAt:      inv.ExpiresAt,
+		}
+	}
+
+	return &gen.CampaignResponse{
+		Id:          updated.ID,
+		Title:       updated.Title,
+		Status:      gen.CampaignResponseStatus(updated.Status),
+		Deadline:    updated.Deadline,
+		CreatedAt:   updated.CreatedAt,
+		Invitations: invitations,
+	}, nil
+}
+
+// DeleteCampaign deletes an intake campaign by ID, cascading to associated invitations and submissions.
+func (s *IntakeService) DeleteCampaign(ctx context.Context, actor *domain.Actor, campaignID uuid.UUID) error {
+	if !actor.HasRole(domain.RolePlatformAdmin) {
+		return domain.ErrForbidden
+	}
+	_, err := s.store.Queries().GetCampaignByID(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrCampaignNotFound
+		}
+		return fmt.Errorf("failed to fetch campaign: %w", err)
+	}
+
+	if err := s.store.Queries().DeleteIntakeCampaign(ctx, campaignID); err != nil {
+		return fmt.Errorf("failed to delete intake campaign: %w", err)
+	}
+	return nil
 }
 
 // GetCampaignProgress computes real-time campaign progress broken down by department.
@@ -256,14 +470,27 @@ func (s *IntakeService) ResolveToken(ctx context.Context, rawToken string) (*gen
 	row, err := s.store.Queries().GetInvitationByTokenHash(ctx, tokenHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrTokenNotFound
+			// Fallback: check if the token itself is stored as token_hash
+			row, err = s.store.Queries().GetInvitationByTokenHash(ctx, rawToken)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil, ErrTokenNotFound
+				}
+				return nil, fmt.Errorf("failed to resolve token: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to resolve token: %w", err)
 		}
-		return nil, fmt.Errorf("failed to resolve token: %w", err)
 	}
 
 	now := time.Now().UTC()
 	if row.ExpiresAt.Before(now) || row.InvitationStatus == sqlcgen.InvitationStatusEnumExpired {
 		return nil, ErrTokenExpired
+	}
+
+	campaign, err := s.store.Queries().GetCampaignByID(ctx, row.CampaignID)
+	if err == nil && campaign.Status == sqlcgen.CampaignStatusEnumClosed {
+		return nil, ErrCampaignClosed
 	}
 
 	// Update invitation access time and transition from 'sent' to 'opened'
@@ -334,14 +561,26 @@ func (s *IntakeService) SaveDraft(ctx context.Context, rawToken string, ifMatchH
 	row, err := s.store.Queries().GetInvitationByTokenHash(ctx, tokenHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrTokenNotFound
+			row, err = s.store.Queries().GetInvitationByTokenHash(ctx, rawToken)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil, ErrTokenNotFound
+				}
+				return nil, fmt.Errorf("failed to lookup token: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to lookup token: %w", err)
 		}
-		return nil, fmt.Errorf("failed to lookup token: %w", err)
 	}
 
 	now := time.Now().UTC()
 	if row.ExpiresAt.Before(now) || row.InvitationStatus == sqlcgen.InvitationStatusEnumExpired {
 		return nil, ErrTokenExpired
+	}
+
+	campaign, err := s.store.Queries().GetCampaignByID(ctx, row.CampaignID)
+	if err == nil && campaign.Status == sqlcgen.CampaignStatusEnumClosed {
+		return nil, ErrCampaignClosed
 	}
 
 	if row.InvitationStatus == sqlcgen.InvitationStatusEnumSubmitted {
@@ -406,7 +645,7 @@ func mapActiveCIRowToCIEnvelope(ci sqlcgen.GetActiveCIsByOwnerGroupRow) gen.CIEn
 	return gen.CIEnvelope{
 		CiId:             &ci.CiID,
 		Name:             ci.Name,
-		CiClass:          gen.CIEnvelopeCiClass(ci.CiClass),
+		CiClass:          string(ci.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(ci.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(ci.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(ci.CriticalityTier),
@@ -446,7 +685,7 @@ func mapSearchRowToCIEnvelope(ci sqlcgen.SearchCIsRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &ci.CiID,
 		Name:             ci.Name,
-		CiClass:          gen.CIEnvelopeCiClass(ci.CiClass),
+		CiClass:          string(ci.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(ci.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(ci.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(ci.CriticalityTier),
@@ -513,7 +752,7 @@ type ParsedService struct {
 type ParsedDependency struct {
 	SourceCIName string
 	TargetCIID   uuid.UUID
-	EdgeType     sqlcgen.EdgeTypeEnum
+	EdgeType     string
 }
 
 // validateIntakePayload enforces the strict 10-field envelope and dependency structure.
@@ -685,8 +924,7 @@ func validateIntakePayload(payload map[string]interface{}) ([]ParsedService, []P
 		}
 
 		edgeTypeStr, _ := dMap["edge_type"].(string)
-		edgeType, ok := validEdgeTypes[edgeTypeStr]
-		if !ok {
+		if _, ok := validEdgeTypes[edgeTypeStr]; !ok {
 			depErrors = append(depErrors, fmt.Sprintf("invalid edge_type %q; must be depends_on, hosted_on, connects_to, or reads_from", edgeTypeStr))
 		}
 
@@ -696,7 +934,7 @@ func validateIntakePayload(payload map[string]interface{}) ([]ParsedService, []P
 			parsedDeps = append(parsedDeps, ParsedDependency{
 				SourceCIName: srcName,
 				TargetCIID:   targetUUID,
-				EdgeType:     edgeType,
+				EdgeType:     edgeTypeStr,
 			})
 		}
 	}
@@ -718,14 +956,27 @@ func (s *IntakeService) SubmitIntake(ctx context.Context, rawToken string, idemp
 	invRow, err := s.store.Queries().GetInvitationByTokenHash(ctx, tokenHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, false, ErrTokenNotFound
+			invRow, err = s.store.Queries().GetInvitationByTokenHash(ctx, rawToken)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil, false, ErrTokenNotFound
+				}
+				return nil, false, fmt.Errorf("failed to lookup token: %w", err)
+			}
+			tokenHash = invRow.TokenHash
+		} else {
+			return nil, false, fmt.Errorf("failed to lookup token: %w", err)
 		}
-		return nil, false, fmt.Errorf("failed to lookup token: %w", err)
 	}
 
 	now := time.Now().UTC()
 	if invRow.ExpiresAt.Before(now) || invRow.InvitationStatus == sqlcgen.InvitationStatusEnumExpired {
 		return nil, false, ErrTokenExpired
+	}
+
+	campaign, err := s.store.Queries().GetCampaignByID(ctx, invRow.CampaignID)
+	if err == nil && campaign.Status == sqlcgen.CampaignStatusEnumClosed {
+		return nil, false, ErrCampaignClosed
 	}
 
 	// Ensure publisher user exists in users table so WithAuditTx has a valid actor_id FK
@@ -864,7 +1115,7 @@ func (s *IntakeService) SubmitIntake(ctx context.Context, rawToken string, idemp
 			upsertedCI, err := q.UpsertCI(ctx, sqlcgen.UpsertCIParams{
 				CiID:             ciID,
 				Name:             svc.Name,
-				CiClass:          svc.CiClass,
+				CiClass:          string(svc.CiClass),
 				Environment:      svc.Environment,
 				LifecycleState:   sqlcgen.LifecycleStateEnumInService,
 				CriticalityTier:  svc.CriticalityTier,

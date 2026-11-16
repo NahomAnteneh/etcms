@@ -195,7 +195,7 @@ type GetCandidateCIsForDigestParams struct {
 type GetCandidateCIsForDigestRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -302,7 +302,7 @@ type GetDigestItemsByCycleRow struct {
 	ActionType       pgtype.Text          `json:"action_type"`
 	CreatedAt        time.Time            `json:"created_at"`
 	CiName           string               `json:"ci_name"`
-	CiClass          CiClassEnum          `json:"ci_class"`
+	CiClass          string               `json:"ci_class"`
 	Environment      EnvironmentEnum      `json:"environment"`
 	LifecycleState   LifecycleStateEnum   `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum  `json:"criticality_tier"`

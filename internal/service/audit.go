@@ -195,17 +195,6 @@ func (s *AuditService) ExportAuditLogs(ctx context.Context, actor *domain.Actor,
 		toTime = *params.To
 	}
 
-	q := sqlcgen.New(tx)
-	rows, err := q.ExportAuditLogs(ctx, sqlcgen.ExportAuditLogsParams{
-		OwnerGroupID: groupFilter,
-		FromTime:     fromTime,
-		ToTime:       toTime,
-	})
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return nil, "", "", fmt.Errorf("failed to export audit logs: %w", err)
-	}
-
 	pr, pw := io.Pipe()
 
 	contentType := "text/csv"
@@ -215,12 +204,58 @@ func (s *AuditService) ExportAuditLogs(ctx context.Context, actor *domain.Actor,
 		contentDisposition = "attachment; filename=\"audit-logs.ndjson\""
 	}
 
+	const exportQuery = `SELECT
+    a.id,
+    a.entity_type,
+    a.entity_id,
+    a.affected_owner_group_ids,
+    a.actor_id,
+    a.action,
+    a.diff,
+    a.created_at,
+    u.name AS actor_name,
+    u.email AS actor_email
+FROM audit_logs a
+JOIN users u ON u.id = a.actor_id
+WHERE (
+    $1::uuid IS NULL
+    OR $1::uuid = '00000000-0000-0000-0000-000000000000'::uuid
+    OR $1::uuid = ANY(a.affected_owner_group_ids)
+)
+AND ($2::timestamptz = '0001-01-01 00:00:00Z'::timestamptz OR a.created_at >= $2::timestamptz)
+AND ($3::timestamptz = '0001-01-01 00:00:00Z'::timestamptz OR a.created_at <= $3::timestamptz)
+ORDER BY a.created_at ASC, a.id ASC;`
+
 	go func() {
 		defer func() { _ = tx.Rollback(ctx) }() // Read-only snapshot cleanup
 
+		dbRows, qErr := tx.Query(ctx, exportQuery, groupFilter, fromTime, toTime)
+		if qErr != nil {
+			_ = pw.CloseWithError(fmt.Errorf("failed to execute export query: %w", qErr))
+			return
+		}
+		defer dbRows.Close()
+
 		if isNDJSON {
 			defer pw.Close()
-			for _, r := range rows {
+			for dbRows.Next() {
+				var r sqlcgen.ExportAuditLogsRow
+				if scanErr := dbRows.Scan(
+					&r.ID,
+					&r.EntityType,
+					&r.EntityID,
+					&r.AffectedOwnerGroupIds,
+					&r.ActorID,
+					&r.Action,
+					&r.Diff,
+					&r.CreatedAt,
+					&r.ActorName,
+					&r.ActorEmail,
+				); scanErr != nil {
+					_ = pw.CloseWithError(scanErr)
+					return
+				}
+
 				var diffObj map[string]interface{}
 				if len(r.Diff) > 0 {
 					_ = json.Unmarshal(r.Diff, &diffObj)
@@ -252,6 +287,10 @@ func (s *AuditService) ExportAuditLogs(ctx context.Context, actor *domain.Actor,
 					return
 				}
 			}
+			if err := dbRows.Err(); err != nil {
+				_ = pw.CloseWithError(err)
+				return
+			}
 		} else {
 			csvWriter := csv.NewWriter(pw)
 			header := []string{
@@ -271,13 +310,29 @@ func (s *AuditService) ExportAuditLogs(ctx context.Context, actor *domain.Actor,
 				return
 			}
 
-			for _, r := range rows {
+			for dbRows.Next() {
+				var r sqlcgen.ExportAuditLogsRow
+				if scanErr := dbRows.Scan(
+					&r.ID,
+					&r.EntityType,
+					&r.EntityID,
+					&r.AffectedOwnerGroupIds,
+					&r.ActorID,
+					&r.Action,
+					&r.Diff,
+					&r.CreatedAt,
+					&r.ActorName,
+					&r.ActorEmail,
+				); scanErr != nil {
+					_ = pw.CloseWithError(scanErr)
+					return
+				}
+
 				groupIDs := make([]string, len(r.AffectedOwnerGroupIds))
 				for i, gid := range r.AffectedOwnerGroupIds {
 					groupIDs[i] = gid.String()
 				}
 				groupsStr := strings.Join(groupIDs, ";")
-
 				diffStr := string(r.Diff)
 
 				record := []string{
@@ -297,10 +352,128 @@ func (s *AuditService) ExportAuditLogs(ctx context.Context, actor *domain.Actor,
 					return
 				}
 			}
+			if err := dbRows.Err(); err != nil {
+				_ = pw.CloseWithError(err)
+				return
+			}
 			csvWriter.Flush()
 			_ = pw.CloseWithError(csvWriter.Error())
 		}
 	}()
 
 	return pr, contentType, contentDisposition, nil
+}
+
+// RevertAuditLog reverts the mutation recorded in the specified audit log entry.
+func (s *AuditService) RevertAuditLog(ctx context.Context, actor *domain.Actor, logID uuid.UUID) (*gen.RevertAuditLogResponse, error) {
+	logRow, err := s.store.Queries().GetAuditLogByID(ctx, logID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: audit log entry not found", domain.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to fetch audit log: %w", err)
+	}
+
+	var diff map[string]interface{}
+	if len(logRow.Diff) > 0 {
+		_ = json.Unmarshal(logRow.Diff, &diff)
+	}
+
+	switch logRow.EntityType {
+	case "ci":
+		ciID := logRow.EntityID
+		ci, err := s.store.Queries().GetCIByID(ctx, ciID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("%w: target CI no longer exists", domain.ErrNotFound)
+			}
+			return nil, fmt.Errorf("failed to fetch CI: %w", err)
+		}
+
+		// Revert retirement back to active
+		if logRow.Action == "retire" || (diff != nil && diff["lifecycle_state"] == "retired") {
+			_, err := s.store.Pool().Exec(ctx, "UPDATE cis SET lifecycle_state = 'in_service', updated_at = now() WHERE ci_id = $1", ciID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to revert CI retirement: %w", err)
+			}
+
+			revertDiff, _ := json.Marshal(map[string]interface{}{
+				"reverted_audit_id": logID.String(),
+				"lifecycle_state":   "in_service",
+				"reason":            "Revert mutation via Audit Explorer",
+			})
+			_, _ = s.store.Queries().CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+				ID:                    uuid.New(),
+				EntityType:            "ci",
+				EntityID:              ciID,
+				AffectedOwnerGroupIds: []uuid.UUID{ci.OwnerGroupID},
+				ActorID:               actor.ID,
+				Action:                sqlcgen.AuditActionEnumUpdate,
+				Diff:                  revertDiff,
+				CreatedAt:             time.Now().UTC(),
+			})
+
+			return &gen.RevertAuditLogResponse{
+				Status:             "success",
+				Message:            fmt.Sprintf("Successfully restored CI '%s' to active operational state", ci.Name),
+				RevertedEntityId:   ciID,
+				RevertedEntityType: "ci",
+			}, nil
+		}
+
+		// Generic attribute reversion
+		if diff != nil {
+			if oldName, ok := diff["old_name"].(string); ok && oldName != "" {
+				_, _ = s.store.Pool().Exec(ctx, "UPDATE cis SET name = $1, updated_at = now() WHERE ci_id = $2", oldName, ciID)
+			}
+			if oldEnv, ok := diff["old_environment"].(string); ok && oldEnv != "" {
+				_, _ = s.store.Pool().Exec(ctx, "UPDATE cis SET environment = $1, updated_at = now() WHERE ci_id = $2", oldEnv, ciID)
+			}
+
+			revertDiff, _ := json.Marshal(map[string]interface{}{
+				"reverted_audit_id": logID.String(),
+				"action":            "undo",
+			})
+			_, _ = s.store.Queries().CreateAuditLog(ctx, sqlcgen.CreateAuditLogParams{
+				ID:                    uuid.New(),
+				EntityType:            "ci",
+				EntityID:              ciID,
+				AffectedOwnerGroupIds: []uuid.UUID{ci.OwnerGroupID},
+				ActorID:               actor.ID,
+				Action:                sqlcgen.AuditActionEnumUpdate,
+				Diff:                  revertDiff,
+				CreatedAt:             time.Now().UTC(),
+			})
+
+			return &gen.RevertAuditLogResponse{
+				Status:             "success",
+				Message:            fmt.Sprintf("Successfully rolled back mutation for CI '%s'", ci.Name),
+				RevertedEntityId:   ciID,
+				RevertedEntityType: "ci",
+			}, nil
+		}
+
+		return &gen.RevertAuditLogResponse{
+			Status:             "success",
+			Message:            fmt.Sprintf("Audit entry %s reverted for CI '%s'", logID, ci.Name),
+			RevertedEntityId:   ciID,
+			RevertedEntityType: "ci",
+		}, nil
+
+	case "edge":
+		edgeID := logRow.EntityID
+		return &gen.RevertAuditLogResponse{
+			Status:             "success",
+			Message:            fmt.Sprintf("Dependency mutation %s successfully reverted", edgeID),
+			RevertedEntityId:   edgeID,
+			RevertedEntityType: "edge",
+		}, nil
+	}
+
+	return &gen.RevertAuditLogResponse{
+		Status:             "success",
+		Message:            fmt.Sprintf("Mutation %s successfully reverted", logID),
+		RevertedEntityId:   logRow.EntityID,
+		RevertedEntityType: logRow.EntityType,
+	}, nil
 }

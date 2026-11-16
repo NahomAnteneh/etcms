@@ -8,7 +8,7 @@ WITH RECURSIVE upstream AS (
     WHERE e.target_ci_id = @start_ci_id::uuid
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -20,7 +20,7 @@ WITH RECURSIVE upstream AS (
     WHERE u.depth < 15
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 deduped_upstream AS (
@@ -65,7 +65,7 @@ WITH RECURSIVE upstream AS (
     WHERE e.target_ci_id = @start_ci_id::uuid
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -77,7 +77,7 @@ WITH RECURSIVE upstream AS (
     WHERE u.depth < 15
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 all_nodes AS (
@@ -106,7 +106,7 @@ WITH RECURSIVE upstream AS (
     WHERE e.target_ci_id = @start_ci_id::uuid
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -118,7 +118,7 @@ WITH RECURSIVE upstream AS (
     WHERE u.depth < 15
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 app_nodes AS (
@@ -153,7 +153,7 @@ JOIN owner_groups og ON og.id = c.owner_group_id
 WHERE e.target_ci_id != @start_ci_id::uuid
   AND (
       @include_retired::boolean = true
-      OR c.lifecycle_state IN ('in_service', 'planned')
+      OR c.lifecycle_state != 'retired'
   )
 ORDER BY c.name ASC;
 
@@ -167,7 +167,7 @@ WITH RECURSIVE downstream AS (
     WHERE e.source_ci_id = @start_ci_id::uuid
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -179,7 +179,7 @@ WITH RECURSIVE downstream AS (
     WHERE d.depth < 15
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 deduped_downstream AS (
@@ -224,7 +224,7 @@ WITH RECURSIVE downstream AS (
     WHERE e.source_ci_id = @start_ci_id::uuid
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
     UNION
     SELECT
@@ -236,7 +236,7 @@ WITH RECURSIVE downstream AS (
     WHERE d.depth < 15
       AND (
           @include_retired::boolean = true
-          OR c.lifecycle_state IN ('in_service', 'planned')
+          OR c.lifecycle_state != 'retired'
       )
 ),
 all_nodes AS (

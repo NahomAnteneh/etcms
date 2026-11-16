@@ -79,7 +79,7 @@ func (s *DigestService) GetActiveDigest(ctx context.Context, actor *domain.Actor
 			Id:              r.ID,
 			CiId:            r.CiID,
 			Name:            r.CiName,
-			CiClass:         gen.DigestItemCiClass(r.CiClass),
+			CiClass:         string(r.CiClass),
 			Environment:     gen.DigestItemEnvironment(r.Environment),
 			CriticalityTier: gen.DigestItemCriticalityTier(r.CriticalityTier),
 			TriggerReason:   r.TriggerReason,

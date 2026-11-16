@@ -142,7 +142,7 @@ func TestIntakeWizardGuidedFlow(t *testing.T) {
 		require.Len(t, contextResp.ExistingCis, 1)
 		ci := contextResp.ExistingCis[0]
 		assert.Equal(t, "payment-gateway-svc", ci.Name)
-		assert.Equal(t, gen.CIEnvelopeCiClassApplication, ci.CiClass)
+		assert.Equal(t, "application", ci.CiClass)
 		assert.Equal(t, gen.CIEnvelopeLifecycleStateInService, ci.LifecycleState)
 		assert.Equal(t, "chi", ci.ClassMetadata["framework"])
 		require.NotNil(t, ci.Ownership)
@@ -318,7 +318,7 @@ func TestIntakeWizardGuidedFlow(t *testing.T) {
 		for _, item := range searchResp.Items {
 			if item.Ci.Name == "orders-postgres-cluster" {
 				found = true
-				assert.Equal(t, gen.CIEnvelopeCiClassDatabase, item.Ci.CiClass)
+				assert.Equal(t, "database", item.Ci.CiClass)
 				assert.Equal(t, sharedDBID, *item.Ci.CiId)
 				require.NotNil(t, item.Ci.Ownership)
 				assert.Equal(t, "Database Infrastructure", item.Ci.Ownership.OwnerGroupName)

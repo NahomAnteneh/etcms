@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/org/etcms-backend/internal/adapters/postgres"
 	"github.com/org/etcms-backend/internal/adapters/postgres/gen"
 	"github.com/org/etcms-backend/internal/domain"
@@ -20,8 +21,38 @@ import (
 type contextKey string
 
 const (
-	actorContextKey contextKey = "etcms.actor"
+	actorContextKey      contextKey = "etcms.actor"
+	authTokenContextKey  contextKey = "etcms.auth_token"
+	clientInfoContextKey contextKey = "etcms.client_info"
 )
+
+// ClientInfo encapsulates client IP and User-Agent.
+type ClientInfo struct {
+	UserAgent string
+	IPAddress string
+}
+
+// ContextWithAuthToken injects raw Bearer token into context.
+func ContextWithAuthToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, authTokenContextKey, token)
+}
+
+// AuthTokenFromContext retrieves raw Bearer token from context.
+func AuthTokenFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(authTokenContextKey).(string)
+	return token, ok
+}
+
+// ContextWithClientInfo injects client metadata into context.
+func ContextWithClientInfo(ctx context.Context, info ClientInfo) context.Context {
+	return context.WithValue(ctx, clientInfoContextKey, info)
+}
+
+// ClientInfoFromContext extracts client metadata from context.
+func ClientInfoFromContext(ctx context.Context) (ClientInfo, bool) {
+	info, ok := ctx.Value(clientInfoContextKey).(ClientInfo)
+	return info, ok
+}
 
 // AuthConfig configures the authentication and authorization middleware.
 type AuthConfig struct {
@@ -86,6 +117,19 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 		ctx := r.Context()
 		isDevOrTest := a.config.AppEnv == "development" || a.config.AppEnv == "test"
 
+		// Extract client metadata
+		clientIP := r.Header.Get("X-Forwarded-For")
+		if clientIP != "" {
+			parts := strings.Split(clientIP, ",")
+			clientIP = strings.TrimSpace(parts[0])
+		} else {
+			clientIP = r.RemoteAddr
+		}
+		ctx = ContextWithClientInfo(ctx, ClientInfo{
+			UserAgent: r.UserAgent(),
+			IPAddress: clientIP,
+		})
+
 		var actor *domain.Actor
 
 		// 1. Check X-Dev-User-ID header if running in development or test
@@ -107,6 +151,7 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 			authHeader := r.Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				token := strings.TrimPrefix(authHeader, "Bearer ")
+				ctx = ContextWithAuthToken(ctx, token)
 				act, err := a.resolveBearerToken(ctx, token)
 				if err == nil {
 					actor = act
@@ -121,6 +166,9 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 				hash := sha256.Sum256([]byte(intakeToken))
 				tokenHash := hex.EncodeToString(hash[:])
 				row, err := a.store.Queries().GetInvitationByTokenHash(ctx, tokenHash)
+				if err != nil && errors.Is(err, pgx.ErrNoRows) {
+					row, err = a.store.Queries().GetInvitationByTokenHash(ctx, intakeToken)
+				}
 				if err == nil && row.ExpiresAt.After(time.Now().UTC()) && row.InvitationStatus != gen.InvitationStatusEnumExpired {
 					actor = &domain.Actor{
 						ID:            row.InvitationID,
@@ -197,6 +245,19 @@ func (a *Authenticator) resolveActorByID(ctx context.Context, userID uuid.UUID) 
 		primaryGroupID = &id
 	}
 
+	var customRoleID *uuid.UUID
+	var customRoleName *string
+	var permissions []string
+	if user.CustomRoleID.Valid {
+		cID := uuid.UUID(user.CustomRoleID.Bytes)
+		customRoleID = &cID
+		cr, err := a.store.Queries().GetCustomRoleByID(ctx, cID)
+		if err == nil {
+			customRoleName = &cr.Name
+			permissions = cr.Permissions
+		}
+	}
+
 	return &domain.Actor{
 		ID:                  user.ID,
 		Email:               user.Email,
@@ -204,16 +265,59 @@ func (a *Authenticator) resolveActorByID(ctx context.Context, userID uuid.UUID) 
 		Role:                domain.Role(user.Role),
 		PrimaryOwnerGroupID: primaryGroupID,
 		OwnerGroupIDs:       groupIDs,
+		CustomRoleID:        customRoleID,
+		CustomRoleName:      customRoleName,
+		Permissions:         permissions,
 	}, nil
 }
 
 func (a *Authenticator) resolveBearerToken(ctx context.Context, token string) (*domain.Actor, error) {
-	// Simple dev token resolution: if token is a valid UUID, treat it as user ID
-	if parsedUUID, err := uuid.Parse(token); err == nil {
-		return a.resolveActorByID(ctx, parsedUUID)
+	if a.store != nil {
+		// Hash token with SHA-256 for secure session lookup
+		h := sha256.Sum256([]byte(token))
+		tokenHash := hex.EncodeToString(h[:])
+
+		sessionRow, err := a.store.Queries().GetSessionByToken(ctx, tokenHash)
+		if err != nil {
+			// Fallback for unhashed legacy session tokens
+			sessionRow, err = a.store.Queries().GetSessionByToken(ctx, token)
+		}
+		if err == nil {
+			_ = a.store.Queries().TouchSessionActivity(ctx, sessionRow.Token)
+			groupIDs, _ := a.store.Queries().GetUserOwnerGroupIDs(ctx, sessionRow.UserID)
+
+			var primaryGroupID *uuid.UUID
+			if sessionRow.PrimaryOwnerGroupID.Valid {
+				id := uuid.UUID(sessionRow.PrimaryOwnerGroupID.Bytes)
+				primaryGroupID = &id
+			}
+
+			var customRoleID *uuid.UUID
+			if sessionRow.CustomRoleID.Valid {
+				cID := uuid.UUID(sessionRow.CustomRoleID.Bytes)
+				customRoleID = &cID
+			}
+
+			var customRoleName *string
+			if sessionRow.CustomRoleName.Valid {
+				customRoleName = &sessionRow.CustomRoleName.String
+			}
+
+			return &domain.Actor{
+				ID:                  sessionRow.UserID,
+				Email:               sessionRow.Email,
+				Name:                sessionRow.Name,
+				Role:                domain.Role(sessionRow.Role),
+				PrimaryOwnerGroupID: primaryGroupID,
+				OwnerGroupIDs:       groupIDs,
+				CustomRoleID:        customRoleID,
+				CustomRoleName:      customRoleName,
+				Permissions:         sessionRow.CustomRolePermissions,
+			}, nil
+		}
 	}
 
-	return nil, errors.New("unsupported token format")
+	return nil, errors.New("unauthorized: invalid or expired session token")
 }
 
 // UserRoleToDomain maps SQL user_role_enum to domain.Role.

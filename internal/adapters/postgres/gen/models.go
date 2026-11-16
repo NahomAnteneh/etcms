@@ -503,6 +503,8 @@ const (
 	LifecycleStateEnumInService  LifecycleStateEnum = "in_service"
 	LifecycleStateEnumDeprecated LifecycleStateEnum = "deprecated"
 	LifecycleStateEnumRetired    LifecycleStateEnum = "retired"
+	LifecycleStateEnumSynced     LifecycleStateEnum = "synced"
+	LifecycleStateEnumOutOfSync  LifecycleStateEnum = "out_of_sync"
 )
 
 func (e *LifecycleStateEnum) Scan(src interface{}) error {
@@ -651,7 +653,7 @@ type Baseline struct {
 type Ci struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -665,11 +667,34 @@ type Ci struct {
 	UpdatedAt        time.Time           `json:"updated_at"`
 }
 
+type CiCategory struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Icon        string    `json:"icon"`
+	Color       string    `json:"color"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type CiClass struct {
+	ID          string    `json:"id"`
+	Label       string    `json:"label"`
+	Category    string    `json:"category"`
+	Description string    `json:"description"`
+	Icon        string    `json:"icon"`
+	IsSystem    bool      `json:"is_system"`
+	Attributes  []string  `json:"attributes"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	FormFields  []byte    `json:"form_fields"`
+}
+
 type CiEdge struct {
 	ID              uuid.UUID           `json:"id"`
 	SourceCiID      uuid.UUID           `json:"source_ci_id"`
 	TargetCiID      uuid.UUID           `json:"target_ci_id"`
-	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	EdgeType        string              `json:"edge_type"`
 	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy       uuid.UUID           `json:"created_by"`
 	ConfirmedBy     pgtype.UUID         `json:"confirmed_by"`
@@ -687,6 +712,16 @@ type CiFlag struct {
 	CreatedAt  time.Time          `json:"created_at"`
 	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
 	ResolvedBy pgtype.UUID        `json:"resolved_by"`
+}
+
+type CustomRole struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Permissions []string  `json:"permissions"`
+	IsSystem    bool      `json:"is_system"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type DigestCycle struct {
@@ -729,6 +764,7 @@ type IntakeInvitation struct {
 	ExpiresAt      time.Time            `json:"expires_at"`
 	LastAccessedAt pgtype.Timestamptz   `json:"last_accessed_at"`
 	CreatedAt      time.Time            `json:"created_at"`
+	RawToken       string               `json:"raw_token"`
 }
 
 type IntakeSubmission struct {
@@ -753,6 +789,16 @@ type OwnerGroup struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type RelationshipType struct {
+	ID           string    `json:"id"`
+	Label        string    `json:"label"`
+	ReverseLabel string    `json:"reverse_label"`
+	Description  string    `json:"description"`
+	Color        string    `json:"color"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 type User struct {
 	ID                  uuid.UUID    `json:"id"`
 	Email               string       `json:"email"`
@@ -760,9 +806,24 @@ type User struct {
 	Role                UserRoleEnum `json:"role"`
 	PrimaryOwnerGroupID pgtype.UUID  `json:"primary_owner_group_id"`
 	CreatedAt           time.Time    `json:"created_at"`
+	CustomRoleID        pgtype.UUID  `json:"custom_role_id"`
+	PasswordHash        string       `json:"password_hash"`
+	Status              string       `json:"status"`
+	UpdatedAt           time.Time    `json:"updated_at"`
 }
 
 type UserOwnerGroup struct {
 	UserID       uuid.UUID `json:"user_id"`
 	OwnerGroupID uuid.UUID `json:"owner_group_id"`
+}
+
+type UserSession struct {
+	ID             uuid.UUID   `json:"id"`
+	UserID         uuid.UUID   `json:"user_id"`
+	Token          string      `json:"token"`
+	ExpiresAt      time.Time   `json:"expires_at"`
+	CreatedAt      time.Time   `json:"created_at"`
+	LastActivityAt time.Time   `json:"last_activity_at"`
+	UserAgent      pgtype.Text `json:"user_agent"`
+	IpAddress      pgtype.Text `json:"ip_address"`
 }

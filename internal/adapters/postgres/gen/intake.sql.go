@@ -96,11 +96,11 @@ func (q *Queries) CreateIntakeCampaign(ctx context.Context, arg CreateIntakeCamp
 
 const createIntakeInvitation = `-- name: CreateIntakeInvitation :one
 INSERT INTO intake_invitations (
-    id, campaign_id, owner_group_id, token_hash, team_lead_email, status, expires_at, created_at
+    id, campaign_id, owner_group_id, token_hash, raw_token, team_lead_email, status, expires_at, created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, campaign_id, owner_group_id, token_hash, team_lead_email, status, expires_at, last_accessed_at, created_at
+RETURNING id, campaign_id, owner_group_id, token_hash, raw_token, team_lead_email, status, expires_at, last_accessed_at, created_at
 `
 
 type CreateIntakeInvitationParams struct {
@@ -108,29 +108,45 @@ type CreateIntakeInvitationParams struct {
 	CampaignID    uuid.UUID            `json:"campaign_id"`
 	OwnerGroupID  uuid.UUID            `json:"owner_group_id"`
 	TokenHash     string               `json:"token_hash"`
+	RawToken      string               `json:"raw_token"`
 	TeamLeadEmail string               `json:"team_lead_email"`
 	Status        InvitationStatusEnum `json:"status"`
 	ExpiresAt     time.Time            `json:"expires_at"`
 	CreatedAt     time.Time            `json:"created_at"`
 }
 
-func (q *Queries) CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (IntakeInvitation, error) {
+type CreateIntakeInvitationRow struct {
+	ID             uuid.UUID            `json:"id"`
+	CampaignID     uuid.UUID            `json:"campaign_id"`
+	OwnerGroupID   uuid.UUID            `json:"owner_group_id"`
+	TokenHash      string               `json:"token_hash"`
+	RawToken       string               `json:"raw_token"`
+	TeamLeadEmail  string               `json:"team_lead_email"`
+	Status         InvitationStatusEnum `json:"status"`
+	ExpiresAt      time.Time            `json:"expires_at"`
+	LastAccessedAt pgtype.Timestamptz   `json:"last_accessed_at"`
+	CreatedAt      time.Time            `json:"created_at"`
+}
+
+func (q *Queries) CreateIntakeInvitation(ctx context.Context, arg CreateIntakeInvitationParams) (CreateIntakeInvitationRow, error) {
 	row := q.db.QueryRow(ctx, createIntakeInvitation,
 		arg.ID,
 		arg.CampaignID,
 		arg.OwnerGroupID,
 		arg.TokenHash,
+		arg.RawToken,
 		arg.TeamLeadEmail,
 		arg.Status,
 		arg.ExpiresAt,
 		arg.CreatedAt,
 	)
-	var i IntakeInvitation
+	var i CreateIntakeInvitationRow
 	err := row.Scan(
 		&i.ID,
 		&i.CampaignID,
 		&i.OwnerGroupID,
 		&i.TokenHash,
+		&i.RawToken,
 		&i.TeamLeadEmail,
 		&i.Status,
 		&i.ExpiresAt,
@@ -184,6 +200,16 @@ func (q *Queries) CreateIntakeSubmission(ctx context.Context, arg CreateIntakeSu
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteIntakeCampaign = `-- name: DeleteIntakeCampaign :exec
+DELETE FROM intake_campaigns
+WHERE id = $1
+`
+
+func (q *Queries) DeleteIntakeCampaign(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteIntakeCampaign, id)
+	return err
 }
 
 const finalizeIntakeInvitation = `-- name: FinalizeIntakeInvitation :exec
@@ -320,6 +346,7 @@ SELECT
     i.campaign_id,
     i.owner_group_id,
     i.token_hash,
+    i.raw_token,
     i.team_lead_email,
     i.status,
     i.expires_at,
@@ -339,6 +366,7 @@ type GetCampaignInvitationsWithGroupRow struct {
 	CampaignID     uuid.UUID            `json:"campaign_id"`
 	OwnerGroupID   uuid.UUID            `json:"owner_group_id"`
 	TokenHash      string               `json:"token_hash"`
+	RawToken       string               `json:"raw_token"`
 	TeamLeadEmail  string               `json:"team_lead_email"`
 	Status         InvitationStatusEnum `json:"status"`
 	ExpiresAt      time.Time            `json:"expires_at"`
@@ -363,6 +391,7 @@ func (q *Queries) GetCampaignInvitationsWithGroup(ctx context.Context, campaignI
 			&i.CampaignID,
 			&i.OwnerGroupID,
 			&i.TokenHash,
+			&i.RawToken,
 			&i.TeamLeadEmail,
 			&i.Status,
 			&i.ExpiresAt,
@@ -534,6 +563,74 @@ func (q *Queries) GetSubmissionByTokenHashForUpdate(ctx context.Context, tokenHa
 		&i.OwnerGroupName,
 		&i.DepartmentName,
 		&i.TeamLeadName,
+	)
+	return i, err
+}
+
+const listIntakeCampaigns = `-- name: ListIntakeCampaigns :many
+SELECT id, title, status, deadline, created_by, created_at
+FROM intake_campaigns
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListIntakeCampaigns(ctx context.Context) ([]IntakeCampaign, error) {
+	rows, err := q.db.Query(ctx, listIntakeCampaigns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []IntakeCampaign
+	for rows.Next() {
+		var i IntakeCampaign
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Status,
+			&i.Deadline,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateIntakeCampaign = `-- name: UpdateIntakeCampaign :one
+UPDATE intake_campaigns
+SET status = $2,
+    title = $3,
+    deadline = $4
+WHERE id = $1
+RETURNING id, title, status, deadline, created_by, created_at
+`
+
+type UpdateIntakeCampaignParams struct {
+	ID       uuid.UUID          `json:"id"`
+	Status   CampaignStatusEnum `json:"status"`
+	Title    string             `json:"title"`
+	Deadline time.Time          `json:"deadline"`
+}
+
+func (q *Queries) UpdateIntakeCampaign(ctx context.Context, arg UpdateIntakeCampaignParams) (IntakeCampaign, error) {
+	row := q.db.QueryRow(ctx, updateIntakeCampaign,
+		arg.ID,
+		arg.Status,
+		arg.Title,
+		arg.Deadline,
+	)
+	var i IntakeCampaign
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Status,
+		&i.Deadline,
+		&i.CreatedBy,
+		&i.CreatedAt,
 	)
 	return i, err
 }

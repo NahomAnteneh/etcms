@@ -99,6 +99,54 @@ func (q *Queries) ExportAuditLogs(ctx context.Context, arg ExportAuditLogsParams
 	return items, nil
 }
 
+const getAuditLogByID = `-- name: GetAuditLogByID :one
+SELECT
+    a.id,
+    a.entity_type,
+    a.entity_id,
+    a.affected_owner_group_ids,
+    a.actor_id,
+    a.action,
+    a.diff,
+    a.created_at,
+    u.name AS actor_name,
+    u.email AS actor_email
+FROM audit_logs a
+JOIN users u ON u.id = a.actor_id
+WHERE a.id = $1
+`
+
+type GetAuditLogByIDRow struct {
+	ID                    uuid.UUID       `json:"id"`
+	EntityType            string          `json:"entity_type"`
+	EntityID              uuid.UUID       `json:"entity_id"`
+	AffectedOwnerGroupIds []uuid.UUID     `json:"affected_owner_group_ids"`
+	ActorID               uuid.UUID       `json:"actor_id"`
+	Action                AuditActionEnum `json:"action"`
+	Diff                  []byte          `json:"diff"`
+	CreatedAt             time.Time       `json:"created_at"`
+	ActorName             string          `json:"actor_name"`
+	ActorEmail            string          `json:"actor_email"`
+}
+
+func (q *Queries) GetAuditLogByID(ctx context.Context, id uuid.UUID) (GetAuditLogByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAuditLogByID, id)
+	var i GetAuditLogByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.EntityType,
+		&i.EntityID,
+		&i.AffectedOwnerGroupIds,
+		&i.ActorID,
+		&i.Action,
+		&i.Diff,
+		&i.CreatedAt,
+		&i.ActorName,
+		&i.ActorEmail,
+	)
+	return i, err
+}
+
 const getCIAuditLogs = `-- name: GetCIAuditLogs :many
 SELECT
     a.id,

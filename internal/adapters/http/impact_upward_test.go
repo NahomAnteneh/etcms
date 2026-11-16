@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -220,6 +221,49 @@ func TestUpwardImpactTraversal(t *testing.T) {
 			}
 		}
 		assert.True(t, foundRetired, "expected legacy-batch-sync to be included when include_retired=true")
+	})
+
+	t.Run("GET /api/v1/cis/{id}/impact-upward - includes synced and out_of_sync CIs by default", func(t *testing.T) {
+		syncedCIID := uuid.New()
+		outOfSyncCIID := uuid.New()
+		t.Cleanup(func() {
+			_, _ = testPool.Exec(context.Background(), "DELETE FROM ci_edges WHERE source_ci_id IN ($1, $2) OR target_ci_id IN ($1, $2)", syncedCIID, outOfSyncCIID)
+			_, _ = testPool.Exec(context.Background(), "DELETE FROM cis WHERE ci_id IN ($1, $2)", syncedCIID, outOfSyncCIID)
+		})
+
+		_, err := testPool.Exec(ctx, `
+			INSERT INTO cis (ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, class_metadata, created_at, updated_at)
+			VALUES
+				($1, 'synced-consumer-app', 'application', 'prod', 'synced', 'tier_1', $3, 'Sync Lead', 'https://sync.internal', now(), '{}', now(), now()),
+				($2, 'out-of-sync-worker', 'application', 'prod', 'out_of_sync', 'tier_2', $3, 'Worker Lead', 'https://worker.internal', now(), '{}', now(), now())
+		`, syncedCIID, outOfSyncCIID, appGroupID)
+		require.NoError(t, err)
+
+		_, err = testPool.Exec(ctx, `
+			INSERT INTO ci_edges (id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at)
+			VALUES
+				(gen_random_uuid(), $1, $3, 'reads_from', 'confirmed', $4, $4, now(), now(), now()),
+				(gen_random_uuid(), $2, $1, 'connects_to', 'confirmed', $4, $4, now(), now(), now())
+		`, syncedCIID, outOfSyncCIID, dbID, adminID)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/cis/%s/impact-upward", dbID.String()), nil)
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp gen.UpwardImpactResponse
+		err = json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		require.NotNil(t, resp.Nodes)
+		nodeNames := make([]string, 0, len(*resp.Nodes))
+		for _, n := range *resp.Nodes {
+			nodeNames = append(nodeNames, n.Name)
+		}
+		assert.Contains(t, nodeNames, "synced-consumer-app", "expected synced CI to be included in upward traversal")
+		assert.Contains(t, nodeNames, "out-of-sync-worker", "expected out_of_sync CI to be included in upward traversal")
 	})
 
 	t.Run("GET /api/v1/cis/{id}/impact-upward - Upward traversal from Physical Host reaches full stack", func(t *testing.T) {

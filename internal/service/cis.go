@@ -83,6 +83,10 @@ func (s *CIService) SearchCIs(ctx context.Context, params gen.SearchCIsParams) (
 	if params.OwnerGroupId != nil {
 		ownerGroupID = *params.OwnerGroupId
 	}
+	lifecycleState := ""
+	if params.LifecycleState != nil {
+		lifecycleState = string(*params.LifecycleState)
+	}
 	limit := int32(20)
 	if params.Limit != nil && *params.Limit > 0 {
 		limit = int32(*params.Limit)
@@ -110,25 +114,27 @@ func (s *CIService) SearchCIs(ctx context.Context, params gen.SearchCIsParams) (
 	fetchLimit := limit + 1
 
 	rows, err := s.store.Queries().SearchCIs(ctx, sqlcgen.SearchCIsParams{
-		Query:        query,
-		CiClass:      ciClass,
-		Environment:  environment,
-		OwnerGroupID: ownerGroupID,
-		HasCursor:    hasCursor,
-		LastScore:    lastScore,
-		LastName:     lastName,
-		LastCiID:     lastCIID,
-		LimitVal:     fetchLimit,
+		Query:          query,
+		LifecycleState: lifecycleState,
+		CiClass:        ciClass,
+		Environment:    environment,
+		OwnerGroupID:   ownerGroupID,
+		HasCursor:      hasCursor,
+		LastScore:      lastScore,
+		LastName:       lastName,
+		LastCiID:       lastCIID,
+		LimitVal:       fetchLimit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to search CIs: %w", err)
 	}
 
 	totalCount, err := s.store.Queries().CountSearchCIs(ctx, sqlcgen.CountSearchCIsParams{
-		Query:        query,
-		CiClass:      ciClass,
-		Environment:  environment,
-		OwnerGroupID: ownerGroupID,
+		Query:          query,
+		LifecycleState: lifecycleState,
+		CiClass:        ciClass,
+		Environment:    environment,
+		OwnerGroupID:   ownerGroupID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to count search CIs: %w", err)
@@ -235,7 +241,7 @@ func mapGetCIByIDRowToEnvelope(ci sqlcgen.GetCIByIDRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &ci.CiID,
 		Name:             ci.Name,
-		CiClass:          gen.CIEnvelopeCiClass(ci.CiClass),
+		CiClass:          string(ci.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(ci.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(ci.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(ci.CriticalityTier),
@@ -260,16 +266,37 @@ func mapGetCIByIDRowToEnvelope(ci sqlcgen.GetCIByIDRow) gen.CIEnvelope {
 
 // CreateCI creates a single configuration item post-baseline with strict envelope and owner RBAC validation.
 func (s *CIService) CreateCI(ctx context.Context, actor domain.Actor, req gen.CreateCIRequest) (*gen.CIEnvelope, error) {
-	// 1. RBAC Check: Viewers cannot create CIs; caller must belong to owner group
+	// 1. RBAC Check: Viewers cannot create CIs
 	if actor.Role == domain.RoleViewer {
 		return nil, domain.ErrForbidden
 	}
-	if !actor.BelongsToOwnerGroup(req.OwnerGroupId) {
+
+	// Resolve OwnerGroupID: default to creator's owner group if not specified
+	var ownerGroupID uuid.UUID
+	if req.OwnerGroupId != nil && *req.OwnerGroupId != uuid.Nil {
+		ownerGroupID = *req.OwnerGroupId
+	} else if actor.PrimaryOwnerGroupID != nil && *actor.PrimaryOwnerGroupID != uuid.Nil {
+		ownerGroupID = *actor.PrimaryOwnerGroupID
+	} else if len(actor.OwnerGroupIDs) > 0 {
+		ownerGroupID = actor.OwnerGroupIDs[0]
+	} else {
+		// Fallback for platform admin or users with unassigned owner groups: query primary active owner group
+		ogs, ogErr := s.store.Queries().ListOwnerGroups(ctx)
+		if ogErr == nil && len(ogs) > 0 {
+			ownerGroupID = ogs[0].ID
+		}
+	}
+
+	if ownerGroupID == uuid.Nil {
+		return nil, fmt.Errorf("%w: owner group could not be determined", domain.ErrBadParam)
+	}
+
+	if !actor.BelongsToOwnerGroup(ownerGroupID) {
 		return nil, domain.ErrForbidden
 	}
 
 	// 2. Validate owner group exists
-	og, err := s.store.Queries().GetOwnerGroupByID(ctx, req.OwnerGroupId)
+	og, err := s.store.Queries().GetOwnerGroupByID(ctx, ownerGroupID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: owner group not found", domain.ErrNotFound)
@@ -282,15 +309,15 @@ func (s *CIService) CreateCI(ctx context.Context, actor domain.Actor, req gen.Cr
 	if name == "" {
 		return nil, fmt.Errorf("%w: name cannot be empty", domain.ErrBadParam)
 	}
-	techContact := strings.TrimSpace(req.TechnicalContact)
-	if techContact == "" {
-		return nil, fmt.Errorf("%w: technical_contact cannot be empty", domain.ErrBadParam)
-	}
 
-	if req.ClassMetadata != nil && len(*req.ClassMetadata) > 2 {
-		return nil, &domain.ValidationError{
-			Message: "class_metadata cannot exceed 2 keys",
-		}
+	// Resolve TechnicalContact: default to creator's email if not specified
+	var techContact string
+	if req.TechnicalContact != nil && strings.TrimSpace(*req.TechnicalContact) != "" {
+		techContact = strings.TrimSpace(*req.TechnicalContact)
+	} else if actor.Email != "" {
+		techContact = actor.Email
+	} else {
+		return nil, fmt.Errorf("%w: technical_contact cannot be empty", domain.ErrBadParam)
 	}
 
 	var metaJSON []byte
@@ -318,11 +345,11 @@ func (s *CIService) CreateCI(ctx context.Context, actor domain.Actor, req gen.Cr
 		createdCI, cErr = q.CreateCI(ctx, sqlcgen.CreateCIParams{
 			CiID:             ciID,
 			Name:             name,
-			CiClass:          sqlcgen.CiClassEnum(req.CiClass),
+			CiClass:          req.CiClass,
 			Environment:      sqlcgen.EnvironmentEnum(req.Environment),
 			LifecycleState:   sqlcgen.LifecycleStateEnumInService,
 			CriticalityTier:  sqlcgen.CriticalityTierEnum(req.CriticalityTier),
-			OwnerGroupID:     req.OwnerGroupId,
+			OwnerGroupID:     ownerGroupID,
 			TechnicalContact: techContact,
 			PrimaryEndpoint:  epText,
 			LastVerifiedAt:   now,
@@ -386,7 +413,7 @@ func (s *CIService) CreateCI(ctx context.Context, actor domain.Actor, req gen.Cr
 	return &gen.CIEnvelope{
 		CiId:             &createdCI.CiID,
 		Name:             createdCI.Name,
-		CiClass:          gen.CIEnvelopeCiClass(createdCI.CiClass),
+		CiClass:          string(createdCI.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(createdCI.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(createdCI.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(createdCI.CriticalityTier),
@@ -432,14 +459,9 @@ func (s *CIService) UpdateCI(ctx context.Context, actor domain.Actor, ciID uuid.
 		}
 	}
 
-	// 4. Validate class_metadata if provided (max 2 keys)
+	// 4. Validate class_metadata if provided
 	metaJSON := existingCI.ClassMetadata
 	if req.ClassMetadata != nil {
-		if len(*req.ClassMetadata) > 2 {
-			return nil, &domain.ValidationError{
-				Message: "class_metadata cannot exceed 2 keys",
-			}
-		}
 		var mErr error
 		metaJSON, mErr = json.Marshal(*req.ClassMetadata)
 		if mErr != nil {
@@ -462,10 +484,10 @@ func (s *CIService) UpdateCI(ctx context.Context, actor domain.Actor, ciID uuid.
 	}
 
 	ciClass := existingCI.CiClass
-	if req.CiClass != nil && string(*req.CiClass) != string(existingCI.CiClass) {
-		oldValues["ci_class"] = string(existingCI.CiClass)
-		newValues["ci_class"] = string(*req.CiClass)
-		ciClass = sqlcgen.CiClassEnum(*req.CiClass)
+	if req.CiClass != nil && *req.CiClass != existingCI.CiClass {
+		oldValues["ci_class"] = existingCI.CiClass
+		newValues["ci_class"] = *req.CiClass
+		ciClass = *req.CiClass
 	}
 
 	env := existingCI.Environment
@@ -729,7 +751,7 @@ func mapUpdateCIRowToEnvelope(u sqlcgen.UpdateCIRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &u.CiID,
 		Name:             u.Name,
-		CiClass:          gen.CIEnvelopeCiClass(u.CiClass),
+		CiClass:          string(u.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(u.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(u.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(u.CriticalityTier),
@@ -804,12 +826,12 @@ func (s *CIService) GetUpwardImpact(ctx context.Context, startCIID uuid.UUID, in
 		env := mapUpwardNodeToEnvelope(n)
 		allEnvelopes = append(allEnvelopes, env)
 
-		switch n.CiClass {
-		case sqlcgen.CiClassEnumApplication:
+		switch string(n.CiClass) {
+		case string(sqlcgen.CiClassEnumApplication):
 			impactedApps = append(impactedApps, env)
-		case sqlcgen.CiClassEnumBusinessService:
+		case string(sqlcgen.CiClassEnumBusinessService):
 			impactedServices = append(impactedServices, env)
-		case sqlcgen.CiClassEnumDatabase, sqlcgen.CiClassEnumVmCluster, sqlcgen.CiClassEnumPhysicalHost, sqlcgen.CiClassEnumNetworkFirewall:
+		default:
 			// Non-application / non-business-service classes
 		}
 
@@ -838,7 +860,7 @@ func (s *CIService) GetUpwardImpact(ctx context.Context, startCIID uuid.UUID, in
 			Id:              e.ID,
 			SourceCiId:      e.SourceCiID,
 			TargetCiId:      e.TargetCiID,
-			EdgeType:        gen.GraphEdgeEdgeType(e.EdgeType),
+			EdgeType:        string(e.EdgeType),
 			HandshakeStatus: gen.GraphEdgeHandshakeStatus(e.HandshakeStatus),
 		})
 	}
@@ -886,7 +908,7 @@ func mapUpwardNodeToEnvelope(n sqlcgen.GetUpwardImpactNodesRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &n.CiID,
 		Name:             n.Name,
-		CiClass:          gen.CIEnvelopeCiClass(n.CiClass),
+		CiClass:          string(n.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(n.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(n.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(n.CriticalityTier),
@@ -926,7 +948,7 @@ func mapSiblingToEnvelope(s sqlcgen.GetSiblingDependenciesRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &s.CiID,
 		Name:             s.Name,
-		CiClass:          gen.CIEnvelopeCiClass(s.CiClass),
+		CiClass:          string(s.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(s.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(s.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(s.CriticalityTier),
@@ -987,7 +1009,7 @@ func (s *CIService) GetDownwardDependencies(ctx context.Context, startCIID uuid.
 			Id:              e.ID,
 			SourceCiId:      e.SourceCiID,
 			TargetCiId:      e.TargetCiID,
-			EdgeType:        gen.GraphEdgeEdgeType(e.EdgeType),
+			EdgeType:        string(e.EdgeType),
 			HandshakeStatus: gen.GraphEdgeHandshakeStatus(e.HandshakeStatus),
 		})
 
@@ -1043,7 +1065,7 @@ func mapDownwardNodeToEnvelope(n sqlcgen.GetDownwardDependencyNodesRow) gen.CIEn
 	return gen.CIEnvelope{
 		CiId:             &n.CiID,
 		Name:             n.Name,
-		CiClass:          gen.CIEnvelopeCiClass(n.CiClass),
+		CiClass:          string(n.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(n.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(n.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(n.CriticalityTier),
@@ -1255,7 +1277,7 @@ func mapVerifyCIRowToEnvelope(u sqlcgen.VerifyCIRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &u.CiID,
 		Name:             u.Name,
-		CiClass:          gen.CIEnvelopeCiClass(u.CiClass),
+		CiClass:          string(u.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(u.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(u.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(u.CriticalityTier),
@@ -1295,7 +1317,7 @@ func mapRetireCIRowToEnvelope(u sqlcgen.RetireCIRow) gen.CIEnvelope {
 	return gen.CIEnvelope{
 		CiId:             &u.CiID,
 		Name:             u.Name,
-		CiClass:          gen.CIEnvelopeCiClass(u.CiClass),
+		CiClass:          string(u.CiClass),
 		Environment:      gen.CIEnvelopeEnvironment(u.Environment),
 		LifecycleState:   gen.CIEnvelopeLifecycleState(u.LifecycleState),
 		CriticalityTier:  gen.CIEnvelopeCriticalityTier(u.CriticalityTier),

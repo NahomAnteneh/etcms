@@ -21,12 +21,29 @@ type Actor struct {
 	Role                Role
 	PrimaryOwnerGroupID *uuid.UUID
 	OwnerGroupIDs       []uuid.UUID
+	CustomRoleID        *uuid.UUID
+	CustomRoleName      *string
+	Permissions         []string
 }
 
 // HasRole checks if the actor possesses at least one of the specified roles.
 func (a Actor) HasRole(roles ...Role) bool {
 	for _, r := range roles {
 		if a.Role == r {
+			return true
+		}
+	}
+	return false
+}
+
+// HasPermission checks whether the actor possesses a specific granular capability,
+// or is a platform admin / has the admin:all super-permission.
+func (a Actor) HasPermission(permission string) bool {
+	if a.Role == RolePlatformAdmin {
+		return true
+	}
+	for _, p := range a.Permissions {
+		if p == "admin:all" || p == permission {
 			return true
 		}
 	}

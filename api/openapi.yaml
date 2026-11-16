@@ -80,6 +80,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/auth/login:
+    post:
+      summary: Authenticate user credentials and create a session
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Invalid email or password
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Terminate the active authenticated session
+      operationId: logout
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/sessions:
+    get:
+      summary: List all active sessions
+      operationId: listSessions
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSessionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/sessions/{id}:
+    delete:
+      summary: Revoke an active session by session ID
+      operationId: deleteSession
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Session terminated
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
   /api/v1/users/me:
     get:
       summary: Get currently authenticated user profile
@@ -123,8 +224,164 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create an owner group
+      operationId: createOwnerGroup
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOwnerGroupRequest'
+      responses:
+        '201':
+          description: Owner group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerGroup'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/owner-groups/{id}:
+    put:
+      summary: Update an owner group
+      operationId: updateOwnerGroup
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOwnerGroupRequest'
+      responses:
+        '200':
+          description: Owner group updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerGroup'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete an owner group
+      operationId: deleteOwnerGroup
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Owner group deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
 
   /api/v1/admin/intake/campaigns:
+    get:
+      summary: List all decentralized intake campaigns
+      operationId: listIntakeCampaigns
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CampaignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
     post:
       summary: Create a decentralized intake campaign
       operationId: createIntakeCampaign
@@ -164,6 +421,130 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         '422':
           description: Unprocessable entity
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/intake/campaigns/{id}:
+    get:
+      summary: Get intake campaign details
+      operationId: getIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    patch:
+      summary: Update intake campaign status or properties
+      operationId: updateIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignRequest'
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete an intake campaign and all associated invitations and submissions
+      operationId: deleteIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Campaign deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
           content:
             application/problem+json:
               schema:
@@ -421,6 +802,19 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: lifecycle_state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - in_service
+              - synced
+              - out_of_sync
+              - planned
+              - deprecated
+              - retired
+          description: Filter by CI lifecycle or sync status
         - name: limit
           in: query
           required: false
@@ -1367,6 +1761,823 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  /api/v1/admin/roles:
+    get:
+      summary: List all custom roles and permissions
+      operationId: listCustomRoles
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of custom roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomRole'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a new custom named role
+      operationId: createCustomRole
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomRoleRequest'
+      responses:
+        '201':
+          description: Custom role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomRole'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/roles/{id}:
+    delete:
+      summary: Delete a custom role
+      operationId: deleteCustomRole
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Custom role deleted
+        '400':
+          description: Cannot delete system role
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/users:
+    get:
+      summary: List all users with role details
+      operationId: listAdminUsers
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of user accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUserResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a user account
+      operationId: createAdminUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdminUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/users/{id}:
+    put:
+      summary: Update a user account
+      operationId: updateAdminUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdminUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: User not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a user account
+      operationId: deleteAdminUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: User not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/users/{id}/reset-password:
+    post:
+      summary: Reset a user's password
+      operationId: resetUserPassword
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/audit-logs/{id}/revert:
+    post:
+      summary: Revert or undo an audit mutation
+      operationId: revertAuditLog
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Mutation successfully reverted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevertAuditLogResponse'
+        '400':
+          description: Mutation cannot be reverted
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Audit log entry not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/ci-classes:
+    get:
+      summary: List all CI class definitions
+      operationId: listCIClasses
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of CI class definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CIClassDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a custom CI class definition
+      operationId: createCIClass
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCIClassRequest'
+      responses:
+        '201':
+          description: CI class created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIClassDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/ci-classes/{id}:
+    put:
+      summary: Update a custom CI class definition
+      operationId: updateCIClass
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCIClassRequest'
+      responses:
+        '200':
+          description: CI class updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIClassDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI class not found or system protected
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a custom CI class definition
+      operationId: deleteCIClass
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: CI class deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI class not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (CI class has active CIs registered)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/categories:
+    get:
+      summary: List all CI categories with usage metrics
+      operationId: listCategories
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of CI categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a new custom category
+      operationId: createCategory
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Category name or ID already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/categories/{id}:
+    put:
+      summary: Update a custom category
+      operationId: updateCategory
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Category not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a custom category
+      operationId: deleteCategory
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Category deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Category not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (Category contains active CI classes or CIs)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/relationship-types:
+    get:
+      summary: List all relationship types with usage metrics
+      operationId: listRelationshipTypes
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of relationship types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelationshipTypeDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a new custom relationship type
+      operationId: createRelationshipType
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRelationshipTypeRequest'
+      responses:
+        '201':
+          description: Relationship type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipTypeDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Relationship type ID already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/relationship-types/{id}:
+    put:
+      summary: Update a custom relationship type
+      operationId: updateRelationshipType
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRelationshipTypeRequest'
+      responses:
+        '200':
+          description: Relationship type updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipTypeDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Relationship type not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a custom relationship type
+      operationId: deleteRelationshipType
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Relationship type deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Relationship type not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (Relationship type is actively used by CI topology edges)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1443,13 +2654,6 @@ components:
                 type: string
               ci_class:
                 type: string
-                enum:
-                  - business_service
-                  - application
-                  - database
-                  - vm_cluster
-                  - physical_host
-                  - network_firewall
               environment:
                 type: string
                 enum:
@@ -1541,13 +2745,6 @@ components:
           maxLength: 160
         ci_class:
           type: string
-          enum:
-            - business_service
-            - application
-            - database
-            - vm_cluster
-            - physical_host
-            - network_firewall
         environment:
           type: string
           enum:
@@ -1557,8 +2754,10 @@ components:
         lifecycle_state:
           type: string
           enum:
-            - planned
             - in_service
+            - synced
+            - out_of_sync
+            - planned
             - deprecated
             - retired
           default: in_service
@@ -1590,7 +2789,6 @@ components:
           maxLength: 512
         class_metadata:
           type: object
-          maxProperties: 2
           additionalProperties:
             type: string
         ownership:
@@ -1630,12 +2828,30 @@ components:
           type: string
           format: uuid
           nullable: true
+        custom_role_id:
+          type: string
+          format: uuid
+          nullable: true
+        custom_role_name:
+          type: string
+          nullable: true
+        custom_role_permissions:
+          type: array
+          nullable: true
+          items:
+            type: string
         owner_group_ids:
           type: array
           items:
             type: string
             format: uuid
+        status:
+          type: string
+          default: active
         created_at:
+          type: string
+          format: date-time
+        updated_at:
           type: string
           format: date-time
 
@@ -1669,6 +2885,164 @@ components:
           type: string
           format: date-time
 
+    CreateOwnerGroupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - department_name
+        - team_lead_name
+        - team_lead_email
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+
+    UpdateOwnerGroupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - department_name
+        - team_lead_name
+        - team_lead_email
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+
+    CIFormField:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - label
+        - type
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, number, select, boolean]
+        required:
+          type: boolean
+        placeholder:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        default_value:
+          type: string
+
+    CIClassDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - category
+        - description
+        - icon
+        - is_system
+        - attributes
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        is_system:
+          type: boolean
+        attributes:
+          type: array
+          items:
+            type: string
+        form_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIFormField'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCIClassRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        form_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIFormField'
+
+    UpdateCIClassRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - label
+      properties:
+        label:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        form_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIFormField'
+
     CreateCampaignRequest:
       type: object
       additionalProperties: false
@@ -1690,6 +3064,21 @@ components:
           items:
             type: string
             format: uuid
+
+    UpdateCampaignRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [active, closed, archived]
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        deadline:
+          type: string
+          format: date-time
 
     CampaignInvitation:
       type: object
@@ -2073,11 +3462,6 @@ components:
           format: uuid
         edge_type:
           type: string
-          enum:
-            - depends_on
-            - hosted_on
-            - connects_to
-            - reads_from
         handshake_status:
           type: string
           enum:
@@ -2210,7 +3594,6 @@ components:
           format: uuid
         edge_type:
           type: string
-          enum: [depends_on, hosted_on, connects_to, reads_from]
         handshake_status:
           type: string
           enum: [pending_confirmation, confirmed, flagged_mismatch, rejected]
@@ -2248,7 +3631,6 @@ components:
           type: string
         ci_class:
           type: string
-          enum: [business_service, application, database, vm_cluster, physical_host, network_firewall]
         environment:
           type: string
           enum: [prod, dr, staging]
@@ -2286,7 +3668,6 @@ components:
           format: uuid
         edge_type:
           type: string
-          enum: [depends_on, hosted_on, connects_to, reads_from]
         handshake_status:
           type: string
           enum: [pending_confirmation, confirmed, flagged_mismatch, rejected]
@@ -2332,8 +3713,6 @@ components:
         - ci_class
         - environment
         - criticality_tier
-        - owner_group_id
-        - technical_contact
       properties:
         name:
           type: string
@@ -2341,13 +3720,6 @@ components:
           maxLength: 160
         ci_class:
           type: string
-          enum:
-            - business_service
-            - application
-            - database
-            - vm_cluster
-            - physical_host
-            - network_firewall
         environment:
           type: string
           enum:
@@ -2378,7 +3750,6 @@ components:
           maxLength: 512
         class_metadata:
           type: object
-          maxProperties: 2
           additionalProperties:
             type: string
 
@@ -2398,11 +3769,6 @@ components:
           format: uuid
         edge_type:
           type: string
-          enum:
-            - depends_on
-            - hosted_on
-            - connects_to
-            - reads_from
 
     UpdateCIRequest:
       type: object
@@ -2414,13 +3780,6 @@ components:
           maxLength: 160
         ci_class:
           type: string
-          enum:
-            - business_service
-            - application
-            - database
-            - vm_cluster
-            - physical_host
-            - network_firewall
         environment:
           type: string
           enum:
@@ -2430,8 +3789,11 @@ components:
         lifecycle_state:
           type: string
           enum:
-            - planned
             - in_service
+            - synced
+            - out_of_sync
+            - planned
+            - deprecated
             - retired
         criticality_tier:
           type: string
@@ -2457,7 +3819,6 @@ components:
           maxLength: 512
         class_metadata:
           type: object
-          maxProperties: 2
           additionalProperties:
             type: string
 
@@ -2572,13 +3933,6 @@ components:
           type: string
         ci_class:
           type: string
-          enum:
-            - business_service
-            - application
-            - database
-            - vm_cluster
-            - physical_host
-            - network_firewall
         environment:
           type: string
           enum:
@@ -2781,5 +4135,394 @@ components:
           type: integer
         actioned_closed_digest_items:
           type: integer
+
+    CustomRole:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - permissions
+        - is_system
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCustomRoleRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - permissions
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    AdminUserResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - email
+        - name
+        - role
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+        primary_owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        custom_role_id:
+          type: string
+          format: uuid
+        custom_role_name:
+          type: string
+        custom_role_permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          default: active
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAdminUserRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+        primary_owner_group_id:
+          type: string
+          format: uuid
+        custom_role_id:
+          type: string
+          format: uuid
+        password:
+          type: string
+        status:
+          type: string
+          default: active
+
+    UpdateAdminUserRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - role
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        primary_owner_group_id:
+          type: string
+          format: uuid
+          nullable: true
+        custom_role_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          default: active
+
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - new_password
+      properties:
+        new_password:
+          type: string
+          minLength: 6
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+        - expires_at
+        - user
+      properties:
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - user_email
+        - user_name
+        - token
+        - expires_at
+        - created_at
+        - last_activity_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        user_email:
+          type: string
+          format: email
+        user_name:
+          type: string
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        last_activity_at:
+          type: string
+          format: date-time
+        user_agent:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+
+    RevertAuditLogResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - message
+        - reverted_entity_id
+        - reverted_entity_type
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        reverted_entity_id:
+          type: string
+          format: uuid
+        reverted_entity_type:
+          type: string
+
+    CategoryDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - icon
+        - color
+        - class_count
+        - ci_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        class_count:
+          type: integer
+        ci_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCategoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+
+    UpdateCategoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+
+    RelationshipTypeDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - reverse_label
+        - description
+        - color
+        - edge_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        reverse_label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+        edge_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRelationshipTypeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        label:
+          type: string
+          minLength: 1
+          maxLength: 128
+        reverse_label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+
+    UpdateRelationshipTypeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - label
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 128
+        reverse_label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+
+
 
 

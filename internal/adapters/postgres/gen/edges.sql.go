@@ -35,7 +35,7 @@ type CreateEdgeParams struct {
 	ID              uuid.UUID           `json:"id"`
 	SourceCiID      uuid.UUID           `json:"source_ci_id"`
 	TargetCiID      uuid.UUID           `json:"target_ci_id"`
-	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	EdgeType        string              `json:"edge_type"`
 	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy       uuid.UUID           `json:"created_by"`
 	ConfirmedBy     pgtype.UUID         `json:"confirmed_by"`
@@ -123,7 +123,7 @@ type GetEdgeWithDetailsRow struct {
 	ID                     uuid.UUID           `json:"id"`
 	SourceCiID             uuid.UUID           `json:"source_ci_id"`
 	TargetCiID             uuid.UUID           `json:"target_ci_id"`
-	EdgeType               EdgeTypeEnum        `json:"edge_type"`
+	EdgeType               string              `json:"edge_type"`
 	HandshakeStatus        HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy              uuid.UUID           `json:"created_by"`
 	ConfirmedBy            pgtype.UUID         `json:"confirmed_by"`
@@ -131,14 +131,14 @@ type GetEdgeWithDetailsRow struct {
 	CreatedAt              time.Time           `json:"created_at"`
 	UpdatedAt              time.Time           `json:"updated_at"`
 	SourceCiName           string              `json:"source_ci_name"`
-	SourceCiClass          CiClassEnum         `json:"source_ci_class"`
+	SourceCiClass          string              `json:"source_ci_class"`
 	SourceCiEnvironment    EnvironmentEnum     `json:"source_ci_environment"`
 	SourceOwnerGroupID     uuid.UUID           `json:"source_owner_group_id"`
 	SourceTechnicalContact string              `json:"source_technical_contact"`
 	SourceOwnerGroupName   string              `json:"source_owner_group_name"`
 	SourceDepartmentName   string              `json:"source_department_name"`
 	TargetCiName           string              `json:"target_ci_name"`
-	TargetCiClass          CiClassEnum         `json:"target_ci_class"`
+	TargetCiClass          string              `json:"target_ci_class"`
 	TargetCiEnvironment    EnvironmentEnum     `json:"target_ci_environment"`
 	TargetOwnerGroupID     uuid.UUID           `json:"target_owner_group_id"`
 	TargetTechnicalContact string              `json:"target_technical_contact"`
@@ -219,7 +219,7 @@ type ListAllPendingEdgesRow struct {
 	ID                     uuid.UUID           `json:"id"`
 	SourceCiID             uuid.UUID           `json:"source_ci_id"`
 	TargetCiID             uuid.UUID           `json:"target_ci_id"`
-	EdgeType               EdgeTypeEnum        `json:"edge_type"`
+	EdgeType               string              `json:"edge_type"`
 	HandshakeStatus        HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy              uuid.UUID           `json:"created_by"`
 	ConfirmedBy            pgtype.UUID         `json:"confirmed_by"`
@@ -227,14 +227,14 @@ type ListAllPendingEdgesRow struct {
 	CreatedAt              time.Time           `json:"created_at"`
 	UpdatedAt              time.Time           `json:"updated_at"`
 	SourceCiName           string              `json:"source_ci_name"`
-	SourceCiClass          CiClassEnum         `json:"source_ci_class"`
+	SourceCiClass          string              `json:"source_ci_class"`
 	SourceCiEnvironment    EnvironmentEnum     `json:"source_ci_environment"`
 	SourceOwnerGroupID     uuid.UUID           `json:"source_owner_group_id"`
 	SourceTechnicalContact string              `json:"source_technical_contact"`
 	SourceOwnerGroupName   string              `json:"source_owner_group_name"`
 	SourceDepartmentName   string              `json:"source_department_name"`
 	TargetCiName           string              `json:"target_ci_name"`
-	TargetCiClass          CiClassEnum         `json:"target_ci_class"`
+	TargetCiClass          string              `json:"target_ci_class"`
 	TargetCiEnvironment    EnvironmentEnum     `json:"target_ci_environment"`
 	TargetOwnerGroupID     uuid.UUID           `json:"target_owner_group_id"`
 	TargetTechnicalContact string              `json:"target_technical_contact"`
@@ -329,7 +329,7 @@ type ListPendingEdgesForGroupRow struct {
 	ID                     uuid.UUID           `json:"id"`
 	SourceCiID             uuid.UUID           `json:"source_ci_id"`
 	TargetCiID             uuid.UUID           `json:"target_ci_id"`
-	EdgeType               EdgeTypeEnum        `json:"edge_type"`
+	EdgeType               string              `json:"edge_type"`
 	HandshakeStatus        HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy              uuid.UUID           `json:"created_by"`
 	ConfirmedBy            pgtype.UUID         `json:"confirmed_by"`
@@ -337,14 +337,14 @@ type ListPendingEdgesForGroupRow struct {
 	CreatedAt              time.Time           `json:"created_at"`
 	UpdatedAt              time.Time           `json:"updated_at"`
 	SourceCiName           string              `json:"source_ci_name"`
-	SourceCiClass          CiClassEnum         `json:"source_ci_class"`
+	SourceCiClass          string              `json:"source_ci_class"`
 	SourceCiEnvironment    EnvironmentEnum     `json:"source_ci_environment"`
 	SourceOwnerGroupID     uuid.UUID           `json:"source_owner_group_id"`
 	SourceTechnicalContact string              `json:"source_technical_contact"`
 	SourceOwnerGroupName   string              `json:"source_owner_group_name"`
 	SourceDepartmentName   string              `json:"source_department_name"`
 	TargetCiName           string              `json:"target_ci_name"`
-	TargetCiClass          CiClassEnum         `json:"target_ci_class"`
+	TargetCiClass          string              `json:"target_ci_class"`
 	TargetCiEnvironment    EnvironmentEnum     `json:"target_ci_environment"`
 	TargetOwnerGroupID     uuid.UUID           `json:"target_owner_group_id"`
 	TargetTechnicalContact string              `json:"target_technical_contact"`
@@ -439,7 +439,7 @@ type ListPendingEdgesForGroupsRow struct {
 	ID                     uuid.UUID           `json:"id"`
 	SourceCiID             uuid.UUID           `json:"source_ci_id"`
 	TargetCiID             uuid.UUID           `json:"target_ci_id"`
-	EdgeType               EdgeTypeEnum        `json:"edge_type"`
+	EdgeType               string              `json:"edge_type"`
 	HandshakeStatus        HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy              uuid.UUID           `json:"created_by"`
 	ConfirmedBy            pgtype.UUID         `json:"confirmed_by"`
@@ -447,14 +447,14 @@ type ListPendingEdgesForGroupsRow struct {
 	CreatedAt              time.Time           `json:"created_at"`
 	UpdatedAt              time.Time           `json:"updated_at"`
 	SourceCiName           string              `json:"source_ci_name"`
-	SourceCiClass          CiClassEnum         `json:"source_ci_class"`
+	SourceCiClass          string              `json:"source_ci_class"`
 	SourceCiEnvironment    EnvironmentEnum     `json:"source_ci_environment"`
 	SourceOwnerGroupID     uuid.UUID           `json:"source_owner_group_id"`
 	SourceTechnicalContact string              `json:"source_technical_contact"`
 	SourceOwnerGroupName   string              `json:"source_owner_group_name"`
 	SourceDepartmentName   string              `json:"source_department_name"`
 	TargetCiName           string              `json:"target_ci_name"`
-	TargetCiClass          CiClassEnum         `json:"target_ci_class"`
+	TargetCiClass          string              `json:"target_ci_class"`
 	TargetCiEnvironment    EnvironmentEnum     `json:"target_ci_environment"`
 	TargetOwnerGroupID     uuid.UUID           `json:"target_owner_group_id"`
 	TargetTechnicalContact string              `json:"target_technical_contact"`

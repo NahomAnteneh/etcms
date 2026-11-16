@@ -157,12 +157,10 @@ func TestCIEditsVolatileStampingAndFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("PATCH /api/v1/cis/{id} - 422 Reject class_metadata exceeding 2 keys", func(t *testing.T) {
+	t.Run("PATCH /api/v1/cis/{id} - 422 Reject class_metadata containing Anti-ITAM fields", func(t *testing.T) {
 		body := map[string]interface{}{
 			"class_metadata": map[string]string{
-				"k1": "v1",
-				"k2": "v2",
-				"k3": "v3",
+				"cost": "$5000",
 			},
 		}
 		bodyBytes, _ := json.Marshal(body)
@@ -273,6 +271,42 @@ func TestCIEditsVolatileStampingAndFlags(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &resp)
 		require.NoError(t, err)
 		assert.Equal(t, gen.CIEnvelopeCriticalityTier("tier_0"), resp.CriticalityTier)
+	})
+
+	t.Run("PATCH /api/v1/cis/{id} - Platform Admin can toggle lifecycle_state to out_of_sync and synced", func(t *testing.T) {
+		// 1. Mark out_of_sync
+		body := map[string]interface{}{
+			"lifecycle_state": "out_of_sync",
+		}
+		bodyBytes, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/cis/%s", ciID.String()), bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Dev-User-ID", platformAdminUserID.String())
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp gen.CIEnvelope
+		err := json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.Equal(t, gen.CIEnvelopeLifecycleState("out_of_sync"), resp.LifecycleState)
+
+		// 2. Mark synced
+		body2 := map[string]interface{}{
+			"lifecycle_state": "synced",
+		}
+		bodyBytes2, _ := json.Marshal(body2)
+		req2 := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/cis/%s", ciID.String()), bytes.NewReader(bodyBytes2))
+		req2.Header.Set("Content-Type", "application/json")
+		req2.Header.Set("X-Dev-User-ID", platformAdminUserID.String())
+		rec2 := httptest.NewRecorder()
+		router.ServeHTTP(rec2, req2)
+
+		assert.Equal(t, http.StatusOK, rec2.Code)
+		var resp2 gen.CIEnvelope
+		err = json.Unmarshal(rec2.Body.Bytes(), &resp2)
+		require.NoError(t, err)
+		assert.Equal(t, gen.CIEnvelopeLifecycleState("synced"), resp2.LifecycleState)
 	})
 
 	// =========================================================================

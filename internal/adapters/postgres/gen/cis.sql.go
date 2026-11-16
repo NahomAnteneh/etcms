@@ -16,26 +16,34 @@ import (
 const countSearchCIs = `-- name: CountSearchCIs :one
 SELECT count(*)::integer AS total_count
 FROM cis c
-WHERE c.lifecycle_state != 'retired'
-  AND ($1::text IS NULL OR $1::text = '' OR c.ci_class::text = $1::text)
-  AND ($2::text IS NULL OR $2::text = '' OR c.environment::text = $2::text)
-  AND ($3::uuid IS NULL OR $3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = $3)
+WHERE (
+      CASE
+          WHEN $1::text IS NOT NULL AND $1::text != ''
+              THEN c.lifecycle_state::text = $1::text
+          ELSE c.lifecycle_state != 'retired'
+      END
+  )
+  AND ($2::text IS NULL OR $2::text = '' OR c.ci_class::text = $2::text)
+  AND ($3::text IS NULL OR $3::text = '' OR c.environment::text = $3::text)
+  AND ($4::uuid IS NULL OR $4::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = $4)
   AND (
-      $4::text = ''
-      OR (length($4::text) < 3 AND (c.name ILIKE $4::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $4::text || '%'))
-      OR (length($4::text) >= 3 AND (c.name % $4::text OR COALESCE(c.primary_endpoint, '') % $4::text OR similarity(c.name, $4::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), $4::text) > 0.1))
+      $5::text = ''
+      OR (length($5::text) < 3 AND (c.name ILIKE $5::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $5::text || '%'))
+      OR (length($5::text) >= 3 AND (c.name % $5::text OR COALESCE(c.primary_endpoint, '') % $5::text OR similarity(c.name, $5::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), $5::text) > 0.1))
   )
 `
 
 type CountSearchCIsParams struct {
-	CiClass      string    `json:"ci_class"`
-	Environment  string    `json:"environment"`
-	OwnerGroupID uuid.UUID `json:"owner_group_id"`
-	Query        string    `json:"query"`
+	LifecycleState string    `json:"lifecycle_state"`
+	CiClass        string    `json:"ci_class"`
+	Environment    string    `json:"environment"`
+	OwnerGroupID   uuid.UUID `json:"owner_group_id"`
+	Query          string    `json:"query"`
 }
 
 func (q *Queries) CountSearchCIs(ctx context.Context, arg CountSearchCIsParams) (int32, error) {
 	row := q.db.QueryRow(ctx, countSearchCIs,
+		arg.LifecycleState,
 		arg.CiClass,
 		arg.Environment,
 		arg.OwnerGroupID,
@@ -71,7 +79,7 @@ RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier,
 type CreateCIParams struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -200,7 +208,7 @@ ORDER BY c.name ASC
 type GetActiveCIsByOwnerGroupRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -280,7 +288,7 @@ ORDER BY c.name ASC
 type GetActiveUpstreamDependentsRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -349,7 +357,7 @@ WHERE c.ci_id = $1
 type GetCIByIDRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -546,7 +554,7 @@ type RetireCIParams struct {
 type RetireCIRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -619,15 +627,21 @@ SELECT
     END AS score
 FROM cis c
 JOIN owner_groups og ON og.id = c.owner_group_id
-WHERE c.lifecycle_state != 'retired'
-  AND (
-      $2::text IS NULL OR $2::text = '' OR c.ci_class::text = $2::text
+WHERE (
+      CASE
+          WHEN $2::text IS NOT NULL AND $2::text != ''
+              THEN c.lifecycle_state::text = $2::text
+          ELSE c.lifecycle_state != 'retired'
+      END
   )
   AND (
-      $3::text IS NULL OR $3::text = '' OR c.environment::text = $3::text
+      $3::text IS NULL OR $3::text = '' OR c.ci_class::text = $3::text
   )
   AND (
-      $4::uuid IS NULL OR $4::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = $4
+      $4::text IS NULL OR $4::text = '' OR c.environment::text = $4::text
+  )
+  AND (
+      $5::uuid IS NULL OR $5::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = $5
   )
   AND (
       $1::text = ''
@@ -635,7 +649,7 @@ WHERE c.lifecycle_state != 'retired'
       OR (length($1::text) >= 3 AND (c.name % $1::text OR COALESCE(c.primary_endpoint, '') % $1::text OR similarity(c.name, $1::text) > 0.1 OR similarity(COALESCE(c.primary_endpoint, ''), $1::text) > 0.1))
   )
   AND (
-      $5::boolean = false
+      $6::boolean = false
       OR (
           (CASE
               WHEN $1::text = '' THEN 1.0::real
@@ -643,7 +657,7 @@ WHERE c.lifecycle_state != 'retired'
                   GREATEST(similarity(c.name, $1::text), similarity(COALESCE(c.primary_endpoint, ''), $1::text))
               WHEN c.name ILIKE $1::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $1::text || '%' THEN 1.0::real
               ELSE 0.0::real
-          END) < $6::real
+          END) < $7::real
           OR (
               (CASE
                   WHEN $1::text = '' THEN 1.0::real
@@ -651,31 +665,32 @@ WHERE c.lifecycle_state != 'retired'
                       GREATEST(similarity(c.name, $1::text), similarity(COALESCE(c.primary_endpoint, ''), $1::text))
                   WHEN c.name ILIKE $1::text || '%' OR COALESCE(c.primary_endpoint, '') ILIKE $1::text || '%' THEN 1.0::real
                   ELSE 0.0::real
-              END) = $6::real
-              AND (c.name > $7::text OR (c.name = $7::text AND c.ci_id > $8::uuid))
+              END) = $7::real
+              AND (c.name > $8::text OR (c.name = $8::text AND c.ci_id > $9::uuid))
           )
       )
   )
 ORDER BY score DESC, c.name ASC, c.ci_id ASC
-LIMIT CASE WHEN $9::integer <= 0 THEN 20 ELSE $9::integer END
+LIMIT CASE WHEN $10::integer <= 0 THEN 20 ELSE $10::integer END
 `
 
 type SearchCIsParams struct {
-	Query        string    `json:"query"`
-	CiClass      string    `json:"ci_class"`
-	Environment  string    `json:"environment"`
-	OwnerGroupID uuid.UUID `json:"owner_group_id"`
-	HasCursor    bool      `json:"has_cursor"`
-	LastScore    float32   `json:"last_score"`
-	LastName     string    `json:"last_name"`
-	LastCiID     uuid.UUID `json:"last_ci_id"`
-	LimitVal     int32     `json:"limit_val"`
+	Query          string    `json:"query"`
+	LifecycleState string    `json:"lifecycle_state"`
+	CiClass        string    `json:"ci_class"`
+	Environment    string    `json:"environment"`
+	OwnerGroupID   uuid.UUID `json:"owner_group_id"`
+	HasCursor      bool      `json:"has_cursor"`
+	LastScore      float32   `json:"last_score"`
+	LastName       string    `json:"last_name"`
+	LastCiID       uuid.UUID `json:"last_ci_id"`
+	LimitVal       int32     `json:"limit_val"`
 }
 
 type SearchCIsRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -697,6 +712,7 @@ type SearchCIsRow struct {
 func (q *Queries) SearchCIs(ctx context.Context, arg SearchCIsParams) ([]SearchCIsRow, error) {
 	rows, err := q.db.Query(ctx, searchCIs,
 		arg.Query,
+		arg.LifecycleState,
 		arg.CiClass,
 		arg.Environment,
 		arg.OwnerGroupID,
@@ -788,7 +804,7 @@ JOIN owner_groups og ON og.id = u.owner_group_id
 
 type UpdateCIParams struct {
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -805,7 +821,7 @@ type UpdateCIParams struct {
 type UpdateCIRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -897,7 +913,7 @@ RETURNING ci_id, name, ci_class, environment, lifecycle_state, criticality_tier,
 type UpsertCIParams struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`
@@ -976,7 +992,7 @@ type UpsertEdgeParams struct {
 	ID              uuid.UUID           `json:"id"`
 	SourceCiID      uuid.UUID           `json:"source_ci_id"`
 	TargetCiID      uuid.UUID           `json:"target_ci_id"`
-	EdgeType        EdgeTypeEnum        `json:"edge_type"`
+	EdgeType        string              `json:"edge_type"`
 	HandshakeStatus HandshakeStatusEnum `json:"handshake_status"`
 	CreatedBy       uuid.UUID           `json:"created_by"`
 	ConfirmedBy     pgtype.UUID         `json:"confirmed_by"`
@@ -1054,7 +1070,7 @@ type VerifyCIParams struct {
 type VerifyCIRow struct {
 	CiID             uuid.UUID           `json:"ci_id"`
 	Name             string              `json:"name"`
-	CiClass          CiClassEnum         `json:"ci_class"`
+	CiClass          string              `json:"ci_class"`
 	Environment      EnvironmentEnum     `json:"environment"`
 	LifecycleState   LifecycleStateEnum  `json:"lifecycle_state"`
 	CriticalityTier  CriticalityTierEnum `json:"criticality_tier"`

@@ -37,6 +37,43 @@ func (q *Queries) GetHealthDigestCompletion(ctx context.Context, ownerGroupID uu
 	return i, err
 }
 
+const getHealthDigestCompletionAllGroups = `-- name: GetHealthDigestCompletionAllGroups :many
+SELECT
+    dc.owner_group_id,
+    count(*)::integer AS total_closed_items,
+    count(*) FILTER (WHERE di.status = 'actioned')::integer AS actioned_closed_items
+FROM digest_items di
+JOIN digest_cycles dc ON dc.id = di.cycle_id
+WHERE dc.status = 'closed'
+GROUP BY dc.owner_group_id
+`
+
+type GetHealthDigestCompletionAllGroupsRow struct {
+	OwnerGroupID        uuid.UUID `json:"owner_group_id"`
+	TotalClosedItems    int32     `json:"total_closed_items"`
+	ActionedClosedItems int32     `json:"actioned_closed_items"`
+}
+
+func (q *Queries) GetHealthDigestCompletionAllGroups(ctx context.Context) ([]GetHealthDigestCompletionAllGroupsRow, error) {
+	rows, err := q.db.Query(ctx, getHealthDigestCompletionAllGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHealthDigestCompletionAllGroupsRow
+	for rows.Next() {
+		var i GetHealthDigestCompletionAllGroupsRow
+		if err := rows.Scan(&i.OwnerGroupID, &i.TotalClosedItems, &i.ActionedClosedItems); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getHealthFreshness = `-- name: GetHealthFreshness :one
 SELECT
     count(*)::integer AS total_in_service,
@@ -62,6 +99,49 @@ func (q *Queries) GetHealthFreshness(ctx context.Context, ownerGroupID uuid.UUID
 	var i GetHealthFreshnessRow
 	err := row.Scan(&i.TotalInService, &i.FreshCount, &i.StaleCount)
 	return i, err
+}
+
+const getHealthFreshnessAllGroups = `-- name: GetHealthFreshnessAllGroups :many
+SELECT
+    c.owner_group_id,
+    count(*)::integer AS total_in_service,
+    count(*) FILTER (WHERE c.last_verified_at >= now() - interval '60 days')::integer AS fresh_count,
+    count(*) FILTER (WHERE c.last_verified_at < now() - interval '60 days')::integer AS stale_count
+FROM cis c
+WHERE c.lifecycle_state = 'in_service'
+GROUP BY c.owner_group_id
+`
+
+type GetHealthFreshnessAllGroupsRow struct {
+	OwnerGroupID   uuid.UUID `json:"owner_group_id"`
+	TotalInService int32     `json:"total_in_service"`
+	FreshCount     int32     `json:"fresh_count"`
+	StaleCount     int32     `json:"stale_count"`
+}
+
+func (q *Queries) GetHealthFreshnessAllGroups(ctx context.Context) ([]GetHealthFreshnessAllGroupsRow, error) {
+	rows, err := q.db.Query(ctx, getHealthFreshnessAllGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHealthFreshnessAllGroupsRow
+	for rows.Next() {
+		var i GetHealthFreshnessAllGroupsRow
+		if err := rows.Scan(
+			&i.OwnerGroupID,
+			&i.TotalInService,
+			&i.FreshCount,
+			&i.StaleCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getHealthOrphans = `-- name: GetHealthOrphans :one
@@ -111,6 +191,67 @@ func (q *Queries) GetHealthOrphans(ctx context.Context, ownerGroupID uuid.UUID) 
 	return orphan_count, err
 }
 
+const getHealthOrphansAllGroups = `-- name: GetHealthOrphansAllGroups :many
+WITH RECURSIVE upstream AS (
+    SELECT
+        e.target_ci_id AS technical_ci_id,
+        e.source_ci_id AS ancestor_id,
+        c.ci_class AS ancestor_class,
+        1 AS depth
+    FROM ci_edges e
+    JOIN cis c ON c.ci_id = e.source_ci_id
+    WHERE c.lifecycle_state = 'in_service'
+      AND e.handshake_status = 'confirmed'
+    UNION
+    SELECT
+        u.technical_ci_id,
+        e.source_ci_id AS ancestor_id,
+        c.ci_class AS ancestor_class,
+        u.depth + 1 AS depth
+    FROM ci_edges e
+    JOIN upstream u ON e.target_ci_id = u.ancestor_id
+    JOIN cis c ON c.ci_id = e.source_ci_id
+    WHERE u.depth < 15
+      AND c.lifecycle_state = 'in_service'
+      AND e.handshake_status = 'confirmed'
+)
+SELECT c.owner_group_id, count(*)::integer AS orphan_count
+FROM cis c
+WHERE c.lifecycle_state = 'in_service'
+  AND c.ci_class IN ('database', 'vm_cluster', 'physical_host', 'network_firewall')
+  AND NOT EXISTS (
+      SELECT 1 FROM upstream u
+      WHERE u.technical_ci_id = c.ci_id
+        AND u.ancestor_class IN ('business_service', 'application')
+  )
+GROUP BY c.owner_group_id
+`
+
+type GetHealthOrphansAllGroupsRow struct {
+	OwnerGroupID uuid.UUID `json:"owner_group_id"`
+	OrphanCount  int32     `json:"orphan_count"`
+}
+
+func (q *Queries) GetHealthOrphansAllGroups(ctx context.Context) ([]GetHealthOrphansAllGroupsRow, error) {
+	rows, err := q.db.Query(ctx, getHealthOrphansAllGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHealthOrphansAllGroupsRow
+	for rows.Next() {
+		var i GetHealthOrphansAllGroupsRow
+		if err := rows.Scan(&i.OwnerGroupID, &i.OrphanCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getHealthPendingEdges = `-- name: GetHealthPendingEdges :one
 SELECT
     count(*)::integer AS pending_edges_count,
@@ -135,4 +276,41 @@ func (q *Queries) GetHealthPendingEdges(ctx context.Context, ownerGroupID uuid.U
 	var i GetHealthPendingEdgesRow
 	err := row.Scan(&i.PendingEdgesCount, &i.OldestPendingAgeDays)
 	return i, err
+}
+
+const getHealthPendingEdgesAllGroups = `-- name: GetHealthPendingEdgesAllGroups :many
+SELECT
+    c.owner_group_id,
+    count(*)::integer AS pending_edges_count,
+    COALESCE(EXTRACT(EPOCH FROM (now() - min(e.created_at))) / 86400.0, 0.0)::float8 AS oldest_pending_age_days
+FROM ci_edges e
+JOIN cis c ON c.ci_id = e.target_ci_id
+WHERE e.handshake_status = 'pending_confirmation'
+GROUP BY c.owner_group_id
+`
+
+type GetHealthPendingEdgesAllGroupsRow struct {
+	OwnerGroupID         uuid.UUID `json:"owner_group_id"`
+	PendingEdgesCount    int32     `json:"pending_edges_count"`
+	OldestPendingAgeDays float64   `json:"oldest_pending_age_days"`
+}
+
+func (q *Queries) GetHealthPendingEdgesAllGroups(ctx context.Context) ([]GetHealthPendingEdgesAllGroupsRow, error) {
+	rows, err := q.db.Query(ctx, getHealthPendingEdgesAllGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHealthPendingEdgesAllGroupsRow
+	for rows.Next() {
+		var i GetHealthPendingEdgesAllGroupsRow
+		if err := rows.Scan(&i.OwnerGroupID, &i.PendingEdgesCount, &i.OldestPendingAgeDays); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

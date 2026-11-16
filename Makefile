@@ -25,6 +25,14 @@ migrate-up:
 migrate-down:
 	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" down
 
+.PHONY: seed
+seed:
+	psql "$(DATABASE_URL)" -f sql/seeds.sql
+
+.PHONY: run
+run: migrate-up
+	go run cmd/etcms-api/main.go
+
 .PHONY: lint
 lint:
 	golangci-lint run ./...

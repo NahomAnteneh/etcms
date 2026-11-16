@@ -8,7 +8,7 @@ Welcome to the comprehensive technical documentation for the `etcms-backend` ser
 
 The `etcms-backend` system was designed and implemented under strict architectural guardrails:
 
-1. **Contract-First Pipeline:** The single source of truth is the OpenAPI 3.0.3 specification at [`api/openapi.yaml`](file:///home/nahom/Work/ET/etcms/etcms-backend/api/openapi.yaml). Handlers strictly implement the generated `StrictServerInterface` in [`internal/adapters/http/gen/openapi.gen.go`](file:///home/nahom/Work/ET/etcms/etcms-backend/internal/adapters/http/gen/openapi.gen.go).
+1. **Contract-First Pipeline:** The single source of truth is the OpenAPI 3.0.3 specification at [`api/openapi.yaml`](../api/openapi.yaml). Handlers strictly implement the generated `StrictServerInterface` in [`internal/adapters/http/gen/openapi.gen.go`](../internal/adapters/http/gen/openapi.gen.go).
 2. **Modern Ownership Terminology:** Archaic "custodian" terminology is strictly prohibited across code, schemas, and documentation. Modern team terminology (`owner_group`, `team_lead`, `owner_group_id`, `department_name`) is used exclusively.
 3. **Strict Anti-ITAM Schema Enforcement:** Any payload containing unapproved ITAM fields (such as `cost`, `purchase_cost`, `license_count`, `warranty_end`, or `vendor`) is rejected with `HTTP 422 Unprocessable Entity`.
 4. **Append-Only Auditing:** The `audit_logs` table is strictly append-only. Database triggers (`audit_logs_no_update_delete` and `audit_logs_no_truncate`) prohibit any `UPDATE`, `DELETE`, or `TRUNCATE` operations at the database engine level.
@@ -41,12 +41,12 @@ The `etcms-backend` system was designed and implemented under strict architectur
 
 The `docs/` folder provides comprehensive, deep-dive specifications across all subsystems:
 
-- [architecture.md](file:///home/nahom/Work/ET/etcms/etcms-backend/docs/architecture.md) — Architectural design, layered hexagonal structure, security model, and transaction handling.
-- [api-reference.md](file:///home/nahom/Work/ET/etcms/etcms-backend/docs/api-reference.md) — Complete endpoint reference, request/response models, and RFC 9457 Problem Details.
-- [database-schema.md](file:///home/nahom/Work/ET/etcms/etcms-backend/docs/database-schema.md) — PostgreSQL 16 schema, DDL migrations, tables, constraints, triggers, and indexing strategies.
-- [graph-and-algorithms.md](file:///home/nahom/Work/ET/etcms/etcms-backend/docs/graph-and-algorithms.md) — Upward impact analysis, downward dependency traversal, shared dependency math, and scale benchmarks.
-- [audit-and-digests.md](file:///home/nahom/Work/ET/etcms/etcms-backend/docs/audit-and-digests.md) — Bi-weekly calendar-anchored digest worker, one-click verification/retire actions, streaming export, and CMDB health metrics.
-- [testing-and-verification.md](file:///home/nahom/Work/ET/etcms/etcms-backend/docs/testing-and-verification.md) — Testing strategy, test suites, coverage gates, and verification commands.
+- [architecture.md](./architecture.md) — Architectural design, layered hexagonal structure, security model, and transaction handling.
+- [api-reference.md](./api-reference.md) — Complete endpoint reference, request/response models, and RFC 9457 Problem Details.
+- [database-schema.md](./database-schema.md) — PostgreSQL 16 schema, DDL migrations, tables, constraints, triggers, and indexing strategies.
+- [graph-and-algorithms.md](./graph-and-algorithms.md) — Upward impact analysis, downward dependency traversal, shared dependency math, and scale benchmarks.
+- [audit-and-digests.md](./audit-and-digests.md) — Bi-weekly calendar-anchored digest worker, one-click verification/retire actions, streaming export, and CMDB health metrics.
+- [testing-and-verification.md](./testing-and-verification.md) — Testing strategy, test suites, coverage gates, and verification commands.
 
 ---
 
@@ -67,12 +67,12 @@ The `docs/` folder provides comprehensive, deep-dive specifications across all s
 │   │   ├── http/                      # Routing, handlers, middleware, and integration tests
 │   │   │   ├── gen/                   # Generated OpenAPI strict server code (DO NOT EDIT)
 │   │   │   ├── handler/               # Handler implementation of StrictServerInterface
-│   │   │   └── middleware/            # Auth, CORS, logging, and error mapping middleware
+│   │   │   └── middleware/            # Auth, Anti-ITAM, max body, and error mapping middleware
 │   │   └── postgres/                  # Database store, connection pooling, and WithAuditTx
 │   │       └── gen/                   # Generated sqlc type-safe database queries (DO NOT EDIT)
 │   ├── domain/                        # Domain entities, RBAC roles, ITAM validation, errors
 │   ├── service/                       # Business logic services (intake, edges, cis, digests, audit, health)
-│   └── worker/                        # Background scheduler for bi-weekly owner digests
+│   └── worker/                        # Bi-weekly owner digest scheduler (orchestrated via external cron / admin endpoint)
 ├── migrations/                        # Goose SQL database migrations (00001 - 00003)
 ├── sql/
 │   └── queries/                       # sqlc source SQL queries

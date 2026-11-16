@@ -16,3 +16,6 @@ coverage.txt
 .vscode/
 *.swp
 *~
+etcms-api
+etcms-worker
+etcms-migrate

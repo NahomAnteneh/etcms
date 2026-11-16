@@ -241,6 +241,48 @@ func TestDownwardDependenciesTraversal(t *testing.T) {
 		assert.True(t, foundRetired, "expected down-retired-audit to be present when include_retired=true")
 	})
 
+	t.Run("GET /api/v1/cis/{id}/dependencies-downward - includes synced and out_of_sync dependencies by default", func(t *testing.T) {
+		syncedDepID := uuid.New()
+		outOfSyncDepID := uuid.New()
+		t.Cleanup(func() {
+			_, _ = testPool.Exec(context.Background(), "DELETE FROM ci_edges WHERE source_ci_id IN ($1, $2) OR target_ci_id IN ($1, $2)", syncedDepID, outOfSyncDepID)
+			_, _ = testPool.Exec(context.Background(), "DELETE FROM cis WHERE ci_id IN ($1, $2)", syncedDepID, outOfSyncDepID)
+		})
+
+		_, err := testPool.Exec(ctx, `
+			INSERT INTO cis (ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, primary_endpoint, last_verified_at, class_metadata, created_at, updated_at)
+			VALUES
+				($1, 'down-synced-dep', 'database', 'prod', 'synced', 'tier_1', $3, 'Sync DBA', 'pg.synced.internal', now(), '{}', now(), now()),
+				($2, 'down-out-of-sync-dep', 'database', 'prod', 'out_of_sync', 'tier_2', $3, 'Worker DBA', 'redis.sync.internal', now(), '{}', now(), now())
+		`, syncedDepID, outOfSyncDepID, infraGroupID)
+		require.NoError(t, err)
+
+		_, err = testPool.Exec(ctx, `
+			INSERT INTO ci_edges (id, source_ci_id, target_ci_id, edge_type, handshake_status, created_by, confirmed_by, confirmed_at, created_at, updated_at)
+			VALUES
+				(gen_random_uuid(), $1, $2, 'reads_from', 'confirmed', $4, $4, now(), now(), now()),
+				(gen_random_uuid(), $2, $3, 'connects_to', 'confirmed', $4, $4, now(), now(), now())
+		`, payAppID, syncedDepID, outOfSyncDepID, adminID)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/cis/%s/dependencies-downward", retailServiceID.String()), nil)
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp gen.DownwardDependenciesResponse
+		err = json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		nodeNames := make([]string, 0, len(resp.Nodes))
+		for _, n := range resp.Nodes {
+			nodeNames = append(nodeNames, n.Ci.Name)
+		}
+		assert.Contains(t, nodeNames, "down-synced-dep", "expected down-synced-dep to be included in downward traversal")
+		assert.Contains(t, nodeNames, "down-out-of-sync-dep", "expected down-out-of-sync-dep to be included in downward traversal")
+	})
+
 	t.Run("GET /api/v1/cis/{id}/dependencies-downward - Cyclic graph termination", func(t *testing.T) {
 		start := time.Now()
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/cis/%s/dependencies-downward", cyclicSourceID.String()), nil)

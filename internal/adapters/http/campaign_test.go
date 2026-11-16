@@ -88,6 +88,72 @@ func TestIntakeCampaignsFlow(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
+	t.Run("Rejects empty title with 400 Bad Request", func(t *testing.T) {
+		reqBody := gen.CreateCampaignRequest{
+			Title:         "   ",
+			Deadline:      time.Now().Add(14 * 24 * time.Hour),
+			OwnerGroupIds: []uuid.UUID{groupID1},
+		}
+		bodyBytes, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/intake/campaigns", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		var problem gen.ProblemDetails
+		err := json.Unmarshal(rec.Body.Bytes(), &problem)
+		require.NoError(t, err)
+		assert.Contains(t, problem.Detail, "Campaign title is required")
+	})
+
+	t.Run("Rejects title exceeding 255 characters with 400 Bad Request", func(t *testing.T) {
+		reqBody := gen.CreateCampaignRequest{
+			Title:         strings.Repeat("a", 256),
+			Deadline:      time.Now().Add(14 * 24 * time.Hour),
+			OwnerGroupIds: []uuid.UUID{groupID1},
+		}
+		bodyBytes, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/intake/campaigns", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		var problem gen.ProblemDetails
+		err := json.Unmarshal(rec.Body.Bytes(), &problem)
+		require.NoError(t, err)
+		assert.Contains(t, problem.Detail, "cannot exceed 255 characters")
+	})
+
+	t.Run("Rejects empty owner group IDs with 400 Bad Request", func(t *testing.T) {
+		reqBody := gen.CreateCampaignRequest{
+			Title:         "Valid Title",
+			Deadline:      time.Now().Add(14 * 24 * time.Hour),
+			OwnerGroupIds: []uuid.UUID{},
+		}
+		bodyBytes, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/intake/campaigns", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		var problem gen.ProblemDetails
+		err := json.Unmarshal(rec.Body.Bytes(), &problem)
+		require.NoError(t, err)
+		assert.Contains(t, problem.Detail, "At least one owner group must be specified")
+	})
+
 	t.Run("Rejects deadline in the past with 422 Unprocessable Entity", func(t *testing.T) {
 		reqBody := gen.CreateCampaignRequest{
 			Title:         "Expired Campaign",
@@ -165,6 +231,31 @@ func TestIntakeCampaignsFlow(t *testing.T) {
 		err = testDB.QueryRow(`SELECT count(*) FROM intake_invitations WHERE campaign_id = $1`, campaignID).Scan(&storedCount)
 		require.NoError(t, err)
 		assert.Equal(t, 2, storedCount)
+	})
+
+	t.Run("Platform admin launches campaign with duplicate owner group IDs without conflict", func(t *testing.T) {
+		deadline := time.Now().Add(7 * 24 * time.Hour).UTC().Truncate(time.Second)
+		reqBody := gen.CreateCampaignRequest{
+			Title:         "Enterprise Deduplicated Intake",
+			Deadline:      deadline,
+			OwnerGroupIds: []uuid.UUID{groupID1, groupID1, groupID2, groupID1},
+		}
+		bodyBytes, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/intake/campaigns", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusCreated, rec.Code)
+
+		var campaignResp gen.CampaignResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &campaignResp)
+		require.NoError(t, err)
+		assert.Equal(t, "Enterprise Deduplicated Intake", campaignResp.Title)
+		assert.Len(t, campaignResp.Invitations, 2)
 	})
 
 	t.Run("Resolve valid magic link token returns team context and updates status to opened", func(t *testing.T) {
@@ -259,5 +350,127 @@ func TestIntakeCampaignsFlow(t *testing.T) {
 				assert.Equal(t, 1, dept.OverdueCount)
 			}
 		}
+	})
+
+	t.Run("Platform admin lists campaigns successfully", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/intake/campaigns", nil)
+		req.Header.Set("X-Dev-User-ID", adminID.String())
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var list []gen.CampaignResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &list)
+		require.NoError(t, err)
+		assert.NotEmpty(t, list)
+
+		// Verify invitations and magic links are populated in ListCampaigns
+		var found *gen.CampaignResponse
+		for _, c := range list {
+			if c.Id == campaignID {
+				cCopy := c
+				found = &cCopy
+				break
+			}
+		}
+		require.NotNil(t, found)
+		require.NotEmpty(t, found.Invitations)
+		for _, inv := range found.Invitations {
+			assert.NotEmpty(t, inv.InvitationUrl)
+			assert.True(t, strings.HasPrefix(inv.InvitationUrl, "/intake/"))
+		}
+	})
+
+	t.Run("Non-admin cannot update or delete campaign", func(t *testing.T) {
+		// Non-admin PATCH
+		closedStatus := gen.Closed
+		patchBody, _ := json.Marshal(gen.UpdateCampaignRequest{
+			Status: &closedStatus,
+		})
+		patchReq := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), bytes.NewReader(patchBody))
+		patchReq.Header.Set("Content-Type", "application/json")
+		patchReq.Header.Set("X-Dev-User-ID", viewerID.String())
+		patchRec := httptest.NewRecorder()
+		router.ServeHTTP(patchRec, patchReq)
+		assert.Equal(t, http.StatusForbidden, patchRec.Code)
+
+		// Non-admin DELETE
+		delReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), nil)
+		delReq.Header.Set("X-Dev-User-ID", viewerID.String())
+		delRec := httptest.NewRecorder()
+		router.ServeHTTP(delRec, delReq)
+		assert.Equal(t, http.StatusForbidden, delRec.Code)
+	})
+
+	t.Run("Platform admin updates campaign status to closed and reopens it", func(t *testing.T) {
+		// Close campaign
+		closedStatus := gen.Closed
+		patchBody, _ := json.Marshal(gen.UpdateCampaignRequest{
+			Status: &closedStatus,
+		})
+		patchReq := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), bytes.NewReader(patchBody))
+		patchReq.Header.Set("Content-Type", "application/json")
+		patchReq.Header.Set("X-Dev-User-ID", adminID.String())
+		patchRec := httptest.NewRecorder()
+		router.ServeHTTP(patchRec, patchReq)
+		require.Equal(t, http.StatusOK, patchRec.Code)
+
+		var updated gen.CampaignResponse
+		err := json.Unmarshal(patchRec.Body.Bytes(), &updated)
+		require.NoError(t, err)
+		assert.Equal(t, gen.CampaignResponseStatusClosed, updated.Status)
+
+		// Verify draft saving rejects when campaign is closed
+		draftBody := map[string]interface{}{
+			"payload": map[string]interface{}{
+				"services": []interface{}{},
+			},
+		}
+		rawDraft, _ := json.Marshal(draftBody)
+		draftReq := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/intake/%s", rawToken1), bytes.NewReader(rawDraft))
+		draftReq.Header.Set("Content-Type", "application/json")
+		draftReq.Header.Set("If-Match", "\"1\"")
+		draftRec := httptest.NewRecorder()
+		router.ServeHTTP(draftRec, draftReq)
+		assert.Equal(t, http.StatusBadRequest, draftRec.Code)
+
+		// Reopen campaign
+		activeStatus := gen.Active
+		reopenBody, _ := json.Marshal(gen.UpdateCampaignRequest{
+			Status: &activeStatus,
+		})
+		reopenReq := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), bytes.NewReader(reopenBody))
+		reopenReq.Header.Set("Content-Type", "application/json")
+		reopenReq.Header.Set("X-Dev-User-ID", adminID.String())
+		reopenRec := httptest.NewRecorder()
+		router.ServeHTTP(reopenRec, reopenReq)
+		require.Equal(t, http.StatusOK, reopenRec.Code)
+
+		err = json.Unmarshal(reopenRec.Body.Bytes(), &updated)
+		require.NoError(t, err)
+		assert.Equal(t, gen.CampaignResponseStatusActive, updated.Status)
+	})
+
+	t.Run("Platform admin deletes campaign and cascades cleanly", func(t *testing.T) {
+		delReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), nil)
+		delReq.Header.Set("X-Dev-User-ID", adminID.String())
+		delRec := httptest.NewRecorder()
+		router.ServeHTTP(delRec, delReq)
+		require.Equal(t, http.StatusNoContent, delRec.Code)
+
+		// GET should now return 404
+		getReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), nil)
+		getReq.Header.Set("X-Dev-User-ID", adminID.String())
+		getRec := httptest.NewRecorder()
+		router.ServeHTTP(getRec, getReq)
+		assert.Equal(t, http.StatusNotFound, getRec.Code)
+
+		// Subsequent DELETE returns 404
+		delReq2 := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/admin/intake/campaigns/%s", campaignID), nil)
+		delReq2.Header.Set("X-Dev-User-ID", adminID.String())
+		delRec2 := httptest.NewRecorder()
+		router.ServeHTTP(delRec2, delReq2)
+		assert.Equal(t, http.StatusNotFound, delRec2.Code)
 	})
 }

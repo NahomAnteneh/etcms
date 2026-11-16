@@ -52,7 +52,13 @@ SELECT
     END AS score
 FROM cis c
 JOIN owner_groups og ON og.id = c.owner_group_id
-WHERE c.lifecycle_state != 'retired'
+WHERE (
+      CASE
+          WHEN @lifecycle_state::text IS NOT NULL AND @lifecycle_state::text != ''
+              THEN c.lifecycle_state::text = @lifecycle_state::text
+          ELSE c.lifecycle_state != 'retired'
+      END
+  )
   AND (
       @ci_class::text IS NULL OR @ci_class::text = '' OR c.ci_class::text = @ci_class::text
   )
@@ -95,7 +101,13 @@ LIMIT CASE WHEN @limit_val::integer <= 0 THEN 20 ELSE @limit_val::integer END;
 -- name: CountSearchCIs :one
 SELECT count(*)::integer AS total_count
 FROM cis c
-WHERE c.lifecycle_state != 'retired'
+WHERE (
+      CASE
+          WHEN @lifecycle_state::text IS NOT NULL AND @lifecycle_state::text != ''
+              THEN c.lifecycle_state::text = @lifecycle_state::text
+          ELSE c.lifecycle_state != 'retired'
+      END
+  )
   AND (@ci_class::text IS NULL OR @ci_class::text = '' OR c.ci_class::text = @ci_class::text)
   AND (@environment::text IS NULL OR @environment::text = '' OR c.environment::text = @environment::text)
   AND (@owner_group_id::uuid IS NULL OR @owner_group_id::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR c.owner_group_id = @owner_group_id)

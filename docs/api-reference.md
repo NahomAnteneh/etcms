@@ -1,6 +1,6 @@
 # API Reference & Contract Specification
 
-This document provides a complete reference for all REST API endpoints defined in [`api/openapi.yaml`](file:///home/nahom/Work/ET/etcms/etcms-backend/api/openapi.yaml) and implemented in the `etcms-backend` service.
+This document provides a complete reference for all REST API endpoints defined in [`api/openapi.yaml`](../api/openapi.yaml) and implemented in the `etcms-backend` service.
 
 ---
 
@@ -107,41 +107,75 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
 
 ## 4. Decentralized Service Intake (`US-2.1`, `US-2.2`, `US-2.3`, `US-1.1`, `US-1.2`)
 
-### `POST /api/v1/intake-campaigns`
+### `POST /api/v1/admin/intake/campaigns`
 - **Summary:** Launches an intake campaign and generates tokenized magic links for all team leads.
-- **Auth:** Restricted to `platform_admin`.
+- **Auth:** Restricted to `platform_admin` (`HTTP 403 Forbidden` for non-admins).
 - **Request Body:**
   ```json
   {
-    "name": "Q4 2026 Service Mapping Campaign",
-    "deadline": "2026-12-15T00:00:00Z"
+    "title": "Q4 2026 Service Mapping Campaign",
+    "deadline": "2026-12-15T00:00:00Z",
+    "owner_group_ids": ["7fa85f64-5717-4562-b3fc-2c963f66afa6"]
   }
   ```
-- **Response 201 Created:** `IntakeCampaign` with nested `magic_links[]`.
+- **Past Deadline Guard:** If `deadline <= now()`, rejected with `HTTP 422 Unprocessable Entity` (`"campaign deadline must be in the future"`).
+- **Empty Owner Groups Guard:** If `owner_group_ids` is empty, rejected with `HTTP 422 Unprocessable Entity` (`"at least one owner group must be specified"`).
+- **Response 201 Created:** `CampaignResponse` with nested `invitations[]` containing magic link URLs (`/intake/<rawToken>`).
 
-### `GET /api/v1/intake-campaigns/{id}/progress`
+### `GET /api/v1/admin/intake/campaigns/{id}/progress`
 - **Summary:** Aggregates department-level and group-level completion progress for a campaign.
 - **Auth:** `BearerAuth` / `DevAuth`.
-- **Response 200 OK:** `CampaignProgressResponse` with completion percentages.
+- **Response 200 OK:** `CampaignProgressResponse` with departmental breakdowns (`sent_count`, `opened_count`, `submitted_count`, `overdue_count`).
 
 ### `GET /api/v1/intake/{token}`
 - **Summary:** Resolves tokenized magic link, updates status to `'opened'`, and returns team context, existing CIs, and active draft.
-- **Auth:** None (token hash authentication).
-- **Response 200 OK:** `IntakeTokenContextResponse`.
+- **Auth:** Token hash authentication (`intake_invitations.token_hash`).
+- **Errors:**
+  - `HTTP 401 Unauthorized`: If the magic link token is expired (`expires_at <= now()`) or in `'expired'` status.
+  - `HTTP 404 Not Found`: If the magic link token does not exist in `intake_invitations`.
+- **Response 200 OK:** `IntakeContextResponse`.
 
 ### `PATCH /api/v1/intake/{token}`
 - **Summary:** Auto-saves draft services, applications, and dependency selections.
+- **Auth:** Token hash authentication (`intake_invitations.token_hash`).
 - **Headers:** `If-Match: "<lock_version>"` (required).
 - **Payload Limit:** Enforces 2MB maximum payload size limit in middleware.
+- **Errors:**
+  - `HTTP 401 Unauthorized`: If the magic link token is expired or invalid.
+  - `HTTP 404 Not Found`: If the magic link token does not exist.
+  - `HTTP 409 Conflict`: If the submission has already been submitted/approved (`"intake submission is not in draft status"`).
+  - `HTTP 412 Precondition Failed`: If `If-Match` does not match active `lock_version` (`"lock version mismatch"`).
+  - `HTTP 422 Unprocessable Entity`: If prohibited Anti-ITAM fields are present.
 - **Response 200 OK:** Updated draft payload with incremented `lock_version`.
-- **Response 412 Precondition Failed:** If `If-Match` does not match active `lock_version`.
 
 ### `POST /api/v1/intake/{token}/submit`
-- **Summary:** Atomically validates 10-field envelope, rejects unapproved ITAM fields (`422`), acquires row lock (`FOR UPDATE`), and publishes CIs and dependencies.
+- **Summary:** Atomically validates the 10-field envelope, rejects unapproved ITAM fields (`422`), acquires row lock (`FOR UPDATE`), and publishes CIs and dependencies into an approved baseline.
+- **Auth:** Token hash authentication (`intake_invitations.token_hash`).
 - **Headers:** `Idempotency-Key: "<uuid>"` (optional).
-- **Response 201 Created:** `SubmitIntakeResponse` with baseline publication details (`Baseline v1.0`).
-- **Response 409 Conflict:** If already submitted or approved.
-- **Response 422 Unprocessable Entity:** If pre-flight validation fails (`node_errors` detailed map).
+- **10-Field Envelope Validation (`validateIntakePayload`):** Every declared service or application item is strictly validated against the 10-field envelope:
+  1. `name` (required, string, 1-160 chars)
+  2. `ci_class` (required, enum: `business_service`, `application`, `database`, `vm_cluster`, `physical_host`, `network_firewall`)
+  3. `environment` (required, enum: `prod`, `dr`, `staging`)
+  4. `criticality_tier` (required, enum: `tier_0`, `tier_1`, `tier_2`, `tier_3`)
+  5. `technical_contact` (required, string, 1-160 chars)
+  6. `owner_group_id` (implicitly bound to the invitation's owner group during publication)
+  7. `primary_endpoint` (optional, string, nullable, max 255 chars)
+  8. `itam_external_ref` (optional, string, nullable, max 512 chars)
+  9. `class_metadata` (optional, JSON object, max 2 keys)
+  10. `last_verified_at` (timestamp, automatically initialized to `now()` on baseline publication)
+- **Dependency Linking Validation:**
+  - `source_ci_name`: Must match a declared service in the submission.
+  - `target_ci_id`: Must exist in active CI catalog (returns `422` with node error if not found).
+  - `edge_type`: Valid enum (`depends_on`, `hosted_on`, `connects_to`, `reads_from`).
+  - Self-dependencies are forbidden: `targetCI.Name == dep.SourceCIName` rejected with `422`.
+- **Anti-ITAM Enforcement:** Rejects unapproved ITAM fields (`cost`, `purchase_cost`, `license_count`, `warranty_end`, `vendor`) with `HTTP 422 Unprocessable Entity`.
+- **Responses:**
+  - **`HTTP 200 OK` (Idempotent Replay):** Returned when resubmitting a token whose submission is already in `'submitted'` or `'approved'` status, returning the existing baseline snapshot.
+  - **`HTTP 201 Created`:** Returned on initial successful publication of the baseline.
+  - **`HTTP 401 Unauthorized`:** If token is expired.
+  - **`HTTP 404 Not Found`:** If token does not exist.
+  - **`HTTP 409 Conflict`:** If submission is marked submitted/approved but the existing baseline record cannot be found.
+  - **`HTTP 422 Unprocessable Entity`:** If pre-flight validation fails (`node_errors` detailed map) or Anti-ITAM prohibited fields are detected.
 
 ---
 
@@ -154,17 +188,22 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
 - **Response 200 OK:** Array of `PendingEdgeItem` objects.
 
 ### `POST /api/v1/edges/{id}/confirm`
-- **Summary:** Confirms an edge dependency. Restricted to target CI team lead or `platform_admin`.
+- **Summary:** Confirms an edge dependency. Restricted to target CI team lead (`actor.BelongsToOwnerGroup(edge.TargetOwnerGroupID)`) or `platform_admin`. Users with `role = viewer` are rejected with `HTTP 403 Forbidden`.
 - **Auth:** `BearerAuth` / `DevAuth`.
 - **Response 200 OK:** `GraphEdge` with `handshake_status = 'confirmed'`.
 
 ### `POST /api/v1/edges/{id}/flag-mismatch`
 - **Summary:** Flags dependency discrepancy.
+- **Auth:** Restricted to target CI team lead (`actor.BelongsToOwnerGroup(edge.TargetOwnerGroupID)`) or `platform_admin`. Users with `role = viewer` are rejected with `HTTP 403 Forbidden`.
+- **State Machine:** If the edge is already `rejected`, returns `HTTP 409 Conflict`.
+- **Reason Storage:** The `reason` string is persisted in `audit_logs.diff` JSONB (`{"action": "flag_edge_mismatch", "previous_status": "...", "new_status": "flagged_mismatch", "reason": "..."}`). `ci_edges` has no `reason` column; only `handshake_status` is updated.
 - **Request Body:** `{"reason": "Service actually connects via Read Replica, not Primary"}`.
 - **Response 200 OK:** `GraphEdge` with `handshake_status = 'flagged_mismatch'`.
 
 ### `POST /api/v1/edges/{id}/reject`
 - **Summary:** Rejects and disconnects unapproved cross-boundary dependency.
+- **Auth:** Restricted to target CI team lead (`actor.BelongsToOwnerGroup(edge.TargetOwnerGroupID)`) or `platform_admin`. Users with `role = viewer` are rejected with `HTTP 403 Forbidden`.
+- **State Machine:** If the edge is already `rejected`, returns `HTTP 409 Conflict`.
 - **Response 200 OK:** `GraphEdge` with `handshake_status = 'rejected'`.
 
 ---
@@ -173,28 +212,44 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
 
 ### `POST /api/v1/cis`
 - **Summary:** Directly creates a single in-service CI post-baseline.
-- **Auth:** Restricted to CI owner group member or `platform_admin`.
-- **Validation:** 10-field envelope, Anti-ITAM rejection, `class_metadata <= 2` keys.
+- **Auth:** Restricted to CI owner group member (`actor.BelongsToOwnerGroup(req.OwnerGroupId)`) or `platform_admin`. Users with `role = viewer` are explicitly rejected with `HTTP 403 Forbidden`.
+- **10-Field Envelope Validation:**
+  1. `name` (required, string, trimmed, 1-160 chars)
+  2. `ci_class` (required, enum: `business_service`, `application`, `database`, `vm_cluster`, `physical_host`, `network_firewall`)
+  3. `environment` (required, enum: `prod`, `dr`, `staging`)
+  4. `criticality_tier` (required, enum: `tier_0`, `tier_1`, `tier_2`, `tier_3`)
+  5. `owner_group_id` (required, UUID; caller must belong to this group unless `platform_admin`)
+  6. `technical_contact` (required, string, trimmed, 1-160 chars)
+  7. `primary_endpoint` (optional, string, nullable, max 255 chars)
+  8. `last_verified_at` (automatically stamped to `now()` upon creation)
+  9. `itam_external_ref` (optional, string, nullable, max 512 chars)
+  10. `class_metadata` (optional, JSON object, max 2 keys; $>2$ keys rejected with `422`)
+- **Anti-ITAM Enforcement:** Rejects unapproved ITAM fields (`cost`, `purchase_cost`, `license_count`, `warranty_end`, `vendor`) with `HTTP 422 Unprocessable Entity`.
 - **Response 201 Created:** `CIEnvelope` with `last_verified_at = now()`.
 
 ### `POST /api/v1/edges`
 - **Summary:** Connects two CIs post-baseline.
-- **Self-Loop Check:** Rejects `source_ci_id == target_ci_id` with `HTTP 422`.
+- **Auth:** Restricted to team leads belonging to the source OR target CI owner group, or `platform_admin`. Rejects `role = viewer` with `HTTP 403 Forbidden`.
+- **Self-Loop Check:** Rejects `source_ci_id == target_ci_id` with `HTTP 422 Unprocessable Entity`.
 - **Response 201 Created:** `GraphEdge` (`confirmed` if internal, `pending_confirmation` if cross-boundary).
 
 ### `DELETE /api/v1/edges/{id}`
 - **Summary:** Disconnects an edge and records `disconnect` audit log.
+- **Auth:** Viewers cannot delete edges (`role = viewer` returns `HTTP 403 Forbidden`). Caller must belong to either the source CI owner group or target CI owner group (`actor.BelongsToOwnerGroup(...)`), or be `platform_admin`.
 - **Response 204 No Content.**
 
 ### `PATCH /api/v1/cis/{id}`
 - **Summary:** Domain-restricted edits with volatile-only verification stamping and diff auditing.
-- **Auth:** Restricted to CI owner group member or `platform_admin`.
-- **Volatile Stamping:** Updates `last_verified_at = now()` ONLY when modifying `primary_endpoint`, `technical_contact`, `owner_group_id`, or `criticality_tier`. Cosmetic edits (e.g. `class_metadata`) leave verification timestamp untouched.
-- **Retirement Block:** Explicitly rejects retirement via PATCH with `422` (must use `/retire`).
+- **Auth:** Restricted to CI owner group member (`actor.BelongsToOwnerGroup(...)`) or `platform_admin`. Users with `role = viewer` or non-members of the CI's owner group are rejected with `HTTP 403 Forbidden`.
+- **Field Mutability & Stamping Rules (`internal/service/cis.go:452-573`):**
+  - **Volatile Operational Fields:** Modifying `primary_endpoint`, `technical_contact`, `owner_group_id`, or `criticality_tier` updates `last_verified_at = now()` AND `updated_at = now()`.
+  - **Cosmetic / Metadata Fields:** Modifying `name`, `ci_class`, `environment`, `itam_external_ref`, or `class_metadata` ($\le 2$ keys) updates `updated_at = now()` ONLY, leaving `last_verified_at` untouched.
+  - **Class Metadata Validation:** If provided, `class_metadata` must be a JSON object with at most 2 keys. Providing $>2$ keys is rejected with `HTTP 422 Unprocessable Entity`.
+  - **Lifecycle State:** Can be updated between `planned`, `in_service`, and `deprecated`. Attempting to set `lifecycle_state = 'retired'` via PATCH is explicitly rejected with `HTTP 422 Unprocessable Entity` (retirements must use `POST /api/v1/cis/{id}/retire`).
 - **Response 200 OK:** Updated `CIEnvelope`.
 
 ### `POST /api/v1/cis/{id}/flags`
-- **Summary:** Reports data-quality flag on a CI. Open to all authenticated users.
+- **Summary:** Reports data-quality flag on a CI. Open to all authenticated users (`viewer`, `team_lead`, `platform_admin`).
 - **Request Body:** `{"reason": "Host offline since last night", "flag_type": "connectivity"}` (reason min 5 chars).
 - **Response 201 Created:** `CIFlagResponse`.
 
@@ -242,7 +297,7 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
 
 ### `POST /api/v1/cis/{id}/verify`
 - **Summary:** Explicitly verifies operational accuracy of a CI.
-- **Auth:** Restricted to CI owner group member or `platform_admin`.
+- **Auth:** Restricted to CI owner group member (`actor.BelongsToOwnerGroup(ci.OwnerGroupID)`) or `platform_admin`.
 - **Side Effects:**
   - Updates `last_verified_at = now()`.
   - Resolves any open flags on the CI (`status = 'resolved'`).
@@ -252,14 +307,15 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
 
 ### `POST /api/v1/cis/{id}/retire`
 - **Summary:** Retires CI with upstream dependency check.
+- **Auth:** Restricted to CI owner group member (`actor.BelongsToOwnerGroup(ci.OwnerGroupID)`) or `platform_admin`.
 - **Query Params:** `force` (boolean, default false).
-- **Dependent Check:** If active dependents exist (`lifecycle_state = 'in_service'`) and `force != true`, returns `HTTP 409 Conflict` with `dependent_cis` array.
-- **Force Bypass:** `force=true` is strictly restricted to `platform_admin` (`403` for non-admins).
+- **Dependent Check:** Inspects all incoming edges in `ci_edges` with in-service source CIs (`GetActiveUpstreamDependents`). Edge `handshake_status` is not filtered (unconfirmed and flagged edges also block retirement). If active dependents exist (`lifecycle_state = 'in_service'`) and `force != true`, returns `HTTP 409 Conflict` with `dependent_cis` array.
+- **Force Bypass:** `force=true` is strictly restricted to `platform_admin` (`HTTP 403 Forbidden` for non-admins).
 - **Response 200 OK:** Updated `CIEnvelope` with `lifecycle_state = 'retired'`.
 
 ### `POST /api/v1/admin/digests/trigger`
 - **Summary:** Manually triggers an immediate digest evaluation pass for all owner groups.
-- **Auth:** Restricted to `platform_admin`.
+- **Auth:** Restricted to `platform_admin` (`HTTP 403 Forbidden` for non-admins).
 - **Response 200 OK:** `DigestTriggerResponse`.
 
 ---
@@ -268,7 +324,12 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
 
 ### `GET /api/v1/cis/{id}/audit-logs`
 - **Summary:** Cursor-paginated timeline of audit logs for a CI (`created_at DESC, id DESC`).
-- **Response 200 OK:** `CIAuditLogsResponse`.
+- **Auth:** Requires authentication (`HTTP 401 Unauthorized` if unauthenticated). Accessible to all authenticated roles (`viewer`, `team_lead`, `platform_admin`).
+- **Query Params:**
+  - `cursor`: Base64-encoded keyset cursor token containing `(created_at, id)` for deterministic timeline pagination.
+  - `limit`: Integer page limit (default 20, max 100).
+- **Errors:** Returns `HTTP 404 Not Found` if CI does not exist.
+- **Response 200 OK:** `CIAuditLogsResponse` containing `items[]` array, `total_count`, and `next_cursor` (null when end of timeline is reached).
 
 ### `GET /api/v1/audit-logs/export`
 - **Summary:** Streams immutable audit logs under `REPEATABLE READ` snapshot isolation.
@@ -286,3 +347,74 @@ All error responses across all endpoints adhere strictly to the **RFC 9457 Probl
   - `pending_edges_count` & `oldest_pending_age_days`.
   - `digest_completion_rate`: % of actioned items computed strictly over closed cycles.
   - `groups[]`: Per-group breakdowns.
+
+---
+
+## 11. System Administration & Custom Governance
+
+### `POST /api/v1/owner-groups`
+- **Summary:** Creates a new owner group with automatic slug generation.
+- **Auth:** Restricted to `platform_admin` (`HTTP 403 Forbidden` for non-admins).
+- **Request Body:** `CreateOwnerGroupRequest` (`name`, `department_name`, `team_lead_name`, `team_lead_email`, optional `slug`).
+- **Response 201 Created:** `OwnerGroup`.
+
+### `PUT /api/v1/owner-groups/{id}`
+- **Summary:** Updates metadata for an existing owner group.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 200 OK:** Updated `OwnerGroup`.
+
+### `DELETE /api/v1/owner-groups/{id}`
+- **Summary:** Deletes an owner group. Fails if CIs or users are currently associated.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 204 No Content.**
+
+### `GET /api/v1/admin/ci-classes`
+- **Summary:** Lists all system and custom CI class definitions.
+- **Auth:** Requires authentication.
+- **Response 200 OK:** Array of `CIClassDefinition` objects.
+
+### `POST /api/v1/admin/ci-classes`
+- **Summary:** Registers a custom CI class definition.
+- **Auth:** Restricted to `platform_admin`.
+- **Request Body:** `CreateCIClassRequest` (`id`, `label`, `category`, `description`, `icon`, `attributes`).
+- **Response 201 Created:** `CIClassDefinition`.
+
+### `PUT /api/v1/admin/ci-classes/{id}`
+- **Summary:** Updates a custom CI class definition (system classes are protected).
+- **Auth:** Restricted to `platform_admin`.
+- **Response 200 OK:** Updated `CIClassDefinition`.
+
+### `DELETE /api/v1/admin/ci-classes/{id}`
+- **Summary:** Deletes a custom CI class definition.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 204 No Content.**
+
+### `GET /api/v1/admin/roles`
+- **Summary:** Lists all custom RBAC roles and permissions.
+- **Auth:** Requires authentication.
+- **Response 200 OK:** Array of `CustomRole` objects.
+
+### `POST /api/v1/admin/roles`
+- **Summary:** Creates a custom RBAC role with granular capability assignments.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 201 Created:** `CustomRole`.
+
+### `DELETE /api/v1/admin/roles/{id}`
+- **Summary:** Deletes a custom role (system roles are protected).
+- **Auth:** Restricted to `platform_admin`.
+- **Response 204 No Content.**
+
+### `GET /api/v1/admin/users`
+- **Summary:** Lists user accounts with their assigned custom role and primary owner group.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 200 OK:** Array of `AdminUserResponse`.
+
+### `POST /api/v1/admin/users`
+- **Summary:** Creates a user account with assigned role and owner group.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 201 Created:** `AdminUserResponse`.
+
+### `POST /api/v1/audit-logs/{id}/revert`
+- **Summary:** Reverts an audit mutation with compensating transaction.
+- **Auth:** Restricted to `platform_admin`.
+- **Response 200 OK:** `RevertAuditLogResponse`.

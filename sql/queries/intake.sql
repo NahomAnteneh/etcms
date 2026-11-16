@@ -8,11 +8,11 @@ RETURNING id, title, status, deadline, created_by, created_at;
 
 -- name: CreateIntakeInvitation :one
 INSERT INTO intake_invitations (
-    id, campaign_id, owner_group_id, token_hash, team_lead_email, status, expires_at, created_at
+    id, campaign_id, owner_group_id, token_hash, raw_token, team_lead_email, status, expires_at, created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, campaign_id, owner_group_id, token_hash, team_lead_email, status, expires_at, last_accessed_at, created_at;
+RETURNING id, campaign_id, owner_group_id, token_hash, raw_token, team_lead_email, status, expires_at, last_accessed_at, created_at;
 
 -- name: CreateIntakeSubmission :one
 INSERT INTO intake_submissions (
@@ -27,12 +27,30 @@ SELECT id, title, status, deadline, created_by, created_at
 FROM intake_campaigns
 WHERE id = $1;
 
+-- name: DeleteIntakeCampaign :exec
+DELETE FROM intake_campaigns
+WHERE id = $1;
+
+-- name: UpdateIntakeCampaign :one
+UPDATE intake_campaigns
+SET status = $2,
+    title = $3,
+    deadline = $4
+WHERE id = $1
+RETURNING id, title, status, deadline, created_by, created_at;
+
+-- name: ListIntakeCampaigns :many
+SELECT id, title, status, deadline, created_by, created_at
+FROM intake_campaigns
+ORDER BY created_at DESC;
+
 -- name: GetCampaignInvitationsWithGroup :many
 SELECT
     i.id AS invitation_id,
     i.campaign_id,
     i.owner_group_id,
     i.token_hash,
+    i.raw_token,
     i.team_lead_email,
     i.status,
     i.expires_at,

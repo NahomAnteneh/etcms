@@ -184,14 +184,13 @@ func TestCISClassMetadataConstraint(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("Invalid with >2 keys in class_metadata", func(t *testing.T) {
+	t.Run("Valid with >2 keys in class_metadata (dynamic forms)", func(t *testing.T) {
 		ciID := uuid.New()
 		_, err := testDB.Exec(`
 			INSERT INTO cis (ci_id, name, ci_class, environment, lifecycle_state, criticality_tier, owner_group_id, technical_contact, class_metadata)
 			VALUES ($1, 'ci-three-keys', 'application', 'prod', 'in_service', 'tier_1', $2, 'Alice Eng', '{"k1": "v1", "k2": "v2", "k3": "v3"}'::jsonb)
 		`, ciID, ownerGroupID)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "chk_cis_class_metadata")
+		require.NoError(t, err)
 	})
 
 	t.Run("Invalid with non-object JSON array in class_metadata", func(t *testing.T) {
