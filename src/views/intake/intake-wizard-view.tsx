@@ -7,6 +7,7 @@ import {
   Plus,
   Trash2,
   Save,
+  AlertCircle,
 } from 'lucide-react';
 import { api, ApiProblemError, setIntakeToken } from '../../api/client';
 import { useCISearch, type CISearchResult } from '../../api/endpoints';
@@ -51,6 +52,10 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('Synced');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [publicationSuccess, setPublicationSuccess] = useState(false);
+
+  // Step 1 Validation State
+  const [step1Attempted, setStep1Attempted] = useState(false);
+  const [step1ValidationMsg, setStep1ValidationMsg] = useState<string | null>(null);
 
   // Search-First Dependency Picker State
   const [depSearchQuery, setDepSearchQuery] = useState('');
@@ -102,7 +107,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
     setAutoSaveStatus('Saving draft...');
     try {
       const res = await api
-        .put(`intake/${token}`, {
+        .patch(`intake/${token}`, {
           headers: {
             'If-Match': `"${lockVersion}"`,
           },
@@ -206,8 +211,8 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
   if (publicationSuccess) {
     return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-surface border border-hairline rounded-lg p-8 text-center space-y-4 shadow-[0_4px_12px_rgba(16,24,40,0.10)]">
+      <div className="flex-1 w-full bg-canvas flex items-center justify-center p-4">
+        <div className="w-full max-w-lg bg-surface border border-hairline rounded-md p-8 text-center space-y-4 shadow-snow">
           <CheckCircle className="w-12 h-12 text-inservice mx-auto stroke-[1.5]" />
           <h2 className="text-xl font-semibold text-primary">Baseline v1.0 Successfully Published!</h2>
           <p className="text-xs text-secondary leading-relaxed">
@@ -219,23 +224,18 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
   }
 
   return (
-    <div className="min-h-screen bg-canvas text-primary flex flex-col antialiased">
-      {/* Top Banner */}
-      <header className="h-14 bg-surface border-b border-hairline px-6 flex items-center justify-between select-none">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-accent flex items-center justify-center text-white font-bold text-xs">
-            ET
+    <div className="flex-1 w-full bg-canvas text-primary flex flex-col antialiased">
+      {/* Intake Progress Banner */}
+      <div className="bg-surface border-b border-hairline px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 select-none">
+        <div>
+          <div className="text-sm font-semibold text-primary">
+            Service Intake: <span className="text-accent">{session?.department_name}</span>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-primary">
-              Service Intake: <span className="text-accent">{session?.department_name}</span>
-            </div>
-            <div className="text-3xs text-muted font-mono">Team Lead: {session?.team_lead_email}</div>
-          </div>
+          <div className="text-3xs text-muted font-mono">Team Lead: {session?.team_lead_email}</div>
         </div>
 
         {/* Step Indicator & Auto-Save Badge */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="text-2xs font-mono text-muted flex items-center gap-1.5">
             <Save className="w-3.5 h-3.5 text-accent stroke-[1.5]" />
             <span>{autoSaveStatus}</span>
@@ -265,7 +265,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
             </span>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Wizard Form Container */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-6 space-y-6">
@@ -298,7 +298,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     {cis.length > 1 && (
                       <button
                         onClick={() => removeCI(index)}
-                        className="text-tier0 hover:text-red-800 text-xs flex items-center gap-1 cursor-pointer"
+                        className="text-tier0 hover:opacity-75 text-xs flex items-center gap-1 cursor-pointer transition-opacity"
                       >
                         <Trash2 className="w-3 h-3 stroke-[1.5]" /> Remove
                       </button>
@@ -307,21 +307,29 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
+                      <label htmlFor={`ci-${index}-name`} className="block text-2xs font-mono uppercase text-muted mb-1">
                         Service / Application Name *
                       </label>
                       <Input
+                        id={`ci-${index}-name`}
                         value={ci.name}
                         onChange={(e) => updateCI(index, 'name', e.target.value)}
                         placeholder="e.g. core-payments-service"
+                        className={!ci.name.trim() && step1Attempted ? 'border-tier0 ring-1 ring-tier0' : ''}
                       />
+                      {!ci.name.trim() && step1Attempted && (
+                        <span className="text-3xs text-tier0 font-mono mt-1 block">
+                          Service name is required
+                        </span>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
+                      <label htmlFor={`ci-${index}-class`} className="block text-2xs font-mono uppercase text-muted mb-1">
                         CI Class *
                       </label>
                       <select
+                        id={`ci-${index}-class`}
                         value={ci.ci_class}
                         onChange={(e) => updateCI(index, 'ci_class', e.target.value as any)}
                         className="h-8 w-full rounded-md border border-control bg-surface px-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
@@ -336,10 +344,11 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
+                      <label htmlFor={`ci-${index}-env`} className="block text-2xs font-mono uppercase text-muted mb-1">
                         Environment *
                       </label>
                       <select
+                        id={`ci-${index}-env`}
                         value={ci.environment}
                         onChange={(e) => updateCI(index, 'environment', e.target.value as any)}
                         className="h-8 w-full rounded-md border border-control bg-surface px-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-accent"
@@ -351,10 +360,11 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
+                      <label htmlFor={`ci-${index}-tier`} className="block text-2xs font-mono uppercase text-muted mb-1">
                         Criticality Tier *
                       </label>
                       <select
+                        id={`ci-${index}-tier`}
                         value={ci.criticality_tier}
                         onChange={(e) => updateCI(index, 'criticality_tier', e.target.value as any)}
                         className="h-8 w-full rounded-md border border-control bg-surface px-2 text-primary text-xs focus:outline-none focus:ring-2 focus:ring-accent"
@@ -367,21 +377,29 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
+                      <label htmlFor={`ci-${index}-contact`} className="block text-2xs font-mono uppercase text-muted mb-1">
                         Technical Contact *
                       </label>
                       <Input
+                        id={`ci-${index}-contact`}
                         value={ci.technical_contact}
                         onChange={(e) => updateCI(index, 'technical_contact', e.target.value)}
                         placeholder="Engineer handle or email"
+                        className={!ci.technical_contact.trim() && step1Attempted ? 'border-tier0 ring-1 ring-tier0' : ''}
                       />
+                      {!ci.technical_contact.trim() && step1Attempted && (
+                        <span className="text-3xs text-tier0 font-mono mt-1 block">
+                          Contact is required
+                        </span>
+                      )}
                     </div>
 
                     <div className="sm:col-span-3">
-                      <label className="block text-2xs font-mono uppercase text-muted mb-1">
+                      <label htmlFor={`ci-${index}-endpoint`} className="block text-2xs font-mono uppercase text-muted mb-1">
                         Primary Endpoint (VIP, FQDN, or URL)
                       </label>
                       <Input
+                        id={`ci-${index}-endpoint`}
                         value={ci.primary_endpoint}
                         onChange={(e) => updateCI(index, 'primary_endpoint', e.target.value)}
                         placeholder="e.g. 10.20.4.15 or https://payments.internal.net"
@@ -392,6 +410,13 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
               ))}
             </div>
 
+            {step1ValidationMsg && (
+              <div className="p-3 rounded-md bg-tier0-bg border border-tier0-border text-tier0 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 stroke-[1.5]" />
+                <span>{step1ValidationMsg}</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-4 border-t border-subtle">
               <Button variant="secondary" size="sm" onClick={saveDraft}>
                 Save Draft
@@ -400,10 +425,16 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
                 variant="primary"
                 size="sm"
                 onClick={() => {
+                  setStep1Attempted(true);
+                  const hasMissing = cis.some((c) => !c.name.trim() || !c.technical_contact.trim());
+                  if (hasMissing) {
+                    setStep1ValidationMsg('Please provide a name and technical contact for each registered service.');
+                    return;
+                  }
+                  setStep1ValidationMsg(null);
                   saveDraft();
                   setStep(2);
                 }}
-                disabled={cis.some((c) => !c.name.trim())}
               >
                 Next: Search-First Dependencies <ArrowRight className="w-3.5 h-3.5 ml-1 stroke-[1.5]" />
               </Button>
@@ -523,7 +554,7 @@ export function IntakeWizardView({ token, onCompleted }: IntakeWizardViewProps) 
 
                       <button
                         onClick={() => removeEdge(idx)}
-                        className="text-tier0 hover:text-red-800 text-xs cursor-pointer"
+                        className="text-tier0 hover:opacity-75 text-xs cursor-pointer transition-opacity"
                       >
                         <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
                       </button>

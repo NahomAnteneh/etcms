@@ -16,16 +16,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f3f6;
+  background: #ebeef2;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d3d8e0;
+  background: #d0d7de;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #858e9e;
+  background: #8c9ba5;
 }
 
 /* React Flow Canvas overrides */
@@ -35,13 +35,39 @@
 
 .react-flow__controls button {
   background: #ffffff !important;
-  border-bottom: 1px solid #e5e8ed !important;
-  color: #4b5563 !important;
-  fill: #4b5563 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #516273 !important;
+  fill: #516273 !important;
 }
 
 .react-flow__controls button:hover {
-  background: #eef0f4 !important;
-  color: #111827 !important;
-  fill: #111827 !important;
+  background: #edf2f7 !important;
+  color: #182230 !important;
+  fill: #182230 !important;
 }
+
+/* Accessibility: Prefers-Reduced-Motion intentional fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    /* Suppress sliding, scaling, and movement while preserving instant state changes */
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable continuous spinning and aggressive movement while preserving feedback */
+  .animate-spin {
+    animation: none !important;
+    opacity: 0.75;
+  }
+
+  [data-state='open'],
+  [data-state='closed'],
+  .animate-in {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+

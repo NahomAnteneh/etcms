@@ -10,11 +10,16 @@ import {
   Shield,
   AlertTriangle,
   Users,
+  Lock,
+  Unlock,
+  Trash2,
 } from 'lucide-react';
 import {
   useCampaigns,
   useCampaignProgress,
   useOwnerGroups,
+  useUpdateCampaignStatus,
+  useDeleteCampaign,
   type CampaignResponse,
 } from '../../api/endpoints';
 import { Button } from '../../components/ui/button';
@@ -82,6 +87,13 @@ export function CampaignsView({ onNavigateToIntake }: CampaignsViewProps = {}) {
 
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [manualToken, setManualToken] = useState('');
+
+  const [campaignToDelete, setCampaignToDelete] = useState<CampaignResponse | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const updateStatusMutation = useUpdateCampaignStatus();
+  const deleteCampaignMutation = useDeleteCampaign();
 
   // Auto-select first campaign when campaigns load if no campaign is selected
   useEffect(() => {
@@ -171,6 +183,43 @@ export function CampaignsView({ onNavigateToIntake }: CampaignsViewProps = {}) {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async (campaign: CampaignResponse) => {
+    const nextStatus = campaign.status === 'active' ? 'closed' : 'active';
+    setIsUpdatingStatus(true);
+    try {
+      await updateStatusMutation.mutateAsync({ id: campaign.id, status: nextStatus });
+      toast.success(
+        nextStatus === 'closed'
+          ? `Closed request "${campaign.title}"`
+          : `Reopened request "${campaign.title}"`
+      );
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update request status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteCampaignMutation.mutateAsync(campaignToDelete.id);
+      toast.success(`Deleted request "${campaignToDelete.title}"`);
+      if (selectedCampaignId === campaignToDelete.id) {
+        const remaining = campaigns.filter((c) => c.id !== campaignToDelete.id);
+        setSelectedCampaignId(remaining.length > 0 ? remaining[0].id : null);
+      }
+      setCampaignToDelete(null);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete request');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -341,9 +390,9 @@ export function CampaignsView({ onNavigateToIntake }: CampaignsViewProps = {}) {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <span
-                      className={`text-2xs font-mono uppercase px-2 py-0.5 rounded-sm font-semibold ${
+                      className={`text-2xs font-medium px-2 py-0.5 rounded-sm capitalize ${
                         camp.status === 'active'
-                          ? 'bg-accent-subtle text-accent border border-accent/30'
+                          ? 'bg-inservice/10 text-inservice border border-inservice/20'
                           : 'bg-surface-sunken text-secondary border border-subtle'
                       }`}
                     >
@@ -375,26 +424,77 @@ export function CampaignsView({ onNavigateToIntake }: CampaignsViewProps = {}) {
         <div className="bg-surface border border-hairline rounded-md p-5 space-y-4 animate-in fade-in-50 duration-150">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-subtle">
             <div>
-              <h2 className="text-base font-semibold text-primary">
-                {selectedCampaign.title}
-              </h2>
-              <p className="text-xs text-secondary mt-0.5">
-                Track invitation responses and resend requests to team leads.
-              </p>
-            </div>
-            {progressData && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono text-inservice bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
-                  Submitted: {progressData.total_submitted} / {progressData.total_invitations}
-                </span>
-                <span className="text-xs font-mono text-accent bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
-                  Opened: {progressData.total_opened}
-                </span>
-                <span className="text-xs font-mono text-tier1 bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
-                  Overdue: {progressData.total_overdue}
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-primary">
+                  {selectedCampaign.title}
+                </h2>
+                <span
+                  className={`text-2xs font-medium px-2 py-0.5 rounded-sm capitalize ${
+                    selectedCampaign.status === 'active'
+                      ? 'bg-inservice/10 text-inservice border border-inservice/20'
+                      : 'bg-surface-sunken text-secondary border border-subtle'
+                  }`}
+                >
+                  {selectedCampaign.status}
                 </span>
               </div>
-            )}
+              <p className="text-xs text-secondary mt-0.5">
+                Track invitation responses, manage request lifecycle, and resend requests to team leads.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {progressData && (
+                <div className="flex items-center gap-2 mr-1">
+                  <span className="text-xs font-mono text-inservice bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
+                    Submitted: {progressData.total_submitted} / {progressData.total_invitations}
+                  </span>
+                  <span className="text-xs font-mono text-accent bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
+                    Opened: {progressData.total_opened}
+                  </span>
+                  <span className="text-xs font-mono text-tier1 bg-surface-sunken border border-subtle px-2.5 py-1 rounded-sm">
+                    Overdue: {progressData.total_overdue}
+                  </span>
+                </div>
+              )}
+
+              {/* Status Action: Close or Reopen */}
+              {selectedCampaign.status === 'active' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs px-2.5 gap-1.5 cursor-pointer"
+                  onClick={() => handleToggleStatus(selectedCampaign)}
+                  disabled={isUpdatingStatus}
+                >
+                  <Lock className="w-3.5 h-3.5 text-secondary stroke-[1.5]" />
+                  <span>Close request</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs px-2.5 gap-1.5 cursor-pointer"
+                  onClick={() => handleToggleStatus(selectedCampaign)}
+                  disabled={isUpdatingStatus}
+                >
+                  <Unlock className="w-3.5 h-3.5 text-secondary stroke-[1.5]" />
+                  <span>Reopen request</span>
+                </Button>
+              )}
+
+              {/* Delete Action */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2.5 gap-1.5 cursor-pointer hover:border-tier0 hover:text-tier0"
+                onClick={() => setCampaignToDelete(selectedCampaign)}
+                disabled={isDeleting}
+              >
+                <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
+                <span>Delete</span>
+              </Button>
+            </div>
           </div>
 
           {/* Invitations Table */}
@@ -628,6 +728,47 @@ export function CampaignsView({ onNavigateToIntake }: CampaignsViewProps = {}) {
               disabled={!campaignTitle || !deadline}
             >
               Create request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!campaignToDelete} onOpenChange={(open) => !open && setCampaignToDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-tier0">
+              <AlertTriangle className="w-5 h-5 stroke-[1.5]" />
+              Delete data collection request?
+            </DialogTitle>
+            <DialogDescription className="space-y-2 pt-2 text-xs text-secondary leading-relaxed">
+              <p>
+                Are you sure you want to delete <strong className="text-primary font-medium">{campaignToDelete?.title}</strong>?
+              </p>
+              <p>
+                This will permanently remove the request and all{' '}
+                <strong className="text-primary font-medium">{campaignToDelete?.invitations?.length || 0}</strong>{' '}
+                associated invitations and drafts. This action cannot be undone.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCampaignToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteCampaign}
+              disabled={isDeleting}
+              isLoading={isDeleting}
+            >
+              Delete request
             </Button>
           </DialogFooter>
         </DialogContent>

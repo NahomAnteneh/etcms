@@ -559,6 +559,41 @@ describe('Dashboard Workspace Sub-Tabs Tests', () => {
       expect(validateCampaignForm('Valid Title', futureDate, [validGid])).toBeNull();
       expect(validateCampaignForm('a'.repeat(255), futureDate, [validGid])).toBeNull();
     });
+
+    it('toggles request status between active and closed', () => {
+      function getNextCampaignStatus(current: 'active' | 'closed' | 'archived'): 'active' | 'closed' {
+        return current === 'active' ? 'closed' : 'active';
+      }
+
+      expect(getNextCampaignStatus('active')).toBe('closed');
+      expect(getNextCampaignStatus('closed')).toBe('active');
+    });
+
+    it('updates selection and deletes campaign with cascade confirmation message', () => {
+      const mockCampaigns = [
+        { id: 'camp-1', title: 'Q1 Core Intake', invitations: [{}, {}] },
+        { id: 'camp-2', title: 'Q2 Service Intake', invitations: [{}] },
+      ];
+
+      function formatDeleteConfirmation(campaign: { title: string; invitations?: any[] }) {
+        return `Are you sure you want to delete ${campaign.title}? This will permanently remove the request and all ${campaign.invitations?.length || 0} associated invitations and drafts.`;
+      }
+
+      function resolveNextSelectionAfterDelete(deletedId: string, currentSelectedId: string | null, list: typeof mockCampaigns): string | null {
+        if (currentSelectedId === deletedId) {
+          const remaining = list.filter((c) => c.id !== deletedId);
+          return remaining.length > 0 ? remaining[0].id : null;
+        }
+        return currentSelectedId;
+      }
+
+      expect(formatDeleteConfirmation(mockCampaigns[0])).toContain('Q1 Core Intake');
+      expect(formatDeleteConfirmation(mockCampaigns[0])).toContain('all 2 associated invitations');
+
+      expect(resolveNextSelectionAfterDelete('camp-1', 'camp-1', mockCampaigns)).toBe('camp-2');
+      expect(resolveNextSelectionAfterDelete('camp-2', 'camp-1', mockCampaigns)).toBe('camp-1');
+      expect(resolveNextSelectionAfterDelete('camp-1', 'camp-1', [mockCampaigns[0]])).toBeNull();
+    });
   });
 
   describe('P0 - CMDB Governance Health Metrics & Reconciled Calculation Rules', () => {

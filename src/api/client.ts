@@ -38,9 +38,9 @@ export function checkPayloadForITAM(payload: unknown): string[] {
   return violations;
 }
 
-// Actor credentials storage for Dev Auth and Bearer tokens
-let currentDevUserId: string | null = '11111111-1111-1111-1111-111111111111'; // default platform admin for dev
-let currentBearerToken: string | null = null;
+// Actor credentials storage for Session Bearer tokens and Dev Auth
+let currentDevUserId: string | null = null;
+let currentBearerToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('etcms_session_token') : null;
 let currentIntakeToken: string | null = null;
 
 export function setDevUserId(userId: string | null) {
@@ -53,6 +53,17 @@ export function getDevUserId(): string | null {
 
 export function setBearerToken(token: string | null) {
   currentBearerToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('etcms_session_token', token);
+    } else {
+      localStorage.removeItem('etcms_session_token');
+    }
+  }
+}
+
+export function getBearerToken(): string | null {
+  return currentBearerToken;
 }
 
 export function setIntakeToken(token: string | null) {
@@ -89,10 +100,10 @@ export const api = ky.create({
         }
 
         // Inject Auth credentials
-        if (currentDevUserId) {
-          request.headers.set('X-Dev-User-ID', currentDevUserId);
-        } else if (currentBearerToken) {
+        if (currentBearerToken) {
           request.headers.set('Authorization', `Bearer ${currentBearerToken}`);
+        } else if (currentDevUserId) {
+          request.headers.set('X-Dev-User-ID', currentDevUserId);
         }
 
         if (currentIntakeToken) {

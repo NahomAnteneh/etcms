@@ -1,35 +1,51 @@
 import React, { useState } from 'react';
-import { TopNav } from './top-nav';
-import { Sidebar } from './sidebar';
-import { CommandPalette } from './command-palette';
+import { PolarisNav } from './polaris-nav';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AppShellProps {
   currentView: string;
   onSelectView: (view: string) => void;
+  onNavigateToGraph?: (ciId: string) => void;
+  onNavigateToCatalogCI?: (ciId: string) => void;
   children: React.ReactNode;
 }
 
-export function AppShell({ currentView, onSelectView, children }: AppShellProps) {
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+export function AppShell({
+  currentView,
+  onSelectView,
+  onNavigateToGraph,
+  onNavigateToCatalogCI,
+  children,
+}: AppShellProps) {
+  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries();
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 400);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas text-primary antialiased selection:bg-accent-subtle selection:text-accent">
-      <TopNav onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar currentView={currentView} onSelectView={onSelectView} />
-        <main className="flex-1 overflow-y-auto bg-canvas p-6 flex flex-col">
-          {children}
-        </main>
-      </div>
+    <div className="h-screen w-screen flex flex-col bg-canvas text-primary antialiased selection:bg-accent-subtle selection:text-accent font-sans overflow-hidden">
+      {/* Consolidated Single High-Density Header Navigation */}
+      <PolarisNav
+        currentView={currentView}
+        onSelectView={onSelectView}
+        onNavigateToGraph={onNavigateToGraph}
+        onNavigateToCatalogCI={onNavigateToCatalogCI}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+      />
 
-      {commandPaletteOpen && (
-        <CommandPalette
-          onSelectView={(view) => {
-            onSelectView(view);
-            setCommandPaletteOpen(false);
-          }}
-        />
-      )}
+      {/* Main Workspace Body - Maximized Full-Screen Canvas */}
+      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto bg-canvas p-3 md:p-4 min-h-0 focus:outline-none">
+        <div className="w-full h-full flex flex-col">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }
