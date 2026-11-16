@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue, Fragment } from 'react';
 import {
   Search,
   CheckCircle,
@@ -19,6 +19,7 @@ import {
   Link as LinkIcon,
   AlertCircle,
   ChevronRight,
+  ChevronDown,
   Box,
   HardDrive,
   Radio,
@@ -35,6 +36,8 @@ import {
   X,
   MoreHorizontal,
   Copy,
+  Filter,
+  Columns,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -61,7 +64,10 @@ import {
   DEFAULT_CI_CLASSES,
   useRelationshipTypes,
   DEFAULT_RELATIONSHIP_TYPES,
+  useDownwardDependencies,
+  useUpwardImpact,
   type CIEnvelope,
+  type CIClassDefinition,
 } from '../../api/endpoints';
 import { CriticalityChip } from '../../components/governance/criticality-chip';
 import { LifecycleBadge } from '../../components/governance/lifecycle-badge';
@@ -118,13 +124,560 @@ function getVerificationFreshness(lastVerifiedAt: string | null | undefined) {
   };
 }
 
+interface DetailFieldRowProps {
+  label: string;
+  children: React.ReactNode;
+  filterAction?: () => void;
+  toggleColumnAction?: () => void;
+  isColumnVisible?: boolean;
+  onCopy?: () => void;
+}
+
+function DetailFieldRow({
+  label,
+  children,
+  filterAction,
+  toggleColumnAction,
+  isColumnVisible,
+  onCopy,
+}: DetailFieldRowProps) {
+  return (
+    <div className="flex items-center justify-between py-1.5 px-3 hover:bg-hover/60 group text-xs border-b border-subtle/40 last:border-0 transition-colors">
+      <div className="w-36 sm:w-44 text-muted shrink-0 select-none">{label}</div>
+      <div className="flex-1 min-w-0 pr-3">{children}</div>
+      <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+        {filterAction && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              filterAction();
+            }}
+            className="p-1 rounded text-muted hover:text-primary hover:bg-surface transition-colors cursor-pointer"
+            title="Filter for value"
+            aria-label={`Filter for ${label}`}
+          >
+            <Filter className="w-3 h-3" />
+          </button>
+        )}
+        {toggleColumnAction && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleColumnAction();
+            }}
+            className="p-1 rounded text-muted hover:text-primary hover:bg-surface transition-colors cursor-pointer"
+            title={isColumnVisible ? 'Hide column' : 'Show column'}
+            aria-label={`Toggle ${label} column`}
+          >
+            <Columns className="w-3 h-3" />
+          </button>
+        )}
+        {onCopy && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopy();
+            }}
+            className="p-1 rounded text-muted hover:text-primary hover:bg-surface transition-colors cursor-pointer"
+            title="Copy value"
+            aria-label={`Copy ${label} value`}
+          >
+            <Copy className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CIChipList({
+  items,
+  onSelectCI,
+}: {
+  items: Array<{ ci: CIEnvelope; isPending: boolean }>;
+  onSelectCI: (ciId: string) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (items.length === 0) {
+    return <span className="text-muted text-xs">—</span>;
+  }
+
+  const displayed = isExpanded ? items : items.slice(0, 10);
+  const remaining = items.length - 10;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 py-0.5">
+      {displayed.map(({ ci, isPending }) => (
+        <button
+          key={ci.ci_id}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (ci.ci_id) onSelectCI(ci.ci_id);
+          }}
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-surface border border-subtle hover:border-accent hover:text-accent cursor-pointer transition-colors"
+          title={`Open ${ci.name} in catalog`}
+        >
+          <span className="truncate max-w-[160px] font-medium">{ci.name}</span>
+          {isPending && (
+            <span className="px-1 py-0.2 rounded text-[10px] font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              Pending
+            </span>
+          )}
+        </button>
+      ))}
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded((prev) => !prev);
+          }}
+          className="text-xs text-accent hover:underline font-medium px-1 cursor-pointer"
+        >
+          {isExpanded ? 'Show less' : `Show all ${items.length}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface CIDetailInlinePanelProps {
+  ci: CIEnvelope;
+  ciClasses: CIClassDefinition[];
+  visibleColumns: {
+    tier: boolean;
+    environment: boolean;
+    status: boolean;
+    owner: boolean;
+    endpoint: boolean;
+    verified: boolean;
+  };
+  activeRole: string;
+  onVerify: (ci: CIEnvelope) => void;
+  isVerifying: boolean;
+  onEdit: (ci: CIEnvelope) => void;
+  onNavigateToGraph?: (ciId: string) => void;
+  onFlag: (ci: CIEnvelope) => void;
+  onUpdateState: (ciId: string, state: string) => void;
+  onRetire: (ci: CIEnvelope, depCount: number) => void;
+  onFilterBy: (type: 'class' | 'tier' | 'env' | 'state' | 'owner', value: string) => void;
+  onToggleColumn: (col: 'tier' | 'environment' | 'status' | 'owner' | 'endpoint' | 'verified') => void;
+  onOpenCIFromChip: (ciId: string) => void;
+  formatClassName: (cls: string) => string;
+}
+
+function CIDetailInlinePanel({
+  ci,
+  ciClasses,
+  visibleColumns,
+  activeRole,
+  onVerify,
+  isVerifying,
+  onEdit,
+  onNavigateToGraph,
+  onFlag,
+  onUpdateState,
+  onRetire,
+  onFilterBy,
+  onToggleColumn,
+  onOpenCIFromChip,
+  formatClassName,
+}: CIDetailInlinePanelProps) {
+  const [activeTab, setActiveTab] = useState<'table' | 'json'>('table');
+  const toast = useToast();
+
+  const { data: downwardData } = useDownwardDependencies(ci.ci_id || null);
+  const { data: upwardData } = useUpwardImpact(ci.ci_id || null);
+
+  const downwardList = useMemo(() => {
+    if (!downwardData?.nodes) return [];
+    const edges = downwardData.edges || [];
+    return downwardData.nodes
+      .filter((n) => n.ci?.ci_id && n.ci.ci_id !== ci.ci_id)
+      .map((n) => {
+        const edge = edges.find(
+          (e) => (e.source_ci_id === ci.ci_id && e.target_ci_id === n.ci.ci_id) ||
+                 (e.target_ci_id === ci.ci_id && e.source_ci_id === n.ci.ci_id)
+        );
+        return {
+          ci: n.ci,
+          isPending: edge?.handshake_status === 'pending_confirmation',
+        };
+      });
+  }, [downwardData, ci.ci_id]);
+
+  const usedByList = useMemo(() => {
+    if (!upwardData) return [];
+    const edges = upwardData.edges || [];
+    const rawList = upwardData.nodes && upwardData.nodes.length > 0
+      ? upwardData.nodes
+      : [...(upwardData.impacted_business_services || []), ...(upwardData.impacted_applications || [])];
+    const seen = new Set<string>();
+    const list: Array<{ ci: CIEnvelope; isPending: boolean }> = [];
+    rawList.forEach((item) => {
+      if (item.ci_id && item.ci_id !== ci.ci_id && !seen.has(item.ci_id)) {
+        seen.add(item.ci_id);
+        const edge = edges.find(
+          (e) => (e.source_ci_id === item.ci_id && e.target_ci_id === ci.ci_id) ||
+                 (e.target_ci_id === item.ci_id && e.source_ci_id === ci.ci_id)
+        );
+        list.push({
+          ci: item,
+          isPending: edge?.handshake_status === 'pending_confirmation',
+        });
+      }
+    });
+    return list;
+  }, [upwardData, ci.ci_id]);
+
+  const dependentCount = usedByList.length;
+  const freshness = getVerificationFreshness(ci.last_verified_at);
+  const classDef = ciClasses.find((c) => c.id === ci.ci_class);
+
+  const copyText = (val: string, label: string) => {
+    navigator.clipboard.writeText(val);
+    toast.info(`Copied ${label} to clipboard`);
+  };
+
+  return (
+    <div className="w-full bg-surface border-t border-subtle select-text">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-3 py-2 bg-surface-sunken border-b border-subtle">
+        {/* Left: Table | JSON Tabs */}
+        <div className="flex items-center gap-1 bg-surface p-0.5 rounded border border-subtle">
+          <button
+            type="button"
+            onClick={() => setActiveTab('table')}
+            className={cn(
+              'px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer',
+              activeTab === 'table' ? 'bg-surface-sunken text-primary shadow-xs font-semibold' : 'text-secondary hover:text-primary'
+            )}
+          >
+            Table
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('json')}
+            className={cn(
+              'px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer',
+              activeTab === 'json' ? 'bg-surface-sunken text-primary shadow-xs font-semibold' : 'text-secondary hover:text-primary'
+            )}
+          >
+            JSON
+          </button>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1.5">
+          {activeRole !== 'viewer' && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => onVerify(ci)}
+              isLoading={isVerifying}
+              className="text-xs gap-1.5 h-7 cursor-pointer"
+            >
+              <CheckCircle className="w-3.5 h-3.5 stroke-[1.5]" />
+              <span>Verify</span>
+            </Button>
+          )}
+          {activeRole !== 'viewer' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(ci)}
+              className="text-xs gap-1.5 h-7 cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5 stroke-[1.5]" />
+              <span>Edit</span>
+            </Button>
+          )}
+          {onNavigateToGraph && ci.ci_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNavigateToGraph(ci.ci_id!)}
+              className="text-xs gap-1.5 h-7 cursor-pointer"
+            >
+              <Network className="w-3.5 h-3.5 text-accent stroke-[1.5]" />
+              <span>View in graph</span>
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-md text-muted hover:text-primary hover:bg-hover cursor-pointer"
+                title={`More actions for ${ci.name}`}
+                aria-label={`More actions for ${ci.name}`}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => onFlag(ci)}>
+                <Flag className="w-3.5 h-3.5 text-tier1 mr-1.5" />
+                <span>Flag Dispute</span>
+              </DropdownMenuItem>
+              {activeRole === 'platform_admin' && ci.ci_id && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    const nextState = ci.lifecycle_state === 'out_of_sync' ? 'synced' : 'out_of_sync';
+                    onUpdateState(ci.ci_id!, nextState);
+                  }}
+                >
+                  {ci.lifecycle_state === 'out_of_sync' ? (
+                    <>
+                      <CheckCheck className="w-3.5 h-3.5 text-synced mr-1.5" />
+                      <span>Mark Synced</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 text-outofsync mr-1.5" />
+                      <span>Mark Out of Sync</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
+              {activeRole !== 'viewer' && ci.lifecycle_state !== 'retired' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    destructive
+                    onClick={() => onRetire(ci, dependentCount)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Retire</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Tab: Table */}
+      {activeTab === 'table' && (
+        <div className="divide-y divide-subtle/40 bg-surface">
+          {/* 1. Sys ID */}
+          <DetailFieldRow
+            label="Sys ID"
+            onCopy={ci.ci_id ? () => copyText(ci.ci_id!, 'Sys ID') : undefined}
+          >
+            <span className="font-mono text-xs text-secondary truncate inline-block max-w-sm" title={ci.ci_id || ''}>
+              {ci.ci_id ? `${ci.ci_id.slice(0, 18)}...` : '—'}
+            </span>
+          </DetailFieldRow>
+
+          {/* 2. Class */}
+          <DetailFieldRow
+            label="Class"
+            filterAction={() => onFilterBy('class', ci.ci_class)}
+            onCopy={() => copyText(formatClassName(ci.ci_class), 'Class')}
+          >
+            <span className="text-primary font-medium">{formatClassName(ci.ci_class)}</span>
+          </DetailFieldRow>
+
+          {/* 3. Tier */}
+          <DetailFieldRow
+            label="Criticality tier"
+            filterAction={() => onFilterBy('tier', ci.criticality_tier)}
+            toggleColumnAction={() => onToggleColumn('tier')}
+            isColumnVisible={visibleColumns.tier}
+            onCopy={() => copyText(ci.criticality_tier, 'Tier')}
+          >
+            <CriticalityChip tier={ci.criticality_tier} />
+          </DetailFieldRow>
+
+          {/* 4. Environment */}
+          <DetailFieldRow
+            label="Environment"
+            filterAction={() => onFilterBy('env', ci.environment)}
+            toggleColumnAction={() => onToggleColumn('environment')}
+            isColumnVisible={visibleColumns.environment}
+            onCopy={() => copyText(ci.environment, 'Environment')}
+          >
+            <span className="font-mono text-2xs uppercase text-secondary font-medium">
+              {ci.environment}
+            </span>
+          </DetailFieldRow>
+
+          {/* 5. Lifecycle state */}
+          <DetailFieldRow
+            label="Lifecycle state"
+            filterAction={() => onFilterBy('state', ci.lifecycle_state)}
+            toggleColumnAction={() => onToggleColumn('status')}
+            isColumnVisible={visibleColumns.status}
+            onCopy={() => copyText(ci.lifecycle_state, 'Lifecycle state')}
+          >
+            <LifecycleBadge state={ci.lifecycle_state} />
+          </DetailFieldRow>
+
+          {/* 6. Owner group */}
+          <DetailFieldRow
+            label="Owner group"
+            filterAction={
+              ci.ownership?.owner_group_name
+                ? () => onFilterBy('owner', ci.ownership?.owner_group_id || ci.ownership?.owner_group_name || '')
+                : undefined
+            }
+            toggleColumnAction={() => onToggleColumn('owner')}
+            isColumnVisible={visibleColumns.owner}
+            onCopy={
+              ci.ownership?.owner_group_name
+                ? () => copyText(ci.ownership?.owner_group_name || '', 'Owner group')
+                : undefined
+            }
+          >
+            {ci.ownership?.owner_group_name ? (
+              <span className="text-primary font-medium">{ci.ownership.owner_group_name}</span>
+            ) : (
+              <span className="text-amber-600 font-medium">Not set</span>
+            )}
+          </DetailFieldRow>
+
+          {/* 7. Department (Hide if empty) */}
+          {ci.ownership?.department_name ? (
+            <DetailFieldRow
+              label="Department"
+              onCopy={() => copyText(ci.ownership?.department_name || '', 'Department')}
+            >
+              <span className="text-secondary">{ci.ownership.department_name}</span>
+            </DetailFieldRow>
+          ) : null}
+
+          {/* 8. Team lead (Hide if empty) */}
+          {ci.ownership?.team_lead_name ? (
+            <DetailFieldRow
+              label="Team lead"
+              onCopy={() => copyText(ci.ownership?.team_lead_name || '', 'Team lead')}
+            >
+              <span className="text-secondary">{ci.ownership.team_lead_name}</span>
+            </DetailFieldRow>
+          ) : null}
+
+          {/* 9. Technical contact */}
+          <DetailFieldRow
+            label="Technical contact"
+            onCopy={ci.technical_contact ? () => copyText(ci.technical_contact || '', 'Technical contact') : undefined}
+          >
+            {ci.technical_contact ? (
+              <span className="text-secondary">{ci.technical_contact}</span>
+            ) : (
+              <span className="text-amber-600 font-medium">Not set</span>
+            )}
+          </DetailFieldRow>
+
+          {/* 10. Primary endpoint (Hide if empty) */}
+          {ci.primary_endpoint ? (
+            <DetailFieldRow
+              label="Primary endpoint"
+              toggleColumnAction={() => onToggleColumn('endpoint')}
+              isColumnVisible={visibleColumns.endpoint}
+              onCopy={() => copyText(ci.primary_endpoint || '', 'Primary endpoint')}
+            >
+              <span className="font-mono text-2xs text-secondary break-all">
+                {ci.primary_endpoint}
+              </span>
+            </DetailFieldRow>
+          ) : null}
+
+          {/* 11. Last verified */}
+          <DetailFieldRow
+            label="Last verified"
+            toggleColumnAction={() => onToggleColumn('verified')}
+            isColumnVisible={visibleColumns.verified}
+            onCopy={ci.last_verified_at ? () => copyText(ci.last_verified_at!, 'Last verified') : undefined}
+          >
+            <span className={freshness.colorClass}>
+              {freshness.label} ({freshness.detail})
+            </span>
+          </DetailFieldRow>
+
+          {/* 12. Class-specific fields */}
+          {classDef?.form_fields && classDef.form_fields.length > 0 ? (
+            classDef.form_fields.map((f) => {
+              const val = ci.class_metadata?.[f.name];
+              const hasVal = val !== undefined && val !== null && String(val).trim() !== '';
+              if (!hasVal && !f.required) return null;
+              return (
+                <DetailFieldRow
+                  key={f.name}
+                  label={f.label}
+                  onCopy={hasVal ? () => copyText(String(val), f.label) : undefined}
+                >
+                  {hasVal ? (
+                    <span className="font-mono text-2xs text-primary">{String(val)}</span>
+                  ) : (
+                    <span className="text-amber-600 font-medium">Not set</span>
+                  )}
+                </DetailFieldRow>
+              );
+            })
+          ) : ci.class_metadata && Object.keys(ci.class_metadata).length > 0 ? (
+            Object.entries(ci.class_metadata).map(([k, v]) => {
+              if (v === undefined || v === null || String(v).trim() === '') return null;
+              return (
+                <DetailFieldRow
+                  key={k}
+                  label={k}
+                  onCopy={() => copyText(String(v), k)}
+                >
+                  <span className="font-mono text-2xs text-primary">{String(v)}</span>
+                </DetailFieldRow>
+              );
+            })
+          ) : null}
+
+          {/* 13. Depends on */}
+          <DetailFieldRow label="Depends on">
+            <CIChipList items={downwardList} onSelectCI={onOpenCIFromChip} />
+          </DetailFieldRow>
+
+          {/* 14. Used by */}
+          <DetailFieldRow label="Used by">
+            <CIChipList items={usedByList} onSelectCI={onOpenCIFromChip} />
+          </DetailFieldRow>
+        </div>
+      )}
+
+      {/* Tab: JSON */}
+      {activeTab === 'json' && (
+        <div className="p-3 bg-surface-sunken space-y-2">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-2xs font-mono text-muted">Full CI Payload</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => copyText(JSON.stringify(ci, null, 2), 'CI JSON')}
+              className="h-6 text-2xs gap-1.5 cursor-pointer"
+            >
+              <Copy className="w-3 h-3" />
+              <span>Copy JSON</span>
+            </Button>
+          </div>
+          <pre className="font-mono text-2xs text-secondary bg-canvas p-3 rounded border border-subtle overflow-x-auto max-h-96 select-all whitespace-pre leading-relaxed">
+            {JSON.stringify(ci, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface CatalogViewProps {
   onNavigateToGraph?: (ciId: string) => void;
   initialSelectedCIId?: string | null;
 }
 
 export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogViewProps) {
-  const { currentUser, activeRole, isAdmin, ownerGroups, activeOwnerGroup } = useAuth();
+  const { currentUser, activeRole, isAdmin, ownerGroups, activeOwnerGroup, setActiveOwnerGroup } = useAuth();
   const toast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -160,23 +713,69 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Side Drawer State (URL bound via ?ci=<id>)
-  const [drawerCI, setDrawerCI] = useState<CIEnvelope | null>(null);
+  // Inline Row Expansion State (URL bound via ?ci=<id>)
+  const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
+  const [isConfirmBatchVerifyOpen, setIsConfirmBatchVerifyOpen] = useState(false);
+  const [retiringDependentCount, setRetiringDependentCount] = useState<number>(0);
 
-  const handleOpenDrawer = (ci: CIEnvelope) => {
-    setDrawerCI(ci);
-    if (ci.ci_id) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('ci', ci.ci_id);
-      window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+  const toggleRowExpanded = (ciId: string) => {
+    setExpandedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ciId)) {
+        next.delete(ciId);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('ci') === ciId) {
+          url.searchParams.delete('ci');
+          window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+        }
+      } else {
+        next.add(ciId);
+        const url = new URL(window.location.href);
+        url.searchParams.set('ci', ciId);
+        window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+      }
+      return next;
+    });
+  };
+
+  const handleOpenCIFromChip = (targetCIId: string) => {
+    setSelectedClass('');
+    setSelectedEnv('');
+    setSelectedTier('');
+    setSelectedState('');
+    setSearchQuery('');
+    setSavedView('all');
+
+    setExpandedRowIds((prev) => {
+      const next = new Set(prev);
+      next.add(targetCIId);
+      return next;
+    });
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('ci', targetCIId);
+    window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+
+    setTimeout(() => {
+      const el = document.getElementById(`ci-row-${targetCIId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  };
+
+  const handleFilterBy = (type: 'class' | 'tier' | 'env' | 'state' | 'owner', value: string) => {
+    setSavedView('all');
+    if (type === 'class') setSelectedClass(value);
+    else if (type === 'tier') setSelectedTier(value);
+    else if (type === 'env') setSelectedEnv(value);
+    else if (type === 'state') setSelectedState(value);
+    else if (type === 'owner') {
+      const match = ownerGroups.find((g) => g.id === value || g.name === value);
+      if (match) setActiveOwnerGroup(match);
     }
   };
 
-  const handleCloseDrawer = () => {
-    setDrawerCI(null);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('ci');
-    window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+  const handleToggleColumn = (col: 'tier' | 'environment' | 'status' | 'owner' | 'endpoint' | 'verified') => {
+    setVisibleColumns((prev) => ({ ...prev, [col]: !prev[col] }));
   };
 
   const [retiringCI, setRetiringCI] = useState<CIEnvelope | null>(null);
@@ -287,31 +886,76 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
   });
 
   useEffect(() => {
-    if (catalogData?.items) {
-      const targetId = initialSelectedCIId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('ci') : null);
-      if (targetId) {
-        const found = catalogData.items.find((item) => item.ci_id === targetId);
-        if (found) {
-          setDrawerCI(found);
-        }
-      }
+    if (!catalogData?.items) return;
+    const targetId =
+      initialSelectedCIId ||
+      (typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('ci')
+        : null);
+
+    if (!targetId) return;
+
+    const found = catalogData.items.find((item) => item.ci_id === targetId);
+    if (!found || !found.ci_id) return;
+
+    // If target is hidden by filters, clear filters
+    const isHiddenByFilters =
+      (selectedClass && found.ci_class !== selectedClass) ||
+      (selectedEnv && found.environment !== selectedEnv) ||
+      (selectedTier && found.criticality_tier !== selectedTier) ||
+      (selectedState && found.lifecycle_state !== selectedState) ||
+      (searchQuery && !found.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (isHiddenByFilters) {
+      setSelectedClass('');
+      setSelectedEnv('');
+      setSelectedTier('');
+      setSelectedState('');
+      setSearchQuery('');
+      setSavedView('all');
     }
-  }, [initialSelectedCIId, catalogData?.items]);
+
+    setExpandedRowIds((prev) => {
+      if (prev.has(targetId)) return prev;
+      const next = new Set(prev);
+      next.add(targetId);
+      return next;
+    });
+
+    setTimeout(() => {
+      const el = document.getElementById(`ci-row-${targetId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }, [catalogData?.items, initialSelectedCIId]);
 
   useEffect(() => {
     const handlePop = () => {
       const params = new URLSearchParams(window.location.search);
       const ciId = params.get('ci');
-      if (ciId && catalogData?.items) {
-        const found = catalogData.items.find((i) => i.ci_id === ciId);
-        setDrawerCI(found || null);
+      if (ciId) {
+        setExpandedRowIds(new Set([ciId]));
       } else {
-        setDrawerCI(null);
+        setExpandedRowIds(new Set());
       }
     };
     window.addEventListener('popstate', handlePop);
     return () => window.removeEventListener('popstate', handlePop);
-  }, [catalogData?.items]);
+  }, []);
+
+  // Collapse expanded rows on filter, search, sort, view changes
+  useEffect(() => {
+    setExpandedRowIds(new Set());
+  }, [
+    selectedClass,
+    selectedEnv,
+    selectedTier,
+    selectedState,
+    searchQuery,
+    sortField,
+    sortDirection,
+    savedView,
+    activeOwnerGroup?.id,
+  ]);
 
   const verifyMutation = useVerifyCI();
   const retireMutation = useRetireCI();
@@ -695,16 +1339,20 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
     return filteredItems.slice(start, start + pageSize);
   }, [filteredItems, currentPageClamped, pageSize]);
 
+  const hasStatusExceptions = useMemo(() => {
+    return paginatedItems.some((ci) => ci.lifecycle_state !== 'in_service');
+  }, [paginatedItems]);
+
   const totalVisibleColSpan = useMemo(() => {
-    let count = 3; // Checkbox, Name, Actions
+    let count = 4; // Chevron, Checkbox, Name, Actions
     if (visibleColumns.tier) count++;
     if (visibleColumns.environment) count++;
-    if (visibleColumns.status) count++;
+    if (visibleColumns.status && hasStatusExceptions) count++;
     if (visibleColumns.owner) count++;
     if (visibleColumns.endpoint) count++;
     if (visibleColumns.verified) count++;
     return count;
-  }, [visibleColumns]);
+  }, [visibleColumns, hasStatusExceptions]);
 
   const handleVerify = async (ci: CIEnvelope) => {
     if (!ci.ci_id) return;
@@ -727,7 +1375,11 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
     try {
       await retireMutation.mutateAsync({ id: retiringCI.ci_id, force: forceRetire });
       toast.info(`CI "${retiringCI.name}" has been retired`);
-      if (drawerCI?.ci_id === retiringCI.ci_id) handleCloseDrawer();
+      setExpandedRowIds((prev) => {
+        const next = new Set(prev);
+        if (retiringCI?.ci_id) next.delete(retiringCI.ci_id);
+        return next;
+      });
       setRetiringCI(null);
       setForceRetire(false);
       setRetireProblem(null);
@@ -939,7 +1591,9 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
           onDismiss={() => setActiveProblem(null)}
           onNavigateToCI={(ciId) => {
             const found = catalogData?.items?.find((c) => c.ci_id === ciId);
-            if (found) handleOpenDrawer(found);
+            if (found && found.ci_id) {
+              handleOpenCIFromChip(found.ci_id);
+            }
           }}
         />
       )}
@@ -1233,7 +1887,7 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
               <Button
                 size="sm"
                 variant="primary"
-                onClick={handleBatchVerify}
+                onClick={() => setIsConfirmBatchVerifyOpen(true)}
                 isLoading={isBatchVerifying}
                 className="gap-1.5 h-7 text-2xs cursor-pointer"
               >
@@ -1267,6 +1921,7 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
           <table className="w-full text-left text-xs border-collapse">
             <thead className="sticky top-0 bg-surface-sunken z-10 border-b border-subtle shadow-xs">
               <tr className="text-secondary font-mono text-2xs uppercase tracking-wider select-none h-9">
+                <th className="py-1.5 pl-3 pr-1 w-7 text-center bg-surface-sunken"></th>
                 <th className="py-1.5 px-3 w-8 text-center bg-surface-sunken">
                   <input
                     type="checkbox"
@@ -1322,7 +1977,9 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
                     </button>
                   </th>
                 )}
-                {visibleColumns.status && <th className="py-1.5 px-3 font-medium bg-surface-sunken">Status</th>}
+                {visibleColumns.status && hasStatusExceptions && (
+                  <th className="py-1.5 px-3 font-medium bg-surface-sunken">Status</th>
+                )}
                 {visibleColumns.owner && <th className="py-1.5 px-3 font-medium bg-surface-sunken">Owner</th>}
                 {visibleColumns.endpoint && <th className="py-1.5 px-3 font-medium bg-surface-sunken">Endpoint</th>}
                 {visibleColumns.verified && (
@@ -1432,195 +2089,243 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
               ) : (
                 paginatedItems.map((ci) => {
                   const Icon = getClassIcon(ci.ci_class);
-                  const isSelectedForDrawer = drawerCI?.ci_id === ci.ci_id;
+                  const isExpanded = !!(ci.ci_id && expandedRowIds.has(ci.ci_id));
                   const freshness = getVerificationFreshness(ci.last_verified_at);
 
                   return (
-                    <tr
-                      key={ci.ci_id || ci.name}
-                      className={cn(
-                        'hover:bg-hover transition-colors group cursor-pointer h-9 sm:h-10 select-none',
-                        isSelectedForDrawer && 'bg-selected/40 border-l-2 border-l-accent'
-                      )}
-                      onClick={() => handleOpenDrawer(ci)}
-                    >
-                      {/* Checkbox Column */}
-                      <td className="py-1.5 px-3 w-8 text-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          aria-label={`Select ${ci.name}`}
-                          checked={!!(ci.ci_id && selectedCIIds.has(ci.ci_id))}
-                          onChange={() => ci.ci_id && toggleSelectCI(ci.ci_id, { stopPropagation: () => {} } as any)}
-                          className="rounded border-control text-accent focus:ring-accent cursor-pointer"
-                        />
-                      </td>
-
-                      {/* Name & Class & Sys ID */}
-                      <td className="py-1.5 px-3">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1 rounded-sm bg-surface-sunken border border-subtle text-secondary shrink-0">
-                            <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-primary group-hover:text-accent transition-colors truncate text-[13px] leading-tight">
-                              {ci.name}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-2xs font-mono text-muted leading-tight mt-0.5">
-                              <span className="uppercase">{formatClassName(ci.ci_class)}</span>
-                              <span>•</span>
-                              <span className="truncate max-w-[100px]" title={ci.ci_id || ''}>
-                                {ci.ci_id ? `${ci.ci_id.slice(0, 8)}...` : '—'}
-                              </span>
-                              {ci.ci_id && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(ci.ci_id || '');
-                                    toast.info('Copied Sys ID to clipboard');
-                                  }}
-                                  className="text-muted hover:text-primary transition-colors p-0.5 rounded cursor-pointer"
-                                  title="Copy Sys ID"
-                                  aria-label="Copy Sys ID"
-                                >
-                                  <Copy className="w-2.5 h-2.5" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Tier (Neutral Badge T0-T3) */}
-                      {visibleColumns.tier && (
-                        <td className="py-1.5 px-3">
-                          <CriticalityChip tier={ci.criticality_tier} />
-                        </td>
-                      )}
-
-                      {/* Env */}
-                      {visibleColumns.environment && (
-                        <td className="py-1.5 px-3 font-mono text-2xs uppercase text-secondary">
-                          {ci.environment}
-                        </td>
-                      )}
-
-                      {/* Status (Exception Only) */}
-                      {visibleColumns.status && (
-                        <td className="py-1.5 px-3">
-                          {ci.lifecycle_state === 'in_service' ? (
-                            <span className="text-muted/40 font-mono text-xs">—</span>
+                    <Fragment key={ci.ci_id || ci.name}>
+                      <tr
+                        id={ci.ci_id ? `ci-row-${ci.ci_id}` : undefined}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (ci.ci_id) toggleRowExpanded(ci.ci_id);
+                          }
+                        }}
+                        className={cn(
+                          'hover:bg-hover transition-colors group cursor-pointer h-9 sm:h-10 select-none outline-none focus:bg-hover/80',
+                          isExpanded && 'bg-surface-sunken/80 border-l-2 border-l-accent'
+                        )}
+                        onClick={() => ci.ci_id && toggleRowExpanded(ci.ci_id)}
+                      >
+                        {/* Chevron Column */}
+                        <td
+                          className="py-1.5 pl-3 pr-1 w-7 text-center text-muted"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (ci.ci_id) toggleRowExpanded(ci.ci_id);
+                          }}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-accent" />
                           ) : (
-                            <LifecycleBadge state={ci.lifecycle_state} />
+                            <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:text-primary transition-colors" />
                           )}
                         </td>
-                      )}
 
-                      {/* Owner & Contact */}
-                      {visibleColumns.owner && (
+                        {/* Checkbox Column */}
+                        <td className="py-1.5 px-3 w-8 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${ci.name}`}
+                            checked={!!(ci.ci_id && selectedCIIds.has(ci.ci_id))}
+                            onChange={() => ci.ci_id && toggleSelectCI(ci.ci_id, { stopPropagation: () => {} } as any)}
+                            className="rounded border-control text-accent focus:ring-accent cursor-pointer"
+                          />
+                        </td>
+
+                        {/* Name & Class (No Sys ID, No Copy Icon) */}
                         <td className="py-1.5 px-3">
-                          <div className="text-primary font-medium truncate max-w-40 text-xs leading-tight">
-                            {ci.ownership?.owner_group_name || 'Unassigned'}
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 rounded-sm bg-surface-sunken border border-subtle text-secondary shrink-0">
+                              <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-primary group-hover:text-accent transition-colors truncate text-[13px] leading-tight">
+                                {ci.name}
+                              </div>
+                              <div className="text-2xs text-secondary leading-tight mt-0.5">
+                                {formatClassName(ci.ci_class)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-2xs text-muted truncate max-w-40 leading-tight mt-0.5">
-                            {ci.technical_contact || '—'}
-                          </div>
                         </td>
-                      )}
 
-                      {/* Endpoint */}
-                      {visibleColumns.endpoint && (
-                        <td className="py-1.5 px-3 font-mono text-2xs text-secondary truncate max-w-48">
-                          {ci.primary_endpoint || <span className="text-muted/40">—</span>}
-                        </td>
-                      )}
+                        {/* Tier */}
+                        {visibleColumns.tier && (
+                          <td className="py-1.5 px-3">
+                            <CriticalityChip tier={ci.criticality_tier} />
+                          </td>
+                        )}
 
-                      {/* Verified (60-day rule color) */}
-                      {visibleColumns.verified && (
-                        <td className="py-1.5 px-3">
-                          <span className={cn('text-xs leading-tight', freshness.colorClass)}>
-                            {freshness.label}
-                          </span>
-                        </td>
-                      )}
+                        {/* Env */}
+                        {visibleColumns.environment && (
+                          <td className="py-1.5 px-3 font-mono text-2xs uppercase text-secondary">
+                            {ci.environment}
+                          </td>
+                        )}
 
-                      {/* Single "..." Menu */}
-                      <td className="py-1.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 rounded-md text-muted hover:text-primary hover:bg-hover cursor-pointer"
-                              aria-label={`Actions for ${ci.name}`}
-                              title={`Actions for ${ci.name}`}
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem onClick={() => handleOpenDrawer(ci)}>
-                              <Eye className="w-3.5 h-3.5 text-muted mr-1.5" />
-                              <span>View Details</span>
-                            </DropdownMenuItem>
-                            {activeRole !== 'viewer' && (
-                              <DropdownMenuItem onClick={() => handleOpenEditCI(ci)}>
-                                <Pencil className="w-3.5 h-3.5 text-muted mr-1.5" />
-                                <span>Edit</span>
-                              </DropdownMenuItem>
+                        {/* Status (Exception Only) */}
+                        {visibleColumns.status && hasStatusExceptions && (
+                          <td className="py-1.5 px-3">
+                            {ci.lifecycle_state === 'in_service' ? (
+                              <span className="text-muted/40 font-mono text-xs">—</span>
+                            ) : (
+                              <LifecycleBadge state={ci.lifecycle_state} />
                             )}
-                            {activeRole !== 'viewer' && (
-                              <DropdownMenuItem onClick={() => handleVerify(ci)}>
-                                <CheckCircle className="w-3.5 h-3.5 text-inservice mr-1.5" />
-                                <span>Verify</span>
-                              </DropdownMenuItem>
-                            )}
-                            {onNavigateToGraph && ci.ci_id && (
-                              <DropdownMenuItem onClick={() => onNavigateToGraph(ci.ci_id!)}>
-                                <Network className="w-3.5 h-3.5 text-accent mr-1.5" />
-                                <span>View in Graph</span>
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => setFlaggingCI(ci)}>
-                              <Flag className="w-3.5 h-3.5 text-tier1 mr-1.5" />
-                              <span>Flag Dispute</span>
-                            </DropdownMenuItem>
-                            {activeRole === 'platform_admin' && ci.ci_id && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  const nextState = ci.lifecycle_state === 'out_of_sync' ? 'synced' : 'out_of_sync';
-                                  updateCIMutation.mutate({ id: ci.ci_id!, data: { lifecycle_state: nextState } });
-                                }}
+                          </td>
+                        )}
+
+                        {/* Owner & Contact */}
+                        {visibleColumns.owner && (
+                          <td className="py-1.5 px-3">
+                            <div className="text-primary font-medium truncate max-w-40 text-xs leading-tight">
+                              {ci.ownership?.owner_group_name || <span className="text-amber-600 font-medium">Unassigned</span>}
+                            </div>
+                            <div className="text-2xs text-muted truncate max-w-40 leading-tight mt-0.5">
+                              {ci.technical_contact || '—'}
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Endpoint */}
+                        {visibleColumns.endpoint && (
+                          <td className="py-1.5 px-3 font-mono text-2xs text-secondary truncate max-w-48">
+                            {ci.primary_endpoint || <span className="text-muted/40">—</span>}
+                          </td>
+                        )}
+
+                        {/* Verified */}
+                        {visibleColumns.verified && (
+                          <td className="py-1.5 px-3">
+                            <span className={cn('text-xs leading-tight', freshness.colorClass)}>
+                              {freshness.label}
+                            </span>
+                          </td>
+                        )}
+
+                        {/* Single "..." Menu */}
+                        <td className="py-1.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-md text-muted hover:text-primary hover:bg-hover cursor-pointer"
+                                aria-label={`Actions for ${ci.name}`}
+                                title={`Actions for ${ci.name}`}
                               >
-                                {ci.lifecycle_state === 'out_of_sync' ? (
-                                  <>
-                                    <CheckCheck className="w-3.5 h-3.5 text-synced mr-1.5" />
-                                    <span>Mark Synced</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <RefreshCw className="w-3.5 h-3.5 text-outofsync mr-1.5" />
-                                    <span>Mark Out of Sync</span>
-                                  </>
-                                )}
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => ci.ci_id && toggleRowExpanded(ci.ci_id)}>
+                                <Eye className="w-3.5 h-3.5 text-muted mr-1.5" />
+                                <span>{isExpanded ? 'Collapse' : 'View Details'}</span>
                               </DropdownMenuItem>
-                            )}
-                            {activeRole !== 'viewer' && ci.lifecycle_state !== 'retired' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  destructive
-                                  onClick={() => setRetiringCI(ci)}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                                  <span>Delete</span>
+                              {activeRole !== 'viewer' && (
+                                <DropdownMenuItem onClick={() => handleOpenEditCI(ci)}>
+                                  <Pencil className="w-3.5 h-3.5 text-muted mr-1.5" />
+                                  <span>Edit</span>
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
+                              )}
+                              {activeRole !== 'viewer' && (
+                                <DropdownMenuItem onClick={() => handleVerify(ci)}>
+                                  <CheckCircle className="w-3.5 h-3.5 text-inservice mr-1.5" />
+                                  <span>Verify</span>
+                                </DropdownMenuItem>
+                              )}
+                              {onNavigateToGraph && ci.ci_id && (
+                                <DropdownMenuItem onClick={() => onNavigateToGraph(ci.ci_id!)}>
+                                  <Network className="w-3.5 h-3.5 text-accent mr-1.5" />
+                                  <span>View in Graph</span>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => setFlaggingCI(ci)}>
+                                <Flag className="w-3.5 h-3.5 text-tier1 mr-1.5" />
+                                <span>Flag Dispute</span>
+                              </DropdownMenuItem>
+                              {activeRole === 'platform_admin' && ci.ci_id && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const nextState = ci.lifecycle_state === 'out_of_sync' ? 'synced' : 'out_of_sync';
+                                    updateCIMutation.mutate({ id: ci.ci_id!, data: { lifecycle_state: nextState } });
+                                  }}
+                                >
+                                  {ci.lifecycle_state === 'out_of_sync' ? (
+                                    <>
+                                      <CheckCheck className="w-3.5 h-3.5 text-synced mr-1.5" />
+                                      <span>Mark Synced</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="w-3.5 h-3.5 text-outofsync mr-1.5" />
+                                      <span>Mark Out of Sync</span>
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              )}
+                              {activeRole !== 'viewer' && ci.lifecycle_state !== 'retired' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    destructive
+                                    onClick={() => {
+                                      setRetiringCI(ci);
+                                      setRetiringDependentCount(0);
+                                    }}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                    <span>Retire</span>
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+
+                      {/* Inline Detail Expansion Row */}
+                      {isExpanded && (
+                        <tr
+                          id={`ci-detail-${ci.ci_id}`}
+                          className="bg-surface-sunken/80 border-l-2 border-l-accent border-b border-subtle"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (ci.ci_id) toggleRowExpanded(ci.ci_id);
+                              const el = document.getElementById(`ci-row-${ci.ci_id}`);
+                              if (el) el.focus();
+                            }
+                          }}
+                        >
+                          <td colSpan={totalVisibleColSpan} className="p-0">
+                            <CIDetailInlinePanel
+                              ci={ci}
+                              ciClasses={ciClasses}
+                              visibleColumns={visibleColumns}
+                              activeRole={activeRole}
+                              onVerify={handleVerify}
+                              isVerifying={verifyMutation.isPending}
+                              onEdit={handleOpenEditCI}
+                              onNavigateToGraph={onNavigateToGraph}
+                              onFlag={(target) => setFlaggingCI(target)}
+                              onUpdateState={(id, state) => updateCIMutation.mutate({ id, data: { lifecycle_state: state as any } })}
+                              onRetire={(target, depCount) => {
+                                setRetiringCI(target);
+                                setRetiringDependentCount(depCount);
+                              }}
+                              onFilterBy={handleFilterBy}
+                              onToggleColumn={handleToggleColumn}
+                              onOpenCIFromChip={handleOpenCIFromChip}
+                              formatClassName={formatClassName}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })
               )}
@@ -1690,281 +2395,6 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
         </div>
       )}
 
-      {/* CI Details Side Drawer */}
-      <Dialog
-        open={!!drawerCI}
-        onOpenChange={(open) => {
-          if (!open) handleCloseDrawer();
-        }}
-      >
-        <DialogContent
-          variant="drawer"
-          className="w-full sm:max-w-xl p-0 flex flex-col h-full bg-surface border-l border-hairline overflow-hidden space-y-0"
-        >
-          {drawerCI && (
-            <>
-              {/* Drawer Header */}
-              <div className="p-4 border-b border-subtle bg-surface-sunken space-y-3">
-                <div className="flex items-start justify-between gap-3 pr-6">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xs font-mono uppercase bg-surface text-secondary px-1.5 py-0.5 rounded border border-subtle">
-                        {drawerCI.ci_class}
-                      </span>
-                      <CriticalityChip tier={drawerCI.criticality_tier} />
-                      <LifecycleBadge state={drawerCI.lifecycle_state} />
-                    </div>
-                    <h2 className="text-base font-semibold text-primary truncate">
-                      {drawerCI.name}
-                    </h2>
-                    <div className="flex items-center gap-2 text-2xs font-mono text-muted">
-                      <span>Sys ID:</span>
-                      <span className="text-secondary select-all">{drawerCI.ci_id}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(drawerCI.ci_id || '');
-                          toast.info('Copied Sys ID to clipboard');
-                        }}
-                        className="text-muted hover:text-primary p-0.5 rounded cursor-pointer"
-                        title="Copy Sys ID"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Action Toolbar */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  {activeRole !== 'viewer' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleVerify(drawerCI)}
-                      isLoading={verifyMutation.isPending}
-                      className="text-xs gap-1.5 h-7 text-inservice hover:bg-accent-subtle cursor-pointer"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5 stroke-[1.5]" />
-                      <span>Verify</span>
-                    </Button>
-                  )}
-                  {activeRole !== 'viewer' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        handleOpenEditCI(drawerCI);
-                        handleCloseDrawer();
-                      }}
-                      className="text-xs gap-1.5 h-7 cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5 stroke-[1.5]" />
-                      <span>Edit</span>
-                    </Button>
-                  )}
-                  {onNavigateToGraph && drawerCI.ci_id && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        onNavigateToGraph(drawerCI.ci_id!);
-                        handleCloseDrawer();
-                      }}
-                      className="text-xs gap-1.5 h-7 cursor-pointer"
-                    >
-                      <Network className="w-3.5 h-3.5 text-accent stroke-[1.5]" />
-                      <span>View in Graph</span>
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setFlaggingCI(drawerCI)}
-                    className="text-xs gap-1.5 h-7 cursor-pointer"
-                  >
-                    <Flag className="w-3.5 h-3.5 text-tier1 stroke-[1.5]" />
-                    <span>Flag</span>
-                  </Button>
-                  {activeRole !== 'viewer' && drawerCI.lifecycle_state !== 'retired' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRetiringCI(drawerCI)}
-                      className="text-xs gap-1.5 h-7 text-tier0 hover:bg-tier0-bg/30 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
-                      <span>Retire</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Drawer Body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-                {/* 1. Ownership & Contacts */}
-                <div className="p-3 bg-surface-sunken/60 border border-subtle rounded-md space-y-2">
-                  <span className="text-3xs font-mono uppercase text-muted font-semibold block tracking-wider">
-                    Ownership & Assignment
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-2xs text-muted block">Owner Group</span>
-                      <span className="font-semibold text-primary">
-                        {drawerCI.ownership?.owner_group_name || 'Unassigned'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-2xs text-muted block">Department</span>
-                      <span className="text-secondary font-medium">
-                        {drawerCI.ownership?.department_name || '—'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-2xs text-muted block">Technical Contact</span>
-                      <span className="font-mono text-secondary text-2xs">
-                        {drawerCI.technical_contact || '—'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-2xs text-muted block">Team Lead</span>
-                      <span className="text-secondary font-medium">
-                        {drawerCI.ownership?.team_lead_name || '—'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Governance & Attestation */}
-                <div className="p-3 bg-surface-sunken/60 border border-subtle rounded-md space-y-2">
-                  <span className="text-3xs font-mono uppercase text-muted font-semibold block tracking-wider">
-                    Governance & Freshness
-                  </span>
-                  {(() => {
-                    const freshness = getVerificationFreshness(drawerCI.last_verified_at);
-                    return (
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-secondary">Last Verified:</span>
-                          <span className={freshness.colorClass}>
-                            {freshness.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-secondary">Freshness Rule:</span>
-                          <span className={freshness.colorClass}>
-                            {freshness.detail}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-secondary">Lifecycle State:</span>
-                          <LifecycleBadge state={drawerCI.lifecycle_state} />
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {activeRole === 'platform_admin' && (
-                    <div className="pt-2 border-t border-subtle mt-2 space-y-1.5">
-                      <span className="text-3xs font-mono uppercase text-muted font-semibold block">
-                        Admin State Override
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant={drawerCI.lifecycle_state === 'synced' ? 'outline' : 'secondary'}
-                          size="sm"
-                          disabled={updateCIMutation.isPending || drawerCI.lifecycle_state === 'synced'}
-                          onClick={() => {
-                            if (!drawerCI.ci_id) return;
-                            updateCIMutation.mutate({ id: drawerCI.ci_id, data: { lifecycle_state: 'synced' } });
-                            setDrawerCI((prev) => prev ? { ...prev, lifecycle_state: 'synced' } : null);
-                          }}
-                          className="text-xs h-7 gap-1"
-                        >
-                          <CheckCheck className="w-3.5 h-3.5 text-synced" />
-                          Mark Synced
-                        </Button>
-                        <Button
-                          variant={drawerCI.lifecycle_state === 'out_of_sync' ? 'outline' : 'secondary'}
-                          size="sm"
-                          disabled={updateCIMutation.isPending || drawerCI.lifecycle_state === 'out_of_sync'}
-                          onClick={() => {
-                            if (!drawerCI.ci_id) return;
-                            updateCIMutation.mutate({ id: drawerCI.ci_id, data: { lifecycle_state: 'out_of_sync' } });
-                            setDrawerCI((prev) => prev ? { ...prev, lifecycle_state: 'out_of_sync' } : null);
-                          }}
-                          className="text-xs h-7 gap-1"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5 text-outofsync" />
-                          Mark Out of Sync
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Network & Endpoints */}
-                <div className="p-3 bg-surface-sunken/60 border border-subtle rounded-md space-y-2">
-                  <span className="text-3xs font-mono uppercase text-muted font-semibold block tracking-wider">
-                    Network & Endpoints
-                  </span>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-secondary">Primary Endpoint:</span>
-                      <span className="font-mono text-2xs text-primary">
-                        {drawerCI.primary_endpoint || 'None'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-secondary">Environment:</span>
-                      <span className="font-mono text-2xs uppercase text-primary font-semibold">
-                        {drawerCI.environment}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Class Metadata */}
-                <div className="p-3 bg-surface-sunken/60 border border-subtle rounded-md space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-3xs font-mono uppercase text-muted font-semibold block tracking-wider">
-                      Class Form Specifications
-                    </span>
-                    <span className="text-3xs font-mono text-accent">
-                      {formatClassName(drawerCI.ci_class)}
-                    </span>
-                  </div>
-                  {drawerCI.class_metadata && Object.keys(drawerCI.class_metadata).length > 0 ? (
-                    <div className="space-y-1.5 font-mono text-2xs">
-                      {Object.entries(drawerCI.class_metadata).map(([k, v]) => {
-                        const classDef = ciClasses.find((c) => c.id === drawerCI.ci_class);
-                        const fieldDef = classDef?.form_fields?.find((f) => f.name === k);
-                        const displayLabel = fieldDef ? fieldDef.label : k;
-                        return (
-                          <div
-                            key={k}
-                            className="flex justify-between items-center text-secondary py-1 border-b border-subtle/40 last:border-0"
-                          >
-                            <span className="text-muted text-xs font-sans">{displayLabel}:</span>
-                            <span className="text-primary font-medium font-mono bg-canvas px-1.5 py-0.5 rounded border border-hairline">
-                              {String(v)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-muted text-2xs italic py-1">
-                      No custom class metadata registered.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Safe Retirement Modal with Active Dependent Check */}
       <Dialog
         open={!!retiringCI}
@@ -1992,6 +2422,22 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
                   </div>
                 </div>
               </DialogHeader>
+
+              <div className="p-3 bg-surface-sunken border border-subtle rounded-md text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-secondary">Dependent CI count:</span>
+                  <span className="font-semibold font-mono text-primary">{retiringDependentCount}</span>
+                </div>
+                {retiringDependentCount > 0 ? (
+                  <p className="text-tier0 font-medium text-2xs pt-1 border-t border-subtle">
+                    Warning: This CI currently has {retiringDependentCount} active dependent {retiringDependentCount === 1 ? 'service' : 'services'}. Standard retirement will be rejected by policy unless forced.
+                  </p>
+                ) : (
+                  <p className="text-muted text-2xs pt-1 border-t border-subtle">
+                    This CI has 0 active dependencies and can be safely retired.
+                  </p>
+                )}
+              </div>
 
               {/* In-Dialog RFC 9457 Problem Alert */}
               {retireProblem && (
@@ -2049,6 +2495,45 @@ export function CatalogView({ onNavigateToGraph, initialSelectedCIId }: CatalogV
           )}
         </DialogContent>
       </Dialog>
+
+
+      {/* Batch Verify Confirmation Modal */}
+      <Dialog open={isConfirmBatchVerifyOpen} onOpenChange={setIsConfirmBatchVerifyOpen}>
+        <DialogContent variant="modal">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5 text-primary">
+              <CheckCircle className="w-5 h-5 text-accent stroke-[1.5]" />
+              <DialogTitle className="text-base font-semibold">
+                Verify {selectedCIIds.size} {selectedCIIds.size === 1 ? 'CI' : 'CIs'}?
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-secondary mt-1">
+              This will attest that all {selectedCIIds.size} selected configuration items are accurate, active, and verified as of today.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsConfirmBatchVerifyOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={isBatchVerifying}
+              onClick={async () => {
+                setIsConfirmBatchVerifyOpen(false);
+                await handleBatchVerify();
+              }}
+            >
+              Verify CIs
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Report Dispute Flag Modal */}
       <Dialog
