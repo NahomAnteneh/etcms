@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-canvas text-primary font-sans antialiased;
+    color-scheme: light;
+  }
+}
+
+/* High-Density Tables & Canvas Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ebeef2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d0d7de;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8c9ba5;
+}
+
+/* React Flow Canvas overrides */
+.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__controls button {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #516273 !important;
+  fill: #516273 !important;
+}
+
+.react-flow__controls button:hover {
+  background: #edf2f7 !important;
+  color: #182230 !important;
+  fill: #182230 !important;
+}
+
+/* Accessibility: Prefers-Reduced-Motion intentional fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    /* Suppress sliding, scaling, and movement while preserving instant state changes */
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable continuous spinning and aggressive movement while preserving feedback */
+  .animate-spin {
+    animation: none !important;
+    opacity: 0.75;
+  }
+
+  [data-state='open'],
+  [data-state='closed'],
+  .animate-in {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
