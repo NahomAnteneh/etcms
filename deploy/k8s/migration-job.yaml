@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: etcms-migration
+  namespace: etcms
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: hook-succeeded
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: etcms-migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: etcms-backend:latest
+          command: ["/app/etcms-migrate", "up"]
+          envFrom:
+            - configMapRef:
+                name: etcms-config
+            - secretRef:
+                name: etcms-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

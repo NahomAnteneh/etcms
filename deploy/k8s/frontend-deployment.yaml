@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etcms-frontend
+  namespace: etcms
+  labels:
+    app.kubernetes.io/name: etcms-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: etcms-frontend
+  template:
+    metadata:
+      labels:
+        app: etcms-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: etcms-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcms-frontend
+  namespace: etcms
+  labels:
+    app.kubernetes.io/name: etcms-frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  selector:
+    app: etcms-frontend

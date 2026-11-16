@@ -1,0 +1,32 @@
+# OS / Editor artifacts
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Environment variables & runtime logs
+.env
+.env.local
+*.log
+
+# Go binaries & test artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+coverage.txt
+etcms-backend/etcms-api
+etcms-backend/etcms-worker
+etcms-backend/etcms-migrate
+
+# Node / Frontend build artifacts
+etcms-frontend/node_modules/
+etcms-frontend/dist/
+etcms-frontend/.impeccable/
+etcms-frontend/.vite/
+etcms-frontend/.vite-temp/
+
+# Temporary / Scratch
+scratch/

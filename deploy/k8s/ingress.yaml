@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcms-digest-scheduler
+  namespace: etcms
+spec:
+  # Execute at 00:05 UTC on 1st and 15th of each month
+  schedule: "5 0 1,15 * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: worker
+              image: etcms-backend:latest
+              command: ["/app/etcms-worker"]
+              envFrom:
+                - configMapRef:
+                    name: etcms-config
+                - secretRef:
+                    name: etcms-secrets
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: etcms-ingress
+  namespace: etcms
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 2m
+spec:
+  tls:
+    - hosts:
+        - etcms.example.com
+      secretName: etcms-tls-cert
+  rules:
+    - host: etcms.example.com
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: etcms-backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: etcms-frontend
+                port:
+                  number: 8080

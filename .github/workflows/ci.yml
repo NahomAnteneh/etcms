@@ -1,0 +1,89 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-checks:
+    name: Backend Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: etcms-backend/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: etcms-backend
+
+      - name: Run Backend Unit & Integration Tests (with Race Detector)
+        working-directory: etcms-backend
+        run: go test -v -race ./...
+
+      - name: Build Backend Binaries
+        working-directory: etcms-backend
+        run: |
+          go build -o /dev/null ./cmd/etcms-api
+          go build -o /dev/null ./cmd/etcms-worker
+          go build -o /dev/null ./cmd/etcms-migrate
+
+  frontend-checks:
+    name: Frontend Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        working-directory: etcms-frontend
+        run: bun install --frozen-lockfile
+
+      - name: Run Vitest Unit Tests
+        working-directory: etcms-frontend
+        run: bun run test
+
+      - name: Production TypeScript & Bundle Build
+        working-directory: etcms-frontend
+        run: bun run build
+
+  container-builds:
+    name: Container Image Build Verification
+    runs-on: ubuntu-latest
+    needs: [backend-checks, frontend-checks]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Container
+        uses: docker/build-push-action@v6
+        with:
+          context: ./etcms-backend
+          file: ./etcms-backend/Dockerfile
+          push: false
+          tags: etcms-backend:ci-test
+
+      - name: Build Frontend Container
+        uses: docker/build-push-action@v6
+        with:
+          context: ./etcms-frontend
+          file: ./etcms-frontend/Dockerfile
+          push: false
+          tags: etcms-frontend:ci-test

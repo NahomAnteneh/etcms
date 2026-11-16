@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etcms-config
+  namespace: etcms
+data:
+  APP_ENV: "production"
+  PORT: "8080"
+  AUTO_MIGRATE: "false"
+  DB_MAX_CONNS: "25"
+  DB_MIN_CONNS: "5"
+  ALLOWED_ORIGINS: "https://etcms.example.com"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etcms-secrets
+  namespace: etcms
+type: Opaque
+stringData:
+  DATABASE_URL: "postgres://etcms:CHANGE_ME_SECURE_PASSWORD@postgres-service:5432/etcms?sslmode=require"
+  INITIAL_ADMIN_PASSWORD: ""
+  DIGEST_WEBHOOK_URL: ""

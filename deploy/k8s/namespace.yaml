@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: etcms
+  labels:
+    app.kubernetes.io/name: etcms
+    app.kubernetes.io/part-of: etcms
