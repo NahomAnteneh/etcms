@@ -1,0 +1,4528 @@
+openapi: 3.0.3
+info:
+  title: etcms Configuration Management System API
+  version: 3.0.0
+  description: Enterprise-grade manual-first Configuration Management System (CMS) backend.
+servers:
+  - url: /
+paths:
+  /api/v1/healthz:
+    get:
+      summary: Liveness probe
+      operationId: getHealthz
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/readyz:
+    get:
+      summary: Readiness probe
+      operationId: getReadyz
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+        '503':
+          description: Service is not ready
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/health/metrics:
+    get:
+      summary: CMDB governance health metrics API
+      operationId: getHealthMetrics
+      tags:
+        - Health
+        - Governance
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional filter by specific owner group ID
+      responses:
+        '200':
+          description: CMDB governance health metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthMetricsResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/login:
+    post:
+      summary: Authenticate user credentials and create a session
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Invalid email or password
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Terminate the active authenticated session
+      operationId: logout
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/sessions:
+    get:
+      summary: List all active sessions
+      operationId: listSessions
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSessionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/auth/sessions/{id}:
+    delete:
+      summary: Revoke an active session by session ID
+      operationId: deleteSession
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Session terminated
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/users/me:
+    get:
+      summary: Get currently authenticated user profile
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: Authenticated user details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/owner-groups:
+    get:
+      summary: List all owner groups
+      operationId: listOwnerGroups
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of owner groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OwnerGroup'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create an owner group
+      operationId: createOwnerGroup
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOwnerGroupRequest'
+      responses:
+        '201':
+          description: Owner group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerGroup'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/owner-groups/{id}:
+    put:
+      summary: Update an owner group
+      operationId: updateOwnerGroup
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOwnerGroupRequest'
+      responses:
+        '200':
+          description: Owner group updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerGroup'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete an owner group
+      operationId: deleteOwnerGroup
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Owner group deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/intake/campaigns:
+    get:
+      summary: List all decentralized intake campaigns
+      operationId: listIntakeCampaigns
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CampaignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a decentralized intake campaign
+      operationId: createIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaignRequest'
+      responses:
+        '201':
+          description: Intake campaign created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden - requires platform_admin role
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/intake/campaigns/{id}:
+    get:
+      summary: Get intake campaign details
+      operationId: getIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    patch:
+      summary: Update intake campaign status or properties
+      operationId: updateIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignRequest'
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete an intake campaign and all associated invitations and submissions
+      operationId: deleteIntakeCampaign
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Campaign deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/intake/campaigns/{id}/progress:
+    get:
+      summary: Get intake campaign progress by department
+      operationId: getCampaignProgress
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign progress breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignProgressResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Campaign not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/intake/{token}:
+    get:
+      summary: Resolve intake invitation magic link token
+      operationId: getIntakeInvitation
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Intake invitation context and active draft
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Current draft lock version quoted e.g. "1"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntakeContextResponse'
+        '401':
+          description: Token expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Token not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    patch:
+      summary: Auto-save intake draft
+      operationId: saveIntakeDraft
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: If-Match
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Quoted or raw lock version string (e.g. "1")
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveDraftRequest'
+      responses:
+        '200':
+          description: Draft auto-saved successfully
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Updated draft lock version quoted e.g. "2"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveDraftResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Token expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Token not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '412':
+          description: Precondition Failed - Optimistic lock version conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '413':
+          description: Payload Too Large - Exceeds 2MB limit
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/intake/{token}/submit:
+    post:
+      summary: Submit intake and publish baseline
+      operationId: submitIntake
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Optional idempotency key for safe retries
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitIntakeRequest'
+      responses:
+        '200':
+          description: Baseline already published (idempotent retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselineResponse'
+        '201':
+          description: Baseline published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselineResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Token expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Token not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict - Submission already finalized or state conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable Entity - Validation or Anti-ITAM errors
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/search:
+    get:
+      summary: Search configuration items
+      operationId: searchCIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+        - IntakeTokenAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Trigram or prefix search query string
+        - name: ci_class
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - business_service
+              - application
+              - database
+              - vm_cluster
+              - physical_host
+              - network_firewall
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - prod
+              - dr
+              - staging
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: lifecycle_state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - in_service
+              - synced
+              - out_of_sync
+              - planned
+              - deprecated
+              - retired
+          description: Filter by CI lifecycle or sync status
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CISearchResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/owner-groups/me/digest:
+    get:
+      summary: Get active digest cycle and queued items for caller's owner group
+      operationId: getActiveDigest
+      tags:
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional owner group ID (defaults to authenticated user's primary owner group)
+      responses:
+        '200':
+          description: Active digest cycle and queued CIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveDigestResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (user does not belong to owner group and is not platform admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not Found (user has no primary owner group or group not found)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/digests/trigger:
+    post:
+      summary: Manually trigger digest scheduler run (ops / testing)
+      operationId: triggerDigestRun
+      tags:
+        - Admin
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: Digest cycle run triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DigestTriggerResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (strictly restricted to platform_admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/audit-logs/export:
+    get:
+      summary: Stream immutable audit logs exported in CSV or NDJSON format
+      operationId: exportAuditLogs
+      tags:
+        - Audit
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Filter audit logs by affected owner group ID (required for non-admin)
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [csv, ndjson]
+            default: csv
+          description: Export format
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Start of audit window filter
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: End of audit window filter
+      responses:
+        '200':
+          description: Exported audit logs stream
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: File attachment directive
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/x-ndjson:
+              schema:
+                type: string
+        '400':
+          description: Bad request (invalid UUID or date-time)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (non-admin attempting to export without owner group or foreign group)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/owner-groups/pending-edges:
+    get:
+      summary: List pending cross-boundary edges awaiting confirmation
+      operationId: listPendingEdges
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: owner_group_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional filter by specific target owner group ID
+      responses:
+        '200':
+          description: List of pending edges awaiting confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingEdgesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}/confirm:
+    post:
+      summary: Confirm cross-boundary edge handshake
+      operationId: confirmEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Edge confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: State machine conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}/flag-mismatch:
+    post:
+      summary: Flag cross-boundary edge mismatch
+      operationId: flagEdgeMismatch
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagMismatchRequest'
+      responses:
+        '200':
+          description: Edge flagged as mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: State machine conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}/reject:
+    post:
+      summary: Reject cross-boundary edge
+      operationId: rejectEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectEdgeRequest'
+      responses:
+        '200':
+          description: Edge rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: State machine conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis:
+    post:
+      summary: Create a single configuration item post-baseline
+      operationId: createCI
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCIRequest'
+      responses:
+        '201':
+          description: Configuration item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Owner group not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (e.g. duplicate active CI name)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity (e.g. anti-ITAM or validation rule violated)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}:
+    get:
+      summary: Get configuration item detail with graph summary and verification status
+      operationId: getCIDetail
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: CI detail retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIDetailResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    patch:
+      summary: Update configuration item attributes with domain RBAC and volatile-only stamping
+      operationId: updateCI
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCIRequest'
+      responses:
+        '200':
+          description: Configuration item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request (malformed JSON or invalid syntax)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (actor does not belong to owner group and is not platform_admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity (validation errors, retirement disallowed via PATCH, unapproved ITAM fields)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/flags:
+    post:
+      summary: Report data-quality flag on configuration item
+      operationId: createCIFlag
+      tags:
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCIFlagRequest'
+      responses:
+        '201':
+          description: Data-quality flag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIFlagResponse'
+        '400':
+          description: Bad request (malformed JSON or invalid syntax)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity (validation errors, reason too short)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/verify:
+    post:
+      summary: Explicitly verify configuration item operational accuracy
+      operationId: verifyCI
+      tags:
+        - CIs
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Configuration item verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (user does not belong to CI owner group and is not platform admin)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/retire:
+    post:
+      summary: Retire configuration item with upstream dependency safety check
+      operationId: retireCI
+      tags:
+        - CIs
+        - Digests
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Force retirement bypassing dependent check (strictly restricted to platform_admin)
+      responses:
+        '200':
+          description: Configuration item retired successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIEnvelope'
+        '400':
+          description: Bad request (invalid UUID format or illegal query parameter)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (non-owner or non-admin attempting force=true)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (active upstream dependents exist and force is not true)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/impact-upward:
+    get:
+      summary: Traverse upward impact graph for a configuration item
+      operationId: getUpwardImpact
+      tags:
+        - Graph
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: include_retired
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Upward impact traversal completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpwardImpactResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/dependencies-downward:
+    get:
+      summary: Traverse downward dependency graph for a configuration item
+      operationId: getDownwardDependencies
+      tags:
+        - Graph
+        - CIs
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: include_retired
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Downward dependency traversal completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownwardDependenciesResponse'
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/cis/{id}/audit-logs:
+    get:
+      summary: Retrieve cursor-paginated timeline of audit logs for a configuration item
+      operationId: getCIAuditLogs
+      tags:
+        - CIs
+        - Audit
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Keyset pagination cursor
+      responses:
+        '200':
+          description: Audit logs timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIAuditLogsResponse'
+        '400':
+          description: Bad request (invalid UUID or cursor)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges:
+    post:
+      summary: Create a single edge dependency post-baseline
+      operationId: createEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEdgeRequest'
+      responses:
+        '201':
+          description: Edge created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeResponse'
+        '400':
+          description: Bad request (e.g. self-loop)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (caller does not belong to source CI owner group)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Source or target CI not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (edge already exists or target CI retired)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/edges/{id}:
+    delete:
+      summary: Soft-disconnect a graph edge with audit trail
+      operationId: deleteEdge
+      tags:
+        - Edges
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Edge disconnected successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (caller does not belong to source or target owner group)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Edge not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/roles:
+    get:
+      summary: List all custom roles and permissions
+      operationId: listCustomRoles
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of custom roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomRole'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a new custom named role
+      operationId: createCustomRole
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomRoleRequest'
+      responses:
+        '201':
+          description: Custom role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomRole'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/roles/{id}:
+    delete:
+      summary: Delete a custom role
+      operationId: deleteCustomRole
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Custom role deleted
+        '400':
+          description: Cannot delete system role
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/users:
+    get:
+      summary: List all users with role details
+      operationId: listAdminUsers
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of user accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUserResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a user account
+      operationId: createAdminUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdminUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/users/{id}:
+    put:
+      summary: Update a user account
+      operationId: updateAdminUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdminUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: User not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a user account
+      operationId: deleteAdminUser
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: User not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/users/{id}/reset-password:
+    post:
+      summary: Reset a user's password
+      operationId: resetUserPassword
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/audit-logs/{id}/revert:
+    post:
+      summary: Revert or undo an audit mutation
+      operationId: revertAuditLog
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Mutation successfully reverted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevertAuditLogResponse'
+        '400':
+          description: Mutation cannot be reverted
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Audit log entry not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/ci-classes:
+    get:
+      summary: List all CI class definitions
+      operationId: listCIClasses
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of CI class definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CIClassDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a custom CI class definition
+      operationId: createCIClass
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCIClassRequest'
+      responses:
+        '201':
+          description: CI class created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIClassDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/ci-classes/{id}:
+    put:
+      summary: Update a custom CI class definition
+      operationId: updateCIClass
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCIClassRequest'
+      responses:
+        '200':
+          description: CI class updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIClassDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI class not found or system protected
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a custom CI class definition
+      operationId: deleteCIClass
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: CI class deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: CI class not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (CI class has active CIs registered)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/categories:
+    get:
+      summary: List all CI categories with usage metrics
+      operationId: listCategories
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of CI categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a new custom category
+      operationId: createCategory
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Category name or ID already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/categories/{id}:
+    put:
+      summary: Update a custom category
+      operationId: updateCategory
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Category not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a custom category
+      operationId: deleteCategory
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Category deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Category not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (Category contains active CI classes or CIs)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/relationship-types:
+    get:
+      summary: List all relationship types with usage metrics
+      operationId: listRelationshipTypes
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      responses:
+        '200':
+          description: List of relationship types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelationshipTypeDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    post:
+      summary: Create a new custom relationship type
+      operationId: createRelationshipType
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRelationshipTypeRequest'
+      responses:
+        '201':
+          description: Relationship type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipTypeDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Relationship type ID already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/admin/relationship-types/{id}:
+    put:
+      summary: Update a custom relationship type
+      operationId: updateRelationshipType
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRelationshipTypeRequest'
+      responses:
+        '200':
+          description: Relationship type updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipTypeDefinition'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Relationship type not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete a custom relationship type
+      operationId: deleteRelationshipType
+      security:
+        - BearerAuth: []
+        - DevAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Relationship type deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Forbidden (Admin only)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Relationship type not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflict (Relationship type is actively used by CI topology edges)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    DevAuth:
+      type: apiKey
+      in: header
+      name: X-Dev-User-ID
+    IntakeTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Intake-Token
+
+  schemas:
+    ProblemDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          nullable: true
+        invalid_params:
+          type: array
+          nullable: true
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - name
+              - reason
+            properties:
+              name:
+                type: string
+              reason:
+                type: string
+        node_errors:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        dependent_cis:
+          type: array
+          nullable: true
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - ci_id
+              - name
+              - ci_class
+              - environment
+            properties:
+              ci_id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              ci_class:
+                type: string
+              environment:
+                type: string
+                enum:
+                  - prod
+                  - dr
+                  - staging
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    ReadyResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - database
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        database:
+          type: string
+          enum: [connected, disconnected]
+        timestamp:
+          type: string
+          format: date-time
+
+    OwnershipHeader:
+      type: object
+      additionalProperties: false
+      required:
+        - owner_group_id
+        - owner_group_name
+        - department_name
+        - technical_contact
+        - team_lead_name
+        - team_lead_email
+      properties:
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        department_name:
+          type: string
+        technical_contact:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+
+    CIEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - ci_class
+        - environment
+        - lifecycle_state
+        - criticality_tier
+        - owner_group_id
+        - technical_contact
+        - class_metadata
+      properties:
+        ci_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        ci_class:
+          type: string
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        lifecycle_state:
+          type: string
+          enum:
+            - in_service
+            - synced
+            - out_of_sync
+            - planned
+            - deprecated
+            - retired
+          default: in_service
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        owner_group_id:
+          type: string
+          format: uuid
+        technical_contact:
+          type: string
+          minLength: 1
+          maxLength: 160
+        primary_endpoint:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        itam_external_ref:
+          type: string
+          nullable: true
+          maxLength: 512
+        class_metadata:
+          type: object
+          additionalProperties:
+            type: string
+        ownership:
+          $ref: '#/components/schemas/OwnershipHeader'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    User:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - email
+        - name
+        - role
+        - owner_group_ids
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [viewer, team_lead, platform_admin]
+        primary_owner_group_id:
+          type: string
+          format: uuid
+          nullable: true
+        custom_role_id:
+          type: string
+          format: uuid
+          nullable: true
+        custom_role_name:
+          type: string
+          nullable: true
+        custom_role_permissions:
+          type: array
+          nullable: true
+          items:
+            type: string
+        owner_group_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        status:
+          type: string
+          default: active
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OwnerGroup:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - slug
+        - department_name
+        - team_lead_name
+        - team_lead_email
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+
+    CreateOwnerGroupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - department_name
+        - team_lead_name
+        - team_lead_email
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+
+    UpdateOwnerGroupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - department_name
+        - team_lead_name
+        - team_lead_email
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+
+    CIFormField:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - label
+        - type
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, number, select, boolean]
+        required:
+          type: boolean
+        placeholder:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        default_value:
+          type: string
+
+    CIClassDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - category
+        - description
+        - icon
+        - is_system
+        - attributes
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        is_system:
+          type: boolean
+        attributes:
+          type: array
+          items:
+            type: string
+        form_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIFormField'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCIClassRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        form_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIFormField'
+
+    UpdateCIClassRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - label
+      properties:
+        label:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        form_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIFormField'
+
+    CreateCampaignRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - deadline
+        - owner_group_ids
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        deadline:
+          type: string
+          format: date-time
+        owner_group_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+
+    UpdateCampaignRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [active, closed, archived]
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        deadline:
+          type: string
+          format: date-time
+
+    CampaignInvitation:
+      type: object
+      additionalProperties: false
+      required:
+        - invitation_id
+        - owner_group_id
+        - owner_group_name
+        - department_name
+        - team_lead_name
+        - team_lead_email
+        - invitation_url
+        - expires_at
+      properties:
+        invitation_id:
+          type: string
+          format: uuid
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+        invitation_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    CampaignResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - title
+        - status
+        - deadline
+        - created_at
+        - invitations
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+          enum: [active, closed, archived]
+        deadline:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        invitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignInvitation'
+
+    DepartmentProgress:
+      type: object
+      additionalProperties: false
+      required:
+        - department_name
+        - total_invitations
+        - sent_count
+        - opened_count
+        - submitted_count
+        - overdue_count
+      properties:
+        department_name:
+          type: string
+        total_invitations:
+          type: integer
+        sent_count:
+          type: integer
+        opened_count:
+          type: integer
+        submitted_count:
+          type: integer
+        overdue_count:
+          type: integer
+
+    CampaignProgressResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - campaign_id
+        - title
+        - status
+        - deadline
+        - total_invitations
+        - total_sent
+        - total_opened
+        - total_submitted
+        - total_overdue
+        - departments
+      properties:
+        campaign_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+          enum: [active, closed, archived]
+        deadline:
+          type: string
+          format: date-time
+        total_invitations:
+          type: integer
+        total_sent:
+          type: integer
+        total_opened:
+          type: integer
+        total_submitted:
+          type: integer
+        total_overdue:
+          type: integer
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentProgress'
+
+    IntakeContextResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - invitation_id
+        - campaign_id
+        - campaign_title
+        - deadline
+        - owner_group_id
+        - owner_group_name
+        - department_name
+        - team_lead_name
+        - team_lead_email
+        - status
+        - lock_version
+        - existing_cis
+      properties:
+        invitation_id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: string
+          format: uuid
+        campaign_title:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        department_name:
+          type: string
+        team_lead_name:
+          type: string
+        team_lead_email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [sent, opened, submitted, expired]
+        draft_payload:
+          type: object
+          additionalProperties: true
+        lock_version:
+          type: integer
+        existing_cis:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIEnvelope'
+
+    SaveDraftRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - payload
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+
+    SaveDraftResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - invitation_id
+        - lock_version
+        - updated_at
+        - payload
+      properties:
+        invitation_id:
+          type: string
+          format: uuid
+        lock_version:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+
+    CISearchResult:
+      type: object
+      additionalProperties: false
+      required:
+        - ci
+        - ownership
+        - score
+      properties:
+        ci:
+          $ref: '#/components/schemas/CIEnvelope'
+        ownership:
+          $ref: '#/components/schemas/OwnershipHeader'
+        score:
+          type: number
+          format: float
+
+    CISearchResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CISearchResult'
+        total:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true
+
+    CIDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ci
+        - ownership
+        - verification_status
+        - upward_summary
+        - downward_summary
+      properties:
+        ci:
+          $ref: '#/components/schemas/CIEnvelope'
+        ownership:
+          $ref: '#/components/schemas/OwnershipHeader'
+        verification_status:
+          $ref: '#/components/schemas/CIVerificationStatus'
+        upward_summary:
+          $ref: '#/components/schemas/CIUpwardSummary'
+        downward_summary:
+          $ref: '#/components/schemas/CIDownwardSummary'
+
+    CIVerificationStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - last_verified_at
+        - is_stale
+        - pending_edge_count
+        - open_flag_count
+      properties:
+        last_verified_at:
+          type: string
+          format: date-time
+        is_stale:
+          type: boolean
+        pending_edge_count:
+          type: integer
+        open_flag_count:
+          type: integer
+
+    CIUpwardSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - direct_dependent_count
+        - total_upstream_count
+      properties:
+        direct_dependent_count:
+          type: integer
+        total_upstream_count:
+          type: integer
+        highest_criticality_tier:
+          type: string
+          nullable: true
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+
+    CIDownwardSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - direct_dependency_count
+        - total_downstream_count
+      properties:
+        direct_dependency_count:
+          type: integer
+        total_downstream_count:
+          type: integer
+
+    UpwardImpactResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ci_id
+        - highest_criticality_tier
+        - impacted_business_services
+        - impacted_applications
+        - shared_sibling_dependencies
+        - edges
+      properties:
+        ci_id:
+          type: string
+          format: uuid
+        highest_criticality_tier:
+          type: string
+          nullable: true
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        impacted_business_services:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIEnvelope'
+        impacted_applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIEnvelope'
+        shared_sibling_dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIEnvelope'
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CIEnvelope'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphEdge'
+
+    GraphEdge:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source_ci_id
+        - target_ci_id
+        - edge_type
+        - handshake_status
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_ci_id:
+          type: string
+          format: uuid
+        target_ci_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+        handshake_status:
+          type: string
+          enum:
+            - pending_confirmation
+            - confirmed
+            - flagged_mismatch
+            - rejected
+
+    DownwardDependencyNode:
+      type: object
+      additionalProperties: false
+      required:
+        - ci
+        - depth
+        - subgraph_in_degree
+        - is_shared_dependency
+      properties:
+        ci:
+          $ref: '#/components/schemas/CIEnvelope'
+        depth:
+          type: integer
+        subgraph_in_degree:
+          type: integer
+        is_shared_dependency:
+          type: boolean
+
+    DownwardDependenciesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ci_id
+        - total_dependencies
+        - nodes
+        - edges
+      properties:
+        ci_id:
+          type: string
+          format: uuid
+        total_dependencies:
+          type: integer
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DownwardDependencyNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphEdge'
+        shared_dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/DownwardDependencyNode'
+
+    SubmitIntakeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+
+    BaselineResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - baseline_id
+        - campaign_id
+        - owner_group_id
+        - version_tag
+        - published_at
+        - published_by
+        - ci_count
+        - edge_count
+        - pending_edge_count
+      properties:
+        baseline_id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: string
+          format: uuid
+        owner_group_id:
+          type: string
+          format: uuid
+        version_tag:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        published_by:
+          type: string
+          format: uuid
+        ci_count:
+          type: integer
+        edge_count:
+          type: integer
+        pending_edge_count:
+          type: integer
+        snapshot:
+          type: object
+          additionalProperties: true
+
+    PendingEdgesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingEdge'
+        total:
+          type: integer
+
+    PendingEdge:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - edge_type
+        - handshake_status
+        - source_ci
+        - target_ci
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+        handshake_status:
+          type: string
+          enum: [pending_confirmation, confirmed, flagged_mismatch, rejected]
+        source_ci:
+          $ref: '#/components/schemas/EdgeCIPeer'
+        target_ci:
+          $ref: '#/components/schemas/EdgeCIPeer'
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EdgeCIPeer:
+      type: object
+      additionalProperties: false
+      required:
+        - ci_id
+        - name
+        - ci_class
+        - environment
+        - owner_group_id
+        - owner_group_name
+        - department_name
+        - technical_contact
+      properties:
+        ci_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ci_class:
+          type: string
+        environment:
+          type: string
+          enum: [prod, dr, staging]
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        department_name:
+          type: string
+        technical_contact:
+          type: string
+
+    EdgeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source_ci_id
+        - target_ci_id
+        - edge_type
+        - handshake_status
+        - created_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_ci_id:
+          type: string
+          format: uuid
+        target_ci_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+        handshake_status:
+          type: string
+          enum: [pending_confirmation, confirmed, flagged_mismatch, rejected]
+        created_by:
+          type: string
+          format: uuid
+        confirmed_by:
+          type: string
+          format: uuid
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FlagMismatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+
+    RejectEdgeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+
+    CreateCIRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - ci_class
+        - environment
+        - criticality_tier
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        ci_class:
+          type: string
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        owner_group_id:
+          type: string
+          format: uuid
+        technical_contact:
+          type: string
+          minLength: 1
+          maxLength: 160
+        primary_endpoint:
+          type: string
+          nullable: true
+          maxLength: 255
+        itam_external_ref:
+          type: string
+          nullable: true
+          maxLength: 512
+        class_metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    CreateEdgeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - source_ci_id
+        - target_ci_id
+        - edge_type
+      properties:
+        source_ci_id:
+          type: string
+          format: uuid
+        target_ci_id:
+          type: string
+          format: uuid
+        edge_type:
+          type: string
+
+    UpdateCIRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        ci_class:
+          type: string
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        lifecycle_state:
+          type: string
+          enum:
+            - in_service
+            - synced
+            - out_of_sync
+            - planned
+            - deprecated
+            - retired
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        owner_group_id:
+          type: string
+          format: uuid
+        technical_contact:
+          type: string
+          minLength: 1
+          maxLength: 160
+        primary_endpoint:
+          type: string
+          nullable: true
+          maxLength: 255
+        itam_external_ref:
+          type: string
+          nullable: true
+          maxLength: 512
+        class_metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    CreateCIFlagRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+        flag_type:
+          type: string
+          maxLength: 64
+
+    CIFlagResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - ci_id
+        - flagged_by
+        - reason
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        ci_id:
+          type: string
+          format: uuid
+        flagged_by:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        status:
+          type: string
+          enum:
+            - open
+            - resolved
+            - dismissed
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_by:
+          type: string
+          format: uuid
+          nullable: true
+
+    ActiveDigestResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - owner_group_id
+        - owner_group_name
+        - items
+      properties:
+        cycle_id:
+          type: string
+          format: uuid
+          nullable: true
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        window_start:
+          type: string
+          format: date-time
+          nullable: true
+        window_end:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DigestItem'
+
+    DigestItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - ci_id
+        - name
+        - ci_class
+        - environment
+        - criticality_tier
+        - trigger_reason
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        ci_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ci_class:
+          type: string
+        environment:
+          type: string
+          enum:
+            - prod
+            - dr
+            - staging
+        criticality_tier:
+          type: string
+          enum:
+            - tier_0
+            - tier_1
+            - tier_2
+            - tier_3
+        trigger_reason:
+          type: string
+        status:
+          type: string
+          enum:
+            - open
+            - actioned
+            - expired
+        actioned_at:
+          type: string
+          format: date-time
+          nullable: true
+        action_type:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CIAuditLogsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        total:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true
+
+    AuditLogEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - actor_id
+        - actor_name
+        - actor_email
+        - action
+        - diff
+        - affected_owner_group_ids
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        actor_name:
+          type: string
+        actor_email:
+          type: string
+        action:
+          type: string
+        diff:
+          type: object
+          additionalProperties: true
+        affected_owner_group_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    DigestTriggerResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - cycles_processed
+        - timestamp
+      properties:
+        status:
+          type: string
+        cycles_processed:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+
+    HealthMetricsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - freshness_rate
+        - total_in_service_cis
+        - fresh_cis_count
+        - stale_cis_count
+        - orphan_ci_count
+        - pending_edges_count
+        - oldest_pending_age_days
+        - digest_completion_rate
+        - total_closed_digest_items
+        - actioned_closed_digest_items
+        - generated_at
+      properties:
+        freshness_rate:
+          type: number
+          format: float
+        total_in_service_cis:
+          type: integer
+        fresh_cis_count:
+          type: integer
+        stale_cis_count:
+          type: integer
+        orphan_ci_count:
+          type: integer
+        pending_edges_count:
+          type: integer
+        oldest_pending_age_days:
+          type: number
+          format: float
+        digest_completion_rate:
+          type: number
+          format: float
+        total_closed_digest_items:
+          type: integer
+        actioned_closed_digest_items:
+          type: integer
+        groups:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/OwnerGroupHealthMetrics'
+        generated_at:
+          type: string
+          format: date-time
+
+    OwnerGroupHealthMetrics:
+      type: object
+      additionalProperties: false
+      required:
+        - owner_group_id
+        - owner_group_name
+        - freshness_rate
+        - total_in_service_cis
+        - fresh_cis_count
+        - stale_cis_count
+        - orphan_ci_count
+        - pending_edges_count
+        - oldest_pending_age_days
+        - digest_completion_rate
+        - total_closed_digest_items
+        - actioned_closed_digest_items
+      properties:
+        owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        freshness_rate:
+          type: number
+          format: float
+        total_in_service_cis:
+          type: integer
+        fresh_cis_count:
+          type: integer
+        stale_cis_count:
+          type: integer
+        orphan_ci_count:
+          type: integer
+        pending_edges_count:
+          type: integer
+        oldest_pending_age_days:
+          type: number
+          format: float
+        digest_completion_rate:
+          type: number
+          format: float
+        total_closed_digest_items:
+          type: integer
+        actioned_closed_digest_items:
+          type: integer
+
+    CustomRole:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - permissions
+        - is_system
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCustomRoleRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - permissions
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    AdminUserResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - email
+        - name
+        - role
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+        primary_owner_group_id:
+          type: string
+          format: uuid
+        owner_group_name:
+          type: string
+        custom_role_id:
+          type: string
+          format: uuid
+        custom_role_name:
+          type: string
+        custom_role_permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          default: active
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAdminUserRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+        primary_owner_group_id:
+          type: string
+          format: uuid
+        custom_role_id:
+          type: string
+          format: uuid
+        password:
+          type: string
+        status:
+          type: string
+          default: active
+
+    UpdateAdminUserRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - role
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        primary_owner_group_id:
+          type: string
+          format: uuid
+          nullable: true
+        custom_role_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          default: active
+
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - new_password
+      properties:
+        new_password:
+          type: string
+          minLength: 6
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+        - expires_at
+        - user
+      properties:
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - user_email
+        - user_name
+        - token
+        - expires_at
+        - created_at
+        - last_activity_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        user_email:
+          type: string
+          format: email
+        user_name:
+          type: string
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        last_activity_at:
+          type: string
+          format: date-time
+        user_agent:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+
+    RevertAuditLogResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - message
+        - reverted_entity_id
+        - reverted_entity_type
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        reverted_entity_id:
+          type: string
+          format: uuid
+        reverted_entity_type:
+          type: string
+
+    CategoryDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - icon
+        - color
+        - class_count
+        - ci_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        class_count:
+          type: integer
+        ci_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCategoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+
+    UpdateCategoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+
+    RelationshipTypeDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - reverse_label
+        - description
+        - color
+        - edge_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        reverse_label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+        edge_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRelationshipTypeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        label:
+          type: string
+          minLength: 1
+          maxLength: 128
+        reverse_label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+
+    UpdateRelationshipTypeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - label
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 128
+        reverse_label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+
+
+
+

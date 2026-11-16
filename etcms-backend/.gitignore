@@ -1,0 +1,21 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+etcms-api
+etcms-worker
+etcms-migrate
